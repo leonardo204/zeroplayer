@@ -20,4 +20,13 @@ enum PlaybackFailure: Equatable, Sendable {
     case noAudio
     case network
     case unknown(String)
+
+    /// 화면에 그대로 띄우는 문구다.
+    var message: String {
+        switch self {
+        case .noAudio: return "방송이 응답하지 않습니다"
+        case .network: return "연결하지 못했습니다"
+        case .unknown: return "재생할 수 없습니다"
+        }
+    }
 }
