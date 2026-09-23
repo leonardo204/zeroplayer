@@ -1,0 +1,21 @@
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+DerivedData/
+.build/
+xcuserdata/
+*.xcuserstate
+
+# secrets
+Secrets.xcconfig
+*.p12
+*.cer
+*.p8
+*.mobileprovision
+
+# macOS
+.DS_Store
+
+# XcodeGen 생성물
+Sources/App/Info.plist

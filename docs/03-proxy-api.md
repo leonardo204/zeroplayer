@@ -1,0 +1,312 @@
+# 프록시 API — ai.zerolive.co.kr
+
+## 1. 프록시가 떠안는 일
+
+앱은 프록시 한 곳만 부른다. 그래서 다음이 모두 서버 쪽 책임이다.
+
+| 일 | 이유 |
+| --- | --- |
+| radio-browser 서버 목록을 DNS 로 받아 돌려 쓰고 실패하면 다음으로 넘기기 | radio-browser 가 단일 서버 직접 링크를 금지한다 |
+| `zeroplayer/2.0` 형식 User-Agent 전송 | radio-browser 가 요구한다 |
+| 방송국 목록 D1 캐시 | radio-browser 가 내려가도 앱은 돌아야 한다 |
+| 스트림 생사 확인 | 인터넷 라디오는 조용히 죽는다 |
+| `.pls` 파싱, 리다이렉트 추적, m3u8 확인 | 1.x 가 앱에서 하던 일 |
+| 한국 지상파 편성표 파싱 | 방송사 페이지 구조가 바뀌면 서버만 고친다 |
+| Podcast Index 호출과 RSS 정규화 | |
+| 태그 정규화와 분위기 분류 (LLM) | `04-curation.md` |
+| 상황별 추천 세트 생성 (LLM, 배치) | `04-curation.md` |
+| 알람 예약과 APNs 발송 | |
+
+**앱에 남기지 않는 것:** 스트림 주소, 방송사 도메인, radio-browser 주소, API 키. 전부 서버에만 둔다.
+
+## 2. 인증
+
+- 공개 엔드포인트는 앱 식별용 헤더만 요구한다. `X-ZP-Client: ios/2.0.0`, `X-ZP-Install: <설치 UUID>`.
+- 설치 UUID 는 기기 식별자가 아니다. 앱이 처음 실행될 때 만들어 키체인에 넣고, 알람 등록과 남용 차단(rate limit)에만 쓴다.
+- 히든 엔드포인트는 별도 토큰을 요구한다. 히든 기능을 해제할 때 서버에서 받아 키체인에 저장한다. 이렇게 하면 앱 바이너리를 뜯어도 한국 지상파 채널 목록이 바로 나오지 않는다.
+- 이 토큰은 보안 장치가 아니라 문턱이다. 해제 엔드포인트 주소도 바이너리에 있으므로 뜯으면 부를 수 있다. 목적은 두 가지뿐이다. 히든 채널 목록이 공개 API 응답에 섞여 나가지 않게 하는 것, 그리고 설치 UUID 단위로 해제 기록을 남겨 남용을 막는 것.
+
+## 3. 엔드포인트
+
+버전 접두사 `/zp/v1`.
+
+### 3.1 추천
+
+```
+GET /zp/v1/recommend
+  ?situation=sleep|commute|study|work|wake
+  &at=2026-09-23T23:10:00+09:00
+  &country=KR
+  &lang=ko
+  &limit=20
+```
+
+```json
+{
+  "situation": "sleep",
+  "generatedAt": "2026-09-23T04:00:00Z",
+  "items": [
+    {
+      "kind": "station",
+      "id": "rb:9f2c1e7a-...",
+      "title": "Jazz24",
+      "subtitle": "Seattle · Jazz",
+      "reason": "늦은 시간에 어울리는 조용한 연주곡 위주 채널이다.",
+      "artworkURL": "https://.../favicon.png",
+      "tags": ["jazz", "smooth"],
+      "moods": ["calm", "late-night"]
+    },
+    {
+      "kind": "episode",
+      "id": "pi:1420924:8817263",
+      "title": "밤의 서점 · 12화",
+      "subtitle": "42분",
+      "durationSeconds": 2520,
+      "reason": "취침 타이머 45분에 맞는 길이다."
+    }
+  ]
+}
+```
+
+`at` 의 `+` 는 `%2B` 로 인코딩한다. 그냥 보내면 서버에서 공백으로 풀린다.
+`reason` 은 서버가 LLM 으로 미리 만들어 둔 문구다. 앱은 그대로 표시한다.
+앱은 받은 목록을 **기기에서 다시 정렬한다**(`04-curation.md` 3단계). 서버 순서는 시작점이다.
+
+### 3.2 방송국
+
+```
+GET /zp/v1/stations?country=KR&tag=jazz&lang=ko&q=&sort=popular&limit=50&cursor=
+GET /zp/v1/stations/{id}
+GET /zp/v1/stations/facets          → 국가·태그·언어 목록과 각 개수
+```
+
+```
+GET /zp/v1/stations/{id}/stream
+```
+
+```json
+{ "url": "http://stream.example.org/jazz24.aac", "codec": "aac", "bitrate": 128, "recheckAfter": 3600 }
+```
+
+스트림 URL 은 재생 직전에 이 엔드포인트로 받는다. 앱에 캐시하지 않는다. 방송국이 주소를 바꾸면 서버만 고친다. `url` 은 방송국 원본 주소 그대로다. 프록시가 오디오를 중계하지 않는다(`02-architecture.md` 5번). `recheckAfter` 는 같은 채널을 이어 들을 때 주소를 다시 물어볼 주기다.
+
+```
+POST /zp/v1/stations/{id}/report
+Body: { "reason": "no_audio" | "error" | "wrong_content" }
+```
+
+앱이 15초 안에 첫 오디오를 못 받으면 신고한다. 신고가 쌓인 채널은 추천에서 빠진다.
+
+### 3.3 팟캐스트
+
+```
+GET /zp/v1/podcasts/search?q=&lang=ko&limit=30
+GET /zp/v1/podcasts/{feedID}
+GET /zp/v1/podcasts/{feedID}/episodes?limit=50&cursor=
+GET /zp/v1/podcasts/trending?country=KR
+```
+
+에피소드 응답에 `audioURL`, `durationSeconds`, `publishedAt`, `description` 을 담는다. `audioURL` 은 원본 그대로 준다. 팟캐스트 RSS 는 공개 배포가 목적이라 중계할 이유가 없고, 중계하면 대역폭만 먹는다.
+
+### 3.4 히든 — 한국 지상파
+
+```
+POST /zp/v1/hidden/unlock         → 해제 토큰 발급 (설치 UUID 기준). 상태를 바꾸므로 GET 이 아니다
+GET /zp/v1/hidden/channels        → 채널 목록 (토큰 필요)
+GET /zp/v1/hidden/channels/{id}/stream
+GET /zp/v1/hidden/channels/{id}/now
+```
+
+`now` 응답:
+
+```json
+{
+  "programName": "볼륨을 높여요",
+  "startTime": "20:00",
+  "endTime": "22:00",
+  "artworkURL": "https://...",
+  "refreshAfter": 300
+}
+```
+
+편성표 파싱은 서버가 한다. **1.x 의 파싱 규칙을 그대로 옮긴다.** KBS 는 `og:image`·`og:description` 메타 태그, MBC 는 `control.imbc.com/Schedule/PCONAIR?type=radio` JSON, SBS 는 `__NEXT_DATA__` 스크립트, TBS 는 HTML 본문, CBS 는 편성표 하드코딩. 다만 앱 안에서 강제 언랩으로 자르던 것을 서버에서 실패 허용으로 바꾼다. 파싱이 실패하면 `programName` 을 비워 보내고 앱은 채널명만 표시한다.
+
+`serpent0.duckdns.org` 의 `.pls` 주소는 서버의 채널 표에만 둔다. 나중에 끊기면 이 표만 고친다. 앱은 그대로 둔다.
+
+### 3.5 알람
+
+```
+POST /zp/v1/push/token
+Body: { "token": "<APNs device token>", "env": "prod" }
+
+POST /zp/v1/alarms
+Body: {
+  "hour": 7, "minute": 0,
+  "weekdays": [2,3,4,5,6],
+  "timezone": "Asia/Seoul",
+  "source": { "kind": "station", "id": "rb:..." } 또는 { "kind": "auto", "situation": "wake" }
+}
+→ { "alarmID": "alm_..." }
+
+PATCH  /zp/v1/alarms/{alarmID}
+DELETE /zp/v1/alarms/{alarmID}
+```
+
+서버는 Cron Trigger 로 분 단위로 돌며 `next_fire_at <= now` 인 알람을 찾는다. 발송 직전에 소스의 현재 정보를 조회해 알림 본문을 만들고, 발송 후 다음 발송 시각을 다시 써 둔다.
+
+APNs 는 HTTP/2 만 받는다. 배포된 Worker 의 `fetch()` 는 APNs 와 통신이 되지만, 로컬 `wrangler dev` 에서는 HTTP/2 협상이 안 돼 실패한다 [[S5]](#s5). 그래서 발송 테스트는 배포 환경에서 한다. JWT 서명은 Workers 의 WebCrypto 로 되고, Workers 용 클라이언트(`cloudflare-apns2`)가 있다 [[S6]](#s6). APNs 인증 키(.p8)는 App Store Connect API 키와 다른 것이라 개발자 포털 Keys 에서 APNs 용으로 새로 만든다.
+
+푸시 payload:
+
+```json
+{
+  "aps": {
+    "alert": { "title": "알람", "body": "KBS 쿨FM · 지금 〈볼륨을 높여요〉 방송 중" },
+    "sound": "alarm_soft.caf",
+    "category": "ZP_ALARM",
+    "interruption-level": "time-sensitive"
+  },
+  "zp": { "alarmID": "alm_...", "kind": "station", "id": "rb:..." }
+}
+```
+
+`interruption-level: time-sensitive` 를 쓰면 집중 모드에서도 표시된다. 앱에 Time Sensitive Notifications 권한(entitlement)이 필요하다.
+
+### 3.6 상태
+
+```
+GET /zp/v1/health     → 데이터 소스별 마지막 갱신 시각과 성공 여부
+```
+
+## 4. D1 스키마
+
+```sql
+-- 방송국. radio-browser 에서 받아 정규화한 결과
+CREATE TABLE stations (
+  id            TEXT PRIMARY KEY,      -- 'rb:<uuid>' 또는 'kr:<slug>'
+  source        TEXT NOT NULL,         -- 'radio_browser' | 'manual'
+  name          TEXT NOT NULL,
+  stream_url    TEXT NOT NULL,
+  homepage      TEXT,
+  favicon       TEXT,
+  country_code  TEXT,
+  language      TEXT,
+  codec         TEXT,
+  bitrate       INTEGER,
+  votes         INTEGER DEFAULT 0,
+  clicks        INTEGER DEFAULT 0,
+  is_hidden     INTEGER DEFAULT 0,     -- 1 이면 한국 지상파. 토큰 없이는 안 준다
+  updated_at    TEXT NOT NULL
+);
+
+-- 정규화된 태그. 'pop','POP','música pop','Pop Music' → 'pop'
+CREATE TABLE station_tags (
+  station_id TEXT NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
+  tag        TEXT NOT NULL,
+  PRIMARY KEY (station_id, tag)
+);
+
+-- LLM 이 붙인 분위기. calm, energetic, late-night, focus, background ...
+CREATE TABLE station_moods (
+  station_id TEXT NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
+  mood       TEXT NOT NULL,
+  confidence REAL,
+  PRIMARY KEY (station_id, mood)
+);
+
+-- 스트림 생사. 앱 신고와 서버 점검 결과가 함께 쌓인다
+CREATE TABLE station_health (
+  station_id     TEXT PRIMARY KEY REFERENCES stations(id) ON DELETE CASCADE,
+  last_ok_at     TEXT,
+  last_fail_at   TEXT,
+  fail_streak    INTEGER DEFAULT 0,
+  report_count   INTEGER DEFAULT 0,
+  excluded       INTEGER DEFAULT 0     -- 1 이면 추천에서 제외
+);
+
+-- 상황별 추천 세트. 하루 한 번 배치로 만든다
+CREATE TABLE recommendation_sets (
+  id         TEXT PRIMARY KEY,         -- 'sleep|weekday|22-02|KR'
+  situation  TEXT NOT NULL,
+  daypart    TEXT NOT NULL,            -- '22-02' 같은 시간대 구간
+  day_type   TEXT NOT NULL,            -- 'weekday' | 'weekend'
+  country    TEXT NOT NULL,
+  payload    TEXT NOT NULL,            -- 항목 배열 JSON. reason 포함
+  model      TEXT,                     -- 어느 모델이 만들었는지
+  created_at TEXT NOT NULL
+);
+
+-- 팟캐스트
+CREATE TABLE podcasts (
+  feed_id     TEXT PRIMARY KEY,        -- Podcast Index feed id
+  title       TEXT NOT NULL,
+  author      TEXT,
+  feed_url    TEXT NOT NULL,
+  artwork     TEXT,
+  language    TEXT,
+  categories  TEXT,                    -- JSON 배열
+  updated_at  TEXT NOT NULL
+);
+
+-- 기기와 알람
+CREATE TABLE devices (
+  install_id  TEXT PRIMARY KEY,
+  push_token  TEXT,
+  platform    TEXT DEFAULT 'ios',
+  app_version TEXT,
+  hidden_unlocked INTEGER DEFAULT 0,
+  last_seen_at TEXT
+);
+
+CREATE TABLE alarms (
+  id          TEXT PRIMARY KEY,
+  install_id  TEXT NOT NULL REFERENCES devices(install_id) ON DELETE CASCADE,
+  hour        INTEGER NOT NULL,
+  minute      INTEGER NOT NULL,
+  weekdays    TEXT NOT NULL,           -- '2,3,4,5,6'
+  timezone    TEXT NOT NULL,
+  source_kind TEXT NOT NULL,           -- 'station' | 'podcast' | 'auto'
+  source_id   TEXT,
+  situation   TEXT,
+  enabled     INTEGER DEFAULT 1,
+  next_fire_at TEXT,                  -- UTC. 시간대별 계산을 매분 하지 않도록 미리 써 둔다
+  last_sent_at TEXT,
+  created_at  TEXT NOT NULL
+);
+
+CREATE INDEX idx_stations_country ON stations(country_code, is_hidden);
+CREATE INDEX idx_alarms_due ON alarms(enabled, next_fire_at);
+```
+
+## 5. 배치 작업 (Cron Trigger)
+
+| 주기 | 일 |
+| --- | --- |
+| 분마다 | `next_fire_at` 이 지난 알람 조회, APNs 발송, 다음 발송 시각 갱신 |
+| 6시간마다 | radio-browser 동기화. 새 방송국만 태그 정규화·분위기 분류 |
+| 매일 04:00 KST | 상황별 추천 세트 재생성 |
+| 매일 | 스트림 생사 점검. `fail_streak >= 3` 이면 `excluded = 1` |
+| 매일 | Podcast Index 인기 목록 갱신 |
+
+## 6. 시작 규모
+
+전 세계 방송국을 전부 넣지 않는다. 처음에는 **한국 116개 + 주요 국가 인기순 상위**로 수천 개 규모로 시작하고, 사용자가 실제로 듣는 나라부터 넓힌다. 태그 정규화와 분위기 분류에 드는 LLM 비용이 방송국 수에 비례하기 때문이다.
+
+## 7. 데이터 소스 조건
+
+| 소스 | 라이선스 | 비용 | 제약 |
+| --- | --- | --- | --- |
+| radio-browser | 데이터는 퍼블릭 도메인, 소프트웨어는 오픈소스. *"You may use it in free and non free software"* [[S1]](#s1) [[S2]](#s2) | 무료, 키 없음 | User-Agent 필수. 서버 주소 하드코딩 금지 |
+| Podcast Index | MIT. *"always be available for free, for any use"* [[S3]](#s3) | 무료, 키 발급 | 재판매 금지. 사용량 제한은 서버 재량 |
+| iTunes Search | 명시 없음 | 무료, 키 없음 | **분당 약 20회** (IP 기준) [[S4]](#s4) |
+
+iTunes Search 는 주 소스로 쓰지 않는다. Podcast Index 에 한국 팟캐스트 메타데이터가 빈약할 때 보완용으로만 쓰고, 결과는 D1 에 캐시해 호출 수를 줄인다.
+
+## 8. 출처
+
+- <a id="s1"></a>**[S1]** [API.radio-browser.info docs](https://api.radio-browser.info/)
+- <a id="s2"></a>**[S2]** [radio-browser.info FAQ](https://www.radio-browser.info/faq)
+- <a id="s3"></a>**[S3]** [Podcast Index — Terms of Service](https://api.podcastindex.org/tos_v1.0.html)
+- <a id="s4"></a>**[S4]** [iTunes Search API: Constructing Searches](https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/Searching.html)
+- <a id="s5"></a>**[S5]** [APNS HTTP/2 Requests via fetch() Failing on macOS but Working in Workers — cloudflare/workerd #4841](https://github.com/cloudflare/workerd/issues/4841)
+- <a id="s6"></a>**[S6]** [cloudflare-apns2 — Workers 용 APNs 클라이언트](https://github.com/FiveSheepCo/cloudflare-apns2)
