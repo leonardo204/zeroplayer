@@ -20,6 +20,14 @@ final class AudioSessionManager {
     var onOutputDeviceLost: (() -> Void)?
 
     private var isActive = false
+    /// 카테고리는 한 번만 잡는다.
+    private var didSetCategory = false
+    /// 앞서 띄운 세션 작업. 다음 작업은 이것이 끝난 뒤에 한다.
+    ///
+    /// `deactivate()` 는 호출자를 기다리게 하지 않으려고 뒤에서 도는데, 그대로 두면
+    /// 방금 켠 세션을 뒤늦게 끄는 일이 생긴다(프리셋 자동 선택이 죽은 방송을 만나
+    /// 다음 후보로 넘어갈 때 실제로 그 순서가 된다). 그래서 부른 순서를 여기서 지킨다.
+    private var pending: Task<Void, Never>?
 
     /// 이 객체는 앱이 사는 동안 그대로 있어서 관찰자를 따로 해제하지 않는다.
     init() {
@@ -50,22 +58,52 @@ final class AudioSessionManager {
         }
     }
 
-    /// 재생을 시작하기 직전에 부른다. 이미 켜져 있으면 아무 일도 하지 않는다.
-    func activate() throws {
-        let session = AVAudioSession.sharedInstance()
-        if !isActive {
-            try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+    /// 재생을 시작하기 직전에 부른다.
+    ///
+    /// `setCategory`·`setActive` 는 메인 스레드에서 부르면 AVFoundation 이
+    /// "UI unresponsiveness" 경고를 남긴다. 실제로 수십 밀리초를 잡아먹는 호출이라
+    /// 방송을 누른 순간 화면이 멈칫한다. 그래서 메인 스레드 밖에서 부르고 결과만 기다린다.
+    func activate() async throws {
+        await pending?.value
+        pending = nil
+
+        let needsCategory = !didSetCategory
+        try await Self.offMainThread {
+            let session = AVAudioSession.sharedInstance()
+            if needsCategory {
+                try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+            }
+            try session.setActive(true)
         }
-        try session.setActive(true)
+        didSetCategory = true
         isActive = true
     }
 
     /// 완전히 멈출 때만 부른다. 일시정지에서는 세션을 내리지 않는다.
     /// 세션을 내려야 다른 앱이 오디오를 돌려받는다.
+    ///
+    /// 세션을 내리는 것은 아무도 기다릴 필요가 없어서 뒤에서 돈다. 다만 앞선 작업과
+    /// 순서가 뒤바뀌지 않게 `pending` 으로 이어 붙인다.
     func deactivate() {
         guard isActive else { return }
-        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
         isActive = false
+        let previous = pending
+        pending = Task { [weak self] in
+            await previous?.value
+            guard self != nil else { return }
+            try? await Self.offMainThread {
+                try AVAudioSession.sharedInstance()
+                    .setActive(false, options: [.notifyOthersOnDeactivation])
+            }
+        }
+    }
+
+    /// 메인 스레드 밖에서 한 번 실행하고 끝날 때까지 기다린다.
+    /// `AVAudioSession` 은 어느 스레드에서 불러도 되는 객체다.
+    nonisolated private static func offMainThread(
+        _ body: @escaping @Sendable () throws -> Void
+    ) async throws {
+        try await Task.detached(priority: .userInitiated, operation: body).value
     }
 
     nonisolated private static func parseInterruption(_ note: Notification) -> Interruption? {

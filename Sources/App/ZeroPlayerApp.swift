@@ -210,6 +210,15 @@ struct ZeroPlayerApp: App {
         // 'kr:' 로 시작하면 지상파다. 해제 토큰이 있어야 주소를 받는다.
         let kind: SourceKind = id.hasPrefix("kr:") ? .hidden : .station
         await player.play(PlayableItem(id: id, kind: kind, title: id))
+
+        // 일시정지했다가 다시 재생하는 길을 손으로 누르지 않고 확인한다.
+        // `-ZPPauseResume 1` 로 켠다.
+        if UserDefaults.standard.string(forKey: "ZPPauseResume") == "1" {
+            try? await Task.sleep(for: .seconds(5))
+            player.pause()
+            try? await Task.sleep(for: .seconds(3))
+            await player.resume()
+        }
         #endif
     }
 }

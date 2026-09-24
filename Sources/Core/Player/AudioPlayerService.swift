@@ -17,7 +17,7 @@ protocol AudioPlaying: AnyObject {
 
     func play(_ item: PlayableItem, origin: PlaybackOrigin) async
     func pause()
-    func resume()
+    func resume() async
     func stop()
     func next() async
     func previous() async
@@ -155,12 +155,15 @@ final class AudioPlayerService: AudioPlaying {
         guard current?.id == item.id else { return }
 
         do {
-            try session.activate()
+            try await session.activate()
         } catch {
             log.error("오디오 세션을 못 켰다: \(String(describing: error))")
             fail(.unknown("audio session"))
             return
         }
+
+        // 세션을 켜는 사이에 다른 항목으로 넘어갔을 수 있다. 이제는 await 가 하나 더 있다.
+        guard current?.id == item.id else { return }
 
         log.info("재생 시도: \(url.absoluteString, privacy: .public)")
         let asset = AVURLAsset(url: url)
@@ -196,15 +199,17 @@ final class AudioPlayerService: AudioPlaying {
         pushNowPlaying()
     }
 
-    func resume() {
+    func resume() async {
         guard state == .paused, let player else { return }
         do {
-            try session.activate()
+            try await session.activate()
         } catch {
             log.error("재개할 때 오디오 세션을 못 켰다: \(String(describing: error))")
             fail(.unknown("audio session"))
             return
         }
+        // 세션을 켜는 사이에 사용자가 정지했거나 다른 것을 틀었을 수 있다.
+        guard state == .paused, self.player === player else { return }
         liveStartedAt = Date()
         player.play()
         state = .playing
@@ -560,7 +565,7 @@ final class AudioPlayerService: AudioPlaying {
             case .ended(let shouldResume):
                 guard self.pausedByInterruption else { return }
                 self.pausedByInterruption = false
-                if shouldResume { self.resume() }
+                if shouldResume { Task { await self.resume() } }
             }
         }
 
@@ -573,7 +578,11 @@ final class AudioPlayerService: AudioPlaying {
         nowPlaying.wire(.init(
             play: { [weak self] in
                 guard let self else { return }
-                if self.state == .paused { self.resume() } else if self.state == .playing { self.pause() }
+                if self.state == .paused {
+                    Task { await self.resume() }
+                } else if self.state == .playing {
+                    self.pause()
+                }
             },
             pause: { [weak self] in self?.pause() },
             stop: { [weak self] in self?.stop() },

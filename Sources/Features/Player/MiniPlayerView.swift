@@ -88,7 +88,7 @@ struct MiniPlayerView: View {
         if player.state == .playing {
             player.pause()
         } else {
-            player.resume()
+            Task { await player.resume() }
         }
     }
 }

@@ -97,7 +97,6 @@ final class NowPlayingCenter {
     ) {
         guard let item else {
             infoCenter.nowPlayingInfo = nil
-            infoCenter.playbackState = .stopped
             setScrubEnabled(false)
             artworkTask?.cancel()
             artworkTask = nil
@@ -123,8 +122,11 @@ final class NowPlayingCenter {
             info[MPMediaItemPropertyArtwork] = cachedArtwork
         }
 
+        // `playbackState` 는 설정하지 않는다. iOS 에서는
+        // `com.apple.mediaremote.set-playback-state` 엔타이틀먼트가 있는 앱만 쓸 수 있고,
+        // 없으면 시스템이 무시하면서 로그에 경고만 남긴다. 재생 여부는 위의
+        // `MPNowPlayingInfoPropertyPlaybackRate` 로 이미 전달된다.
         infoCenter.nowPlayingInfo = info
-        infoCenter.playbackState = isPlaying ? .playing : .paused
 
         if shownArtworkURL != artworkURL {
             loadArtwork(artworkURL)

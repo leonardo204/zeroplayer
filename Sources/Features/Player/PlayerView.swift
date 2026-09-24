@@ -151,7 +151,11 @@ struct PlayerView: View {
             }
 
             Button {
-                if player.state == .playing { player.pause() } else { player.resume() }
+                if player.state == .playing {
+                    player.pause()
+                } else {
+                    Task { await player.resume() }
+                }
             } label: {
                 Image(systemName: player.state == .playing ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 64))
