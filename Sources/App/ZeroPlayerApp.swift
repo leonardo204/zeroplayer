@@ -167,6 +167,10 @@ struct ZeroPlayerApp: App {
     /// 릴리스 빌드에는 들어가지 않는다.
     private func autoPlayIfRequested() async {
         #if DEBUG
+        if UserDefaults.standard.string(forKey: "ZPFakeNowPlaying") == "1" {
+            player.debugShowFakeItem()
+            return
+        }
         if let id = UserDefaults.standard.string(forKey: "ZPAutoEpisode"), !id.isEmpty {
             let feedID = id.split(separator: ":").prefix(2).joined(separator: ":")
             await player.play(PlayableItem(

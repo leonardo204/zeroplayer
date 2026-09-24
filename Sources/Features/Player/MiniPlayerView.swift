@@ -30,6 +30,8 @@ struct MiniPlayerView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(.bar)
+            // 탭바 바로 위에 쌓인다. 둘 다 바 재질이라 선이 없으면 경계가 안 보인다.
+            .overlay(alignment: .top) { Divider() }
             .contentShape(Rectangle())
             .onTapGesture(perform: onTap)
         }

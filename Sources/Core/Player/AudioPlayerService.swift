@@ -212,6 +212,22 @@ final class AudioPlayerService: AudioPlaying {
     }
 
     /// 실패한 뒤 사용자가 다시 시도할 때 쓴다.
+#if DEBUG
+    /// 시뮬레이터에서 화면 배치만 확인하려고 둔 통로다.
+    /// 시뮬레이터는 실제 재생이 죽어서 미니 플레이어를 띄울 방법이 없다.
+    /// `-ZPFakeNowPlaying 1` 로 켠다. 릴리스 빌드에는 들어가지 않는다.
+    func debugShowFakeItem() {
+        current = PlayableItem(
+            id: "debug.fake",
+            kind: .station,
+            title: "확인용 방송",
+            subtitle: "미니 플레이어 자리 확인"
+        )
+        state = .paused
+        elapsed = 0
+    }
+#endif
+
     func retry() async {
         guard let item = current else { return }
         await play(item, origin: origin)

@@ -45,6 +45,9 @@ xcrun simctl launch booted com.zerolive.cloudRadioN \
   -ZPStartTab presets -ZPAutoPreset 취침 -ZPTimerSeconds 45
 ```
 
+`ZPFakeNowPlaying 1` 은 재생 없이 미니 플레이어만 띄운다. 시뮬레이터는 실제 재생이
+죽어서(6-12 참고) 미니 플레이어가 걸린 화면을 볼 방법이 이것뿐이다.
+
 `Logger.info` 는 기본 로그 스트림에 안 나온다. `--level info` 를 빼면 실패 줄만 보인다.
 
 ## 2. 저장소 두 곳

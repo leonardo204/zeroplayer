@@ -41,29 +41,29 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $selection) {
             RecommendView()
+                .withMiniPlayer { isPlayerPresented = true }
                 .tabItem { Label("추천", systemImage: "sparkles") }
                 .tag(Tab.recommend)
 
             DiscoverView()
+                .withMiniPlayer { isPlayerPresented = true }
                 .tabItem { Label("탐색", systemImage: "magnifyingglass") }
                 .tag(Tab.discover)
 
             PresetsView()
+                .withMiniPlayer { isPlayerPresented = true }
                 .tabItem { Label("프리셋", systemImage: "square.grid.2x2") }
                 .tag(Tab.presets)
 
             StatsView()
+                .withMiniPlayer { isPlayerPresented = true }
                 .tabItem { Label("기록", systemImage: "chart.bar") }
                 .tag(Tab.stats)
 
             SettingsView()
+                .withMiniPlayer { isPlayerPresented = true }
                 .tabItem { Label("설정", systemImage: "gearshape") }
                 .tag(Tab.settings)
-        }
-        .safeAreaInset(edge: .bottom) {
-            if player.current != nil {
-                MiniPlayerView(onTap: { isPlayerPresented = true })
-            }
         }
         .sheet(isPresented: $isPlayerPresented) {
             PlayerView()
@@ -117,6 +117,30 @@ struct RootView: View {
 
         try? await Task.sleep(for: .seconds(4))
         alarmBanner = nil
+    }
+}
+
+/// 미니 플레이어를 탭 내용 아래에 끼운다.
+///
+/// TabView 자체에 `safeAreaInset` 을 걸면 미니 플레이어가 탭바 자리에 들어앉아
+/// 재생 중에는 다른 탭으로 갈 수 없다. 탭 하나하나의 내용에 걸어야
+/// 탭바는 그대로 남고 미니 플레이어가 그 위에 쌓인다.
+private extension View {
+    func withMiniPlayer(onTap: @escaping () -> Void) -> some View {
+        modifier(MiniPlayerInset(onTap: onTap))
+    }
+}
+
+private struct MiniPlayerInset: ViewModifier {
+    @Environment(AudioPlayerService.self) private var player
+    let onTap: () -> Void
+
+    func body(content: Content) -> some View {
+        content.safeAreaInset(edge: .bottom, spacing: 0) {
+            if player.current != nil {
+                MiniPlayerView(onTap: onTap)
+            }
+        }
     }
 }
 
