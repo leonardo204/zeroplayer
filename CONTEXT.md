@@ -304,6 +304,32 @@ npx wrangler secret put PI_SECRET
 - [ ] 팟캐스트 검색·에피소드 목록·이어듣기 줄을 눌러 여는 동작
 - [ ] 재생 화면의 진행 바를 끌어 옮기기와 재생 속도 바꾸기
 
+## 6-9. 랜딩 페이지와 광고 준비
+
+앱 소개와 광고 게시자 선언을 맡는 Worker 가 `worker/` 에 따로 있다. 앱이 부르는 API
+(`server/`, `ai.zerolive.co.kr/zp/v1`)와 다른 Worker 다. 둘을 섞지 않는다.
+
+| 이름 | 값 |
+| --- | --- |
+| Worker | `zeroplayer-landing` |
+| 주소 | `https://zeroplayer.zerolive.co.kr` (custom domain) |
+| 배포 | `cd worker && npm install --include=dev && npx wrangler deploy` |
+| 경로 | `/` `/en` `/privacy` `/en/privacy` `/support` `/en/support` `/app-ads.txt` `/robots.txt` `/sitemap.xml` `/llms.txt` |
+
+랜딩 본문은 2.0 기준으로 썼다. 스토어에 올라가 있는 것은 아직 1.7(유튜브 재생)이다.
+
+**app-ads.txt 는 도메인이 전부다.** 파일 내용은 모든 zerolive 앱이 같다
+(`google.com, pub-4410880415888380, DIRECT, f08c47fec0942fa0`). AdMob 은 **App Store 앱
+페이지의 '개발자 웹사이트'** 를 보고 그 도메인의 루트에서 이 파일을 찾는다. 그 값은
+App Store Connect 의 **마케팅 URL** 이다. 지금 zeroPlayer(id1610259595)에는 마케팅 URL 이
+비어 있어서 AdMob 이 크롤할 곳이 없다 — 앱 인증이 막힌 원인이 이것이다.
+`https://zeroplayer.zerolive.co.kr` 를 마케팅 URL 로 넣은 뒤 AdMob 에서 다시 확인해야 한다.
+스토어 페이지에 반영되기까지 하루 정도 걸리고, AdMob 크롤도 하루 안팎 기다려야 한다.
+
+바닥글 상호 링크는 `worker/src/render.ts` 의 `SIBLINGS` 에 있다. zerolive-root 의
+`robots.txt` 사이트맵 줄에는 zeroplayer 를 넣어 뒀다. 다만 **다른 랜딩 6곳의 `SIBLINGS` 에는
+아직 zeroplayer 를 안 넣었다** — 각 저장소를 열어 한 줄씩 더하고 배포해야 한다.
+
 ## 7. 정해둔 것과 아직 안 정한 것
 
 **정한 것**
@@ -324,11 +350,15 @@ npx wrangler secret put PI_SECRET
 
 **아직 안 정한 것**
 
-- APNs 인증 키(.p8)를 아직 안 만들었다. App Store Connect 키와 별개다. M6 에서 필요하다
-- Podcast Index 키를 신청했고 검증 메일을 기다리는 중이다. 없어도 M5 기능은 돈다(6-6 참고)
+- Podcast Index 키를 받아 Worker 시크릿 `PI_KEY`·`PI_SECRET` 에 넣었다. 검색과 인기 목록이
+  Podcast Index 로 돈다(`/zp/v1/health` 의 `podcastIndexKeys` 로 확인한다)
+- APNs 인증 키를 받았다. Key ID `J32837LLMM`, Team `XU8HS9JUTS`. 파일은
+  `AuthKey_J32837LLMM.p8` 이고 저장소 맨 위에 두되 `.gitignore` 의 `*.p8` 로 막혀 있다.
+  **재다운로드가 안 되는 유일본이다** — 집 서버 `~/work/backup/certs/` 와 R2 에 사본을 둔다.
+  번들 ID `com.zerolive.cloudRadioN` 에 Push Notifications 를 켰고 Time Sensitive 는 신청했다
 - 방송국을 받아오는 나라는 지금 15개다. 사용자가 실제로 듣는 나라를 보고 넓힌다
   (`server/wrangler.toml` 의 `SYNC_TOP_COUNTRIES`)
-- AdMob 광고 단위 ID 를 아직 안 만들었다. M8
+- AdMob 앱 등록이 앱 인증에서 막혀 있다. 원인과 푸는 법은 6-9 절. 광고 단위 ID 는 M8
 
 ## 8. 아직 안 끝난 숙제
 

@@ -1,0 +1,22 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "zeroplayer-landing",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS"
+	},
+	"observability": {
+		"enabled": true
+	},
+	// 소개·정책·app-ads.txt 만 맡는다. 앱이 부르는 API 는 ai.zerolive.co.kr/zp/v1 의
+	// 별도 Worker(zeroplayer-api, 이 저장소의 server/)가 받는다. 둘을 섞지 않는다.
+	"routes": [
+		{
+			"pattern": "zeroplayer.zerolive.co.kr",
+			"custom_domain": true
+		}
+	]
+}
