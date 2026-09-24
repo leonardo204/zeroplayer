@@ -6,7 +6,23 @@ struct RootView: View {
     }
 
     @Environment(AudioPlayerService.self) private var player
-    @State private var selection: Tab = .recommend
+    @State private var selection: Tab = RootView.initialTab
+
+    /// 시뮬레이터에서 특정 탭을 바로 열어 확인하려고 둔 통로다.
+    /// `-ZPStartTab discover` 로 켠다. 릴리스 빌드에서는 항상 추천 탭이다.
+    private static var initialTab: Tab {
+        #if DEBUG
+        switch UserDefaults.standard.string(forKey: "ZPStartTab") {
+        case "discover": return .discover
+        case "presets": return .presets
+        case "stats": return .stats
+        case "settings": return .settings
+        default: return .recommend
+        }
+        #else
+        return .recommend
+        #endif
+    }
     @State private var isPlayerPresented = false
 
     var body: some View {

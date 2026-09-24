@@ -46,14 +46,19 @@ curl 로 부르면 200 이 온다. 시뮬레이터만의 동작일 수 있어 �
 
 ## M2 — 프록시와 데이터
 
-- Worker 배포, D1 스키마 적용
-- radio-browser 동기화 (한국 116개 + 주요 국가 인기순, 수천 개 규모)
-- `GET /stations`, `/stations/{id}/stream`, `/stations/facets`
-- 태그 정규화 배치 (Workers AI)
-- 스트림 생사 점검 배치
-- 앱: 탐색 탭, SwiftData 캐시, 오프라인 폴백
+- [x] Worker 배포, D1 스키마 적용 — `zeroplayer-api`, 라우트 `ai.zerolive.co.kr/zp/v1/*`
+- [x] radio-browser 동기화 — 한국 114개 + 14개국 인기순, 모두 2,845개
+- [x] `GET /stations`, `/stations/{id}/stream`, `/stations/facets`, `POST /stations/{id}/report`
+- [x] 태그 정규화 배치 (규칙 + Workers AI `llama-3.3-70b-instruct-fp8-fast`)
+- [x] 스트림 생사 점검 배치 (매시 150건, IP 주소는 판정 보류)
+- [x] 앱: 탐색 탭, SwiftData 캐시, 오프라인 폴백
 
-**완료 기준** — 앱에 스트림 주소가 한 줄도 없다. 비행기 모드에서 방송국 목록이 보인다. 서버에서 방송국 한 줄을 지우면 앱에서 사라진다.
+**완료 기준 — 채웠다.** 앱 소스에 스트림 주소가 없다(`zerolive.co.kr` 외 도메인 0건).
+프록시에 닿지 못하면 캐시 50건이 그대로 보인다. D1 에서 방송국 한 줄을 지우니 목록에서 사라졌다
+(엣지 캐시 때문에 최대 5분 걸린다).
+
+여기서 드러난 것은 `CONTEXT.md` 6번에 적었다. 평문 HTTP 35%, 한국 지상파 HLS 토큰 만료,
+Cloudflare 의 IP 직접 접근 차단 세 가지다.
 
 ## M3 — 프리셋과 타이머
 

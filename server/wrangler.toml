@@ -1,0 +1,33 @@
+name = "zeroplayer-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+# 기존 ai.zerolive.co.kr 서비스는 그대로 두고 /zp/v1 아래만 이 Worker 가 받는다.
+routes = [
+  { pattern = "ai.zerolive.co.kr/zp/v1/*", zone_name = "zerolive.co.kr" }
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "zeroplayer"
+database_id = "04fa254c-e308-45cc-b258-349fc37d0b8b"
+
+[ai]
+binding = "AI"
+
+[observability]
+enabled = true
+
+[triggers]
+# 6시간마다 radio-browser 동기화, 매시 17분에 스트림 생사 점검 한 묶음,
+# 매일 20:40 UTC(= 05:40 KST) 에 태그 정규화.
+crons = ["0 */6 * * *", "17 * * * *", "40 20 * * *"]
+
+[vars]
+# 전체를 받아 사라진 방송국까지 정리하는 나라
+SYNC_FULL_COUNTRIES = "KR"
+# 인기순 상위만 받는 나라. 순위 밖으로 밀린 항목은 지우지 않는다
+SYNC_TOP_COUNTRIES = "US,JP,GB,DE,FR,CA,AU,IT,ES,NL,BR,MX,SE,PL"
+SYNC_TOP_PER_COUNTRY = "200"
+STREAM_CHECK_BATCH = "150"

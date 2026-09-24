@@ -19,3 +19,8 @@ Secrets.xcconfig
 
 # XcodeGen 생성물
 Sources/App/Info.plist
+
+# Cloudflare Worker (server/)
+server/node_modules/
+server/.wrangler/
+server/.dev.vars

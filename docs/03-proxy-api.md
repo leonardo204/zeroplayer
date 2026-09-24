@@ -75,10 +75,14 @@ GET /zp/v1/recommend
 ### 3.2 방송국
 
 ```
-GET /zp/v1/stations?country=KR&tag=jazz&lang=ko&q=&sort=popular&limit=50&cursor=
+GET /zp/v1/stations?country=KR&tag=jazz&lang=ko&q=&sort=popular&secure=1&limit=50&cursor=
 GET /zp/v1/stations/{id}
 GET /zp/v1/stations/facets          → 국가·태그·언어 목록과 각 개수
 ```
+
+`secure=1` 은 HTTPS 스트림만 내려준다. 목록 항목의 `isSecure` 도 같은 값을 담는다.
+평문 HTTP 를 못 여는 기기에서 걸러 내려고 M2 에서 더했다. `cursor` 는 오프셋 문자열이다.
+목록과 facets 응답에는 5분 엣지 캐시가 붙는다.
 
 ```
 GET /zp/v1/stations/{id}/stream
@@ -196,7 +200,26 @@ CREATE TABLE stations (
   votes         INTEGER DEFAULT 0,
   clicks        INTEGER DEFAULT 0,
   is_hidden     INTEGER DEFAULT 0,     -- 1 이면 한국 지상파. 토큰 없이는 안 준다
+  raw_tags      TEXT,                  -- radio-browser 원문. 정규화 규칙이 바뀌면 여기서 다시 계산한다
   updated_at    TEXT NOT NULL
+);
+
+-- radio-browser 원시 태그를 표준 태그로 옮기는 표. 규칙으로 못 줄인 것만 LLM 이 채운다.
+-- normalized 가 NULL 이면 판정 전, 빈 문자열이면 '맞는 표준 태그 없음' 이다.
+CREATE TABLE tag_aliases (
+  raw        TEXT PRIMARY KEY,
+  normalized TEXT,
+  origin     TEXT NOT NULL,           -- 'rule' | 'ai' | 'manual'
+  created_at TEXT NOT NULL
+);
+
+-- 배치가 어디까지 했는지. /zp/v1/health 가 이 표를 읽는다
+CREATE TABLE sync_state (
+  job         TEXT PRIMARY KEY,       -- 'radio_browser:KR', 'stream_check', 'tag_normalize'
+  last_run_at TEXT,
+  last_ok_at  TEXT,
+  ok          INTEGER DEFAULT 0,
+  detail      TEXT
 );
 
 -- 정규화된 태그. 'pop','POP','música pop','Pop Music' → 'pop'
@@ -283,9 +306,10 @@ CREATE INDEX idx_alarms_due ON alarms(enabled, next_fire_at);
 | 주기 | 일 |
 | --- | --- |
 | 분마다 | `next_fire_at` 이 지난 알람 조회, APNs 발송, 다음 발송 시각 갱신 |
-| 6시간마다 | radio-browser 동기화. 새 방송국만 태그 정규화·분위기 분류 |
-| 매일 04:00 KST | 상황별 추천 세트 재생성 |
-| 매일 | 스트림 생사 점검. `fail_streak >= 3` 이면 `excluded = 1` |
+| 6시간마다 | radio-browser 동기화. 전체를 받는 나라는 사라진 방송국까지 정리한다 |
+| 매일 05:40 KST | 판정 대기 태그를 Workers AI 로 정규화하고 태그를 다시 계산 |
+| 매일 04:00 KST | 상황별 추천 세트 재생성 (M4) |
+| 매시 17분 | 스트림 생사 점검 150건. `fail_streak >= 3` 이면 `excluded = 1`. IP 주소로 된 주소는 판정을 미룬다 — Cloudflare 안에서 IP 직접 접근이 막혀 살았는지 알 수 없다 |
 | 매일 | Podcast Index 인기 목록 갱신 |
 
 ## 6. 시작 규모

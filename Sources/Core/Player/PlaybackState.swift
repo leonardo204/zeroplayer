@@ -30,3 +30,13 @@ enum PlaybackFailure: Equatable, Sendable {
         }
     }
 }
+
+extension PlaybackFailure {
+    /// 서버에 보낼 신고 사유. 사용자가 끈 경우처럼 방송국 잘못이 아닌 것은 보내지 않는다.
+    var reportCode: String? {
+        switch self {
+        case .noAudio: "no_audio"
+        case .network, .unknown: "error"
+        }
+    }
+}

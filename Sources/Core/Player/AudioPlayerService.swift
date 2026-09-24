@@ -34,6 +34,7 @@ final class AudioPlayerService: AudioPlaying {
     static let firstAudioTimeout: Duration = .seconds(15)
 
     @ObservationIgnored private let resolver: StreamResolving
+    @ObservationIgnored private let reporter: StreamReporting
     @ObservationIgnored private let session = AudioSessionManager()
     @ObservationIgnored private let nowPlaying = NowPlayingCenter()
     @ObservationIgnored private let log = Logger(subsystem: "com.zerolive.cloudRadioN", category: "player")
@@ -53,8 +54,12 @@ final class AudioPlayerService: AudioPlaying {
     /// 인터럽트 때문에 우리가 멈춘 것인지 구분한다.
     @ObservationIgnored private var pausedByInterruption = false
 
-    init(resolver: StreamResolving = DemoStreamResolver()) {
+    init(
+        resolver: StreamResolving = ProxyStreamResolver(),
+        reporter: StreamReporting = ProxyClient()
+    ) {
         self.resolver = resolver
+        self.reporter = reporter
         wireSession()
         wireRemoteCommands()
     }
@@ -93,9 +98,7 @@ final class AudioPlayerService: AudioPlaying {
         }
 
         log.info("재생 시도: \(url.absoluteString, privacy: .public)")
-        let asset = AVURLAsset(url: url, options: [
-            "AVURLAssetHTTPHeaderFieldsKey": ["User-Agent": AppConfig.userAgent],
-        ])
+        let asset = AVURLAsset(url: url)
         let playerItem = AVPlayerItem(asset: asset)
         // 라이브는 앞부분을 받아둬도 쓸모가 없다. 시작을 앞당기는 쪽으로 둔다.
         playerItem.preferredForwardBufferDuration = item.isLive ? 3 : 0
@@ -341,10 +344,17 @@ final class AudioPlayerService: AudioPlaying {
     }
 
     private func fail(_ reason: PlaybackFailure) {
+        let reported = current
         teardownCurrentItem()
         session.deactivate()
         state = .failed(reason)
         pushNowPlaying()
+
+        guard let reported, reported.kind == .station, let code = reason.reportCode else { return }
+        let reporter = self.reporter
+        Task.detached(priority: .background) {
+            await reporter.reportDeadStream(stationID: reported.id, reason: code)
+        }
     }
 
     private func teardownCurrentItem() {

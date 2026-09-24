@@ -1,0 +1,84 @@
+# zeroplayer-api — 프록시 Worker
+
+앱이 부르는 서버는 이 Worker 하나다. `ai.zerolive.co.kr/zp/v1/*` 만 받고, 같은 도메인의
+나머지 경로는 원래 있던 서비스가 그대로 가져간다.
+
+## 배포
+
+```sh
+cd server
+export PATH="/opt/homebrew/bin:$PATH"
+npm install --include=dev      # NODE_ENV=production 이라 --include=dev 가 필요하다
+npx wrangler deploy
+```
+
+D1 스키마를 바꿀 때는 `migrations/` 에 파일을 더하고 적용한다.
+
+```sh
+npx wrangler d1 migrations apply zeroplayer --remote
+```
+
+| 이름 | 값 |
+| --- | --- |
+| Worker | `zeroplayer-api` |
+| 라우트 | `ai.zerolive.co.kr/zp/v1/*` (zone `zerolive.co.kr`) |
+| D1 | `zeroplayer` · `04fa254c-e308-45cc-b258-349fc37d0b8b` |
+| Workers AI | 태그 정규화에 `@cf/meta/llama-3.3-70b-instruct-fp8-fast` |
+
+## 앱이 쓰는 경로
+
+```
+GET  /zp/v1/health
+GET  /zp/v1/stations?country=KR&tag=jazz&lang=ko&q=&sort=popular&secure=1&limit=50&cursor=
+GET  /zp/v1/stations/facets
+GET  /zp/v1/stations/{id}
+GET  /zp/v1/stations/{id}/stream
+POST /zp/v1/stations/{id}/report   { "reason": "no_audio" | "error" | "wrong_content" }
+```
+
+`secure=1` 은 HTTPS 스트림만 내려준다. 목록 응답의 `isSecure` 도 같은 정보를 담는다.
+평문 HTTP 스트림을 못 여는 기기에서 걸러 내려고 둔 것이다(아래 5번).
+
+## 관리 경로
+
+전부 `X-ZP-Admin` 헤더가 필요하다. 토큰은 Worker 시크릿 `ADMIN_TOKEN` 이고 사본은
+`server/.dev.vars` 에 있다(git 에 올리지 않는다).
+
+```sh
+TOKEN=$(grep ADMIN_TOKEN .dev.vars | sed 's/.*= "//;s/"//')
+
+# 한 나라만 동기화. limit=0 이면 전체를 받고, prune=1 이면 사라진 방송국을 지운다
+curl -X POST -H "x-zp-admin: $TOKEN" \
+  "https://ai.zerolive.co.kr/zp/v1/admin/sync?country=KR&limit=0&prune=1"
+
+# 설정에 적힌 나라 전부
+curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/sync"
+
+# 판정 대기 태그를 LLM 에 넘긴다. 한 묶음이 25개, batches 로 묶음 수를 정한다
+curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/tags/normalize?batches=4"
+
+# 스트림 생사 점검 한 묶음
+curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/streams/check?size=150"
+```
+
+## 배치
+
+| 주기 | 하는 일 |
+| --- | --- |
+| 6시간마다 | radio-browser 동기화 |
+| 매시 17분 | 스트림 생사 점검 150건 (오래 안 본 것부터) |
+| 매일 20:40 UTC | 판정 대기 태그 정규화와 태그 재계산 |
+
+## 알아둘 것
+
+1. **radio-browser 서버는 하드코딩하지 않는다.** `all.api.radio-browser.info/json/servers` 로
+   목록을 받아 섞어 쓰고, 실패하면 다음 서버로 넘어간다. User-Agent 도 반드시 보낸다.
+2. **태그는 두 단계로 줄인다.** 규칙으로 줄 수 있는 것은 `src/lib/tags.ts` 의 표에서 끝내고,
+   남은 것만 LLM 에 묻는다. 판정 결과는 `tag_aliases` 에 쌓여 다시 묻지 않는다.
+   원문은 `stations.raw_tags` 에 그대로 있어서 규칙을 고치면 언제든 다시 계산할 수 있다.
+3. **IP 주소로 된 스트림은 점검하지 않는다.** Cloudflare 안에서는 IP 로 직접 나가는 요청이
+   1밀리초 만에 403 으로 막힌다. 살았는지 알 수 없으므로 판정을 미루고 앱 신고에만 맡긴다.
+4. **목록 응답은 엣지에 5분 캐시된다.** 서버에서 방송국을 지워도 앱에 사라지기까지 최대 5분이
+   걸린다. 즉시 확인하려면 쿼리 문자열을 바꿔 부른다.
+5. **평문 HTTP 스트림이 전체의 35%다.** 이것을 앱이 열 수 있는지는 아직 확정되지 않았다.
+   `CONTEXT.md` 의 M2 기록을 본다.
