@@ -8,10 +8,17 @@ struct ProxyStreamResolver: StreamResolving {
         self.client = client
     }
 
-    func streamURL(for item: PlayableItem) async throws -> URL {
-        let dto = item.kind == .podcast
-            ? try await client.episodeStream(episodeID: item.id)
-            : try await client.streamURL(stationID: item.id)
+    func streamURL(for item: PlayableItem, hiddenToken: String?) async throws -> URL {
+        let dto: StreamDTO
+        switch item.kind {
+        case .podcast:
+            dto = try await client.episodeStream(episodeID: item.id)
+        case .hidden:
+            guard let hiddenToken else { throw StreamResolveError.locked }
+            dto = try await client.hiddenStreamURL(channelID: item.id, token: hiddenToken)
+        case .station:
+            dto = try await client.streamURL(stationID: item.id)
+        }
         guard let url = URL(string: dto.url) else {
             throw StreamResolveError.notFound(item.id)
         }

@@ -3,16 +3,18 @@
 다른 세션에서 이 저장소를 처음 열었을 때 읽는 문서다. 지금까지 한 일과 다음에 할 일만 적는다.
 기획 배경과 근거는 `docs/` 에 번호순으로 있다. 처음이면 `docs/00-concept.md` 부터 읽는다.
 
-마지막 갱신: 2026-09-24 (M6 완료, 실기기 확인 전)
+마지막 갱신: 2026-09-24 (M7 완료, 실기기 확인 전)
 
 ## 1. 현재 상태
 
-M6 까지 들어갔다. 추천 탭에서 상황을 고르면 서버가 밤에 만들어 둔 목록이 나오고, 그 목록이
+M7 까지 들어갔다. 추천 탭에서 상황을 고르면 서버가 밤에 만들어 둔 목록이 나오고, 그 목록이
 기기에 쌓인 청취 기록으로 다시 세워진다. 프리셋을 누르면 같은 경로로 고른 방송이 재생되고,
 타이머가 끝나면 페이드아웃으로 꺼지고, 그 재생이 기록 탭에 남는다.
 탐색 탭에서 팟캐스트를 찾아 에피소드를 재생할 수 있고, 듣던 자리에서 이어진다.
 알람을 걸면 서버가 분마다 돌며 그 시각에 푸시를 보내고, 알림을 누르면 그 소스가 재생된다.
 서버에 닿지 못할 때를 대비해 같은 시각에 로컬 알림도 함께 걸어 둔다.
+설정의 버전 줄을 12번 누르면 탐색 탭에 '지상파' 가 나타나고 한국 지상파 14채널을
+지금 방송 중인 프로그램과 함께 들을 수 있다.
 실기기 확인(백그라운드 30분, 전화 인터럽트, 잠금화면 조작, 평문 HTTP, 알람 도착)은 아직 안 했다.
 
 ```sh
@@ -277,12 +279,12 @@ MBC 계열은 HTTPS 다. 방송국과 같은 문제라 에피소드 응답에도
 
 ## 6-8. M6 에서 알아낸 것
 
-**APNs 인증 키가 sandbox 전용으로 발급돼 있다.** 같은 JWT 로 가짜 기기 토큰을 보내 보면
-sandbox 는 `400 BadDeviceToken`(인증은 통했고 토큰만 가짜라는 뜻), 배포 환경은
-`403 BadEnvironmentKeyInToken` 이 온다. 개발자 포털에서 APNs 키를 만들 때 환경을
-제한하는 선택이 있는데 그쪽으로 만들어진 것으로 보인다. 개발·TestFlight 확인에는
-지장이 없지만 **App Store 에 올리기 전에 배포 환경도 되는 키로 다시 만들어야 한다**
-(Key ID 가 바뀌므로 `APNS_KEY`·`APNS_KEY_ID` 시크릿을 함께 갈아 끼운다).
+**APNs 키는 발급할 때 환경 제한을 걸지 않아야 한다.** 처음 만든 키(`J32837LLMM`)는
+개발 환경 전용이라 sandbox 는 `400 BadDeviceToken`(인증은 통했고 토큰만 가짜라는 뜻)인데
+배포 환경은 `403 BadEnvironmentKeyInToken` 이 왔다. 개발자 포털에서 APNs 키를 만들 때
+Sandbox·Production 을 고르는 자리가 있고, Production 으로 다시 받은 키(`HDFVB5T2FZ`)는
+두 환경 모두 `400 BadDeviceToken` 이다. **가짜 토큰을 두 환경에 보내 보면 키가 맞는지
+기기 없이 확인할 수 있다** — `POST /zp/v1/admin/push/test` 에 `{"token":"<64자>","env":"prod"}`.
 
 **푸시가 와도 앱이 저절로 소리를 내지 못한다.** iOS 제약이라 설계로 받아들였다
 (`docs/01-features.md` 5.1). 알림을 눌러야 앱이 열리고 재생이 시작된다. 그래서 본문에
@@ -348,11 +350,71 @@ curl -X POST -H "x-zp-admin: $TOKEN" -d '{"token":"<64자 16진수>","env":"sand
   ".../zp/v1/admin/push/test"
 ```
 
-## 6-10. 다음 할 일 — M7 (히든 라디오)
+## 6-10. M7 에서 알아낸 것
 
-`docs/07-roadmap.md` 의 M7 을 따른다. 한국 지상파 채널 표와 편성표 파싱을 서버가 맡고,
-버전 라벨 12회 탭으로 탐색 탭 맨 위에 '라디오' 섹션이 나타난다. radio-browser 에 올라온
-지상파 주소는 서명 토큰이 만료돼 대부분 죽어 있으니(6-2 참고) 서버가 주소를 직접 만들어야 한다.
+**.pls 를 저장하지 말고 재생 직전에 푼다.** KBS·MBC·SBS 의 m3u8 주소에는 서명이 붙어 있고
+몇 시간이면 만료된다. M2 에서 radio-browser 에 적힌 지상파 주소가 전부 403·400 이던 이유가
+이것이다. 1.x 가 쓰던 `serpent0.duckdns.org:8088/*.pls` 는 부를 때마다 새로 서명된 주소를
+내주므로, 채널 표에는 `.pls` 주소만 두고 `/hidden/channels/{id}/stream` 에서 그때 푼다.
+실측(2026-09-24)에서 여덟 개 `.pls` 가 모두 살아 있었고 받은 m3u8 이 200 으로 재생됐다.
+
+**1.x 의 파싱 규칙은 아직 그대로 통한다.** 방송사 네 곳의 응답 모양이 2021년과 같다.
+바뀐 것은 하나뿐이다 — MBC 응답이 `<body><p>` 로 감싸여 오지 않고 순수 JSON 이다.
+감싸개가 있으면 벗기고 없으면 그대로 읽게 해 두 경우 모두 받는다.
+
+| 방송사 | 어디서 | 무엇으로 |
+| --- | --- | --- |
+| KBS | `onair.kbs.co.kr/index.html?…ch_code=<21·22·24·25>` | `og:description` 한 줄. `'2FM 가비의 슈퍼라디오 15:30~16:00'` 모양이라 앞의 채널 약칭과 뒤의 시각을 떼면 프로그램 이름이다 |
+| MBC | `control.imbc.com/Schedule/PCONAIR?type=radio` | `RadioList[]` 에서 `TypeTitle` 이 `'FM4U'`·`'표준FM'` 인 줄 |
+| SBS | `www.sbs.co.kr/ko/live?div=gnb_pc` | `__NEXT_DATA__` 의 `props.pageProps.radio[]`, `channelname` 이 `'POWER FM'`·`'LOVE FM'` |
+| TBS | `tbs.seoul.kr/player/live.do?channelCode=<CH_A·CH_B>` | HTML 의 `class="time"`·`class="tit"`·`posterUrl` |
+| CBS | 없음 | 편성표를 내주는 자리가 없어 서버가 표를 들고 있다 |
+
+**1.x 가 들고 있던 주소 중 셋은 죽었다.** AFN The Voice·Joe Radio·Legacy 는 streamtheworld 에서
+mount 가 사라졌다 — `.pls` 가 200 을 주지만 `NumberOfEntries=0` 이라 재생할 주소가 없다.
+대신 살아 있는 대구(`AFNP_DGU`)를 넣어 두 곳으로 맞췄다. CBS 의 `aac.cbs.co.kr` 도 죽어서
+`m-aac.cbs.co.kr` 쪽 https 주소로 바꿨고, 1.x 가 함께 들고 있던 CBS 프로그램 이미지는
+개인 서버(`zerolive7.iptime.org`)라 지금 응답이 없어 뺐다.
+1.x 는 TBS 의 '재생 페이지 주소' 를 스트림 주소 자리에 넣어 뒀는데, 실제 스트림은
+`cdnfm.tbs.seoul.kr`·`cdnefm.tbs.seoul.kr` 이다.
+
+**편성표가 실패해도 재생은 된다.** 1.x 는 강제 언랩으로 잘라서 방송사가 페이지를 바꾸면
+앱이 죽었다. 서버는 못 읽으면 `programName` 을 비워 200 을 주고, 예전에 읽어 둔 값이 있으면
+그쪽을 먼저 쓴다. 잘못된 채널 이름을 넣어 일부러 실패시켜 확인했다 — `now` 는 전부 null 이고
+`stream` 은 그대로 주소를 줬다.
+
+## 6-11. M7 에서 새로 생긴 것
+
+| 경로 | 하는 일 |
+| --- | --- |
+| `server/src/routes/hidden.ts` | 해제·잠금·채널 목록·주소·편성표 |
+| `server/src/lib/hiddenSchedule.ts` | 방송사별 편성표 파서와 `.pls` 해석, 5분 캐시 |
+| `server/migrations/0005_hidden.sql` | `hidden_channels`·`hidden_now_cache`, `devices` 에 토큰 두 칸 |
+| `server/migrations/0006_hidden_afn.sql` | 죽은 AFN 세 곳을 빼고 대구를 넣는다 |
+| `Core/Config/HiddenAccess.swift` | 해제 상태와 토큰(키체인) |
+| `Core/Networking/DTO/HiddenDTO.swift` | 채널·편성표 구조체 |
+| `Core/Ads/AdPlacement.swift` | 화면별 배너 노출 판정. 배너 자체는 M8 |
+| `Features/Hidden/HiddenModel.swift` | 채널 목록과 편성표 상태. 캐시하지 않는다 |
+| `Features/Hidden/HiddenRadioContent.swift` | 방송사별로 묶은 채널 목록 |
+
+**해제는 설정의 버전 줄을 12번 누르면 된다.** 1.x 는 40번이었고 해제 직후 `exit(0)` 으로
+앱을 껐다 — 애플이 금지하는 동작이다. 2.0 은 앱을 끄지 않고 탐색 탭의 갈래 고르개에
+'지상파' 가 하나 늘어난다. 여섯 번째 탭으로 두지 않는다(`TabView` 가 다섯 개를 넘으면
+'더 보기' 로 접는다). 설정에서 '목록에서 숨기기' 를 누르면 되돌아간다.
+
+**앱에는 방송사 이름도 주소도 없다.** 채널 이름·방송사·주소가 전부 서버에서 온다.
+`Sources/` 안에 `KBS`·`MBC`·`serpent0` 같은 문자열이 한 건도 없다(주석과 화면 문구의
+'지상파' 라는 말은 남는다 — 이건 문턱이지 자물쇠가 아니다).
+
+**시뮬레이터에서 확인한 것** — 해제 전에는 탐색 탭에 라디오·팟캐스트 둘뿐이고, 해제하면
+앱을 끄지 않고 '지상파' 가 나타난다. 채널 14개가 방송사별로 묶여 나오고 지금 방송 중인
+프로그램과 시각이 함께 뜬다. KBS 쿨FM 을 눌러 실제로 소리가 났다.
+
+## 6-12. 다음 할 일 — M8 (광고와 출시)
+
+`docs/07-roadmap.md` 의 M8 을 따른다. AdMob 앱 인증이 먼저다(6-13 참고).
+`Core/Ads/AdPlacement.swift` 에 어느 화면에 붙일지 판정이 이미 있으니 배너만 얹는다.
+알람 커스텀 사운드(30초 `.caf`)도 이 단계에서 넣는다.
 
 **실기기에서 확인할 것** — M1 부터 밀린 것이다.
 
@@ -375,8 +437,9 @@ curl -X POST -H "x-zp-admin: $TOKEN" -d '{"token":"<64자 16진수>","env":"sand
 - [ ] 팟캐스트 검색·에피소드 목록·이어듣기 줄을 눌러 여는 동작
 - [ ] 재생 화면의 진행 바를 끌어 옮기기와 재생 속도 바꾸기
 - [ ] 알람 만들기·고치기·요일 고르기·켜고 끄기
+- [ ] 설정의 버전 줄을 실제로 12번 눌러 지상파가 열리는지, '목록에서 숨기기' 로 되돌아가는지
 
-## 6-11. 랜딩 페이지와 광고 준비
+## 6-13. 랜딩 페이지와 광고 준비
 
 앱 소개와 광고 게시자 선언을 맡는 Worker 가 `worker/` 에 따로 있다. 앱이 부르는 API
 (`server/`, `ai.zerolive.co.kr/zp/v1`)와 다른 Worker 다. 둘을 섞지 않는다.
@@ -426,13 +489,14 @@ golf·wander·hamzzi-diet)의 바닥글과 live-translate 의 `llms.txt` 에도 
 
 - Podcast Index 키를 받아 Worker 시크릿 `PI_KEY`·`PI_SECRET` 에 넣었다. 검색과 인기 목록이
   Podcast Index 로 돈다(`/zp/v1/health` 의 `podcastIndexKeys` 로 확인한다)
-- APNs 인증 키를 받았다. Key ID `J32837LLMM`, Team `XU8HS9JUTS`. 파일은
-  `AuthKey_J32837LLMM.p8` 이고 저장소 맨 위에 두되 `.gitignore` 의 `*.p8` 로 막혀 있다.
+- APNs 인증 키를 받았다. **Key ID `HDFVB5T2FZ`**(Production), Team `XU8HS9JUTS`. 파일은
+  `AuthKey_HDFVB5T2FZ.p8` 이고 저장소 맨 위에 두되 `.gitignore` 의 `*.p8` 로 막혀 있다.
   **재다운로드가 안 되는 유일본이다** — 집 서버 `~/work/backup/certs/` 와 R2 에 사본을 둔다.
+  먼저 만든 `J32837LLMM` 은 개발 환경 전용이라 더 쓰지 않는다(포털에서 지워도 된다).
   번들 ID `com.zerolive.cloudRadioN` 에 Push Notifications 를 켰고 Time Sensitive 는 신청했다
 - 방송국을 받아오는 나라는 지금 15개다. 사용자가 실제로 듣는 나라를 보고 넓힌다
   (`server/wrangler.toml` 의 `SYNC_TOP_COUNTRIES`)
-- AdMob 앱 등록이 앱 인증에서 막혀 있다. 원인과 푸는 법은 6-9 절. 광고 단위 ID 는 M8
+- AdMob 앱 등록이 앱 인증에서 막혀 있다. 원인과 푸는 법은 6-13 절. 광고 단위 ID 는 M8
 
 ## 8. 아직 안 끝난 숙제
 

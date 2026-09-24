@@ -70,6 +70,8 @@ final class AudioPlayerService: AudioPlaying {
     @ObservationIgnored private var isSessionOpen = false
     /// 듣던 위치를 남길 곳. 에피소드에만 쓴다.
     @ObservationIgnored private var positions: (any PlaybackPositionKeeping)?
+    /// 히든 해제 상태. 한국 지상파 주소를 물을 때만 토큰을 꺼내 쓴다.
+    @ObservationIgnored private weak var hidden: HiddenAccess?
     /// 준비되면 이 위치로 옮긴다. 이어듣기 값이다.
     @ObservationIgnored private var pendingSeek: TimeInterval?
     @ObservationIgnored private var lastSavedPosition: TimeInterval = 0
@@ -101,6 +103,11 @@ final class AudioPlayerService: AudioPlaying {
         self.positions = positions
     }
 
+    /// 히든 해제 상태를 꽂는다. 앱이 뜰 때 한 번만 부른다.
+    func attach(hidden: HiddenAccess) {
+        self.hidden = hidden
+    }
+
     // MARK: - 재생 조작
 
     func play(_ item: PlayableItem, origin: PlaybackOrigin = .manual) async {
@@ -122,7 +129,7 @@ final class AudioPlayerService: AudioPlaying {
 
         let url: URL
         do {
-            url = try await resolver.streamURL(for: item)
+            url = try await resolver.streamURL(for: item, hiddenToken: hidden?.token)
         } catch {
             log.error("스트림 주소를 못 받았다: \(String(describing: error))")
             fail(.network)

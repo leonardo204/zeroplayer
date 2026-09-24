@@ -4,6 +4,7 @@ import SwiftUI
 /// 프록시가 내려주는 방송국 목록. 스트림 주소는 여기에 오지 않는다.
 struct DiscoverView: View {
     @Environment(AudioPlayerService.self) private var player
+    @Environment(HiddenAccess.self) private var hidden
     @Environment(\.modelContext) private var modelContext
 
     @Query(sort: \Favorite.addedAt, order: .reverse) private var favorites: [Favorite]
@@ -16,19 +17,34 @@ struct DiscoverView: View {
     /// 탐색 탭이 두 가지를 담는다. 탭은 다섯 개로 고정이라(`docs/01-features.md` 1번)
     /// 팟캐스트를 여섯 번째 탭으로 두지 않고 여기에 넣는다.
     enum Mode: String, CaseIterable, Identifiable {
-        case stations, podcasts
+        case stations, podcasts, hidden
         var id: String { rawValue }
-        var label: String { self == .stations ? "라디오" : "팟캐스트" }
+        var label: String {
+            switch self {
+            case .stations: return "라디오"
+            case .podcasts: return "팟캐스트"
+            case .hidden: return "지상파"
+            }
+        }
     }
 
     /// 시뮬레이터에서 팟캐스트 쪽을 바로 열어 보려고 둔 통로다.
-    /// `-ZPDiscoverMode podcasts` 로 켠다. 릴리스 빌드에서는 항상 라디오다.
+    /// `-ZPDiscoverMode podcasts` 또는 `hidden` 으로 켠다. 릴리스 빌드에서는 항상 라디오다.
     private static var initialMode: Mode {
         #if DEBUG
-        UserDefaults.standard.string(forKey: "ZPDiscoverMode") == "podcasts" ? .podcasts : .stations
+        switch UserDefaults.standard.string(forKey: "ZPDiscoverMode") {
+        case "podcasts": return .podcasts
+        case "hidden": return .hidden
+        default: return .stations
+        }
         #else
         .stations
         #endif
+    }
+
+    /// '지상파' 는 해제한 뒤에만 나온다. 해제 전에는 이 탭에 흔적이 없다.
+    private var visibleModes: [Mode] {
+        hidden.isUnlocked ? Mode.allCases : [.stations, .podcasts]
     }
 
     var body: some View {
@@ -37,17 +53,21 @@ struct DiscoverView: View {
                 switch mode {
                 case .stations: stationList
                 case .podcasts: PodcastListContent()
+                case .hidden: HiddenRadioContent()
                 }
             }
             .navigationTitle("탐색")
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .top, spacing: 0) { modePicker }
+            .onChange(of: hidden.isUnlocked) { _, unlocked in
+                if !unlocked, mode == .hidden { mode = .stations }
+            }
         }
     }
 
     private var modePicker: some View {
         Picker("무엇을 찾을지", selection: $mode) {
-            ForEach(Mode.allCases) { mode in
+            ForEach(visibleModes) { mode in
                 Text(mode.label).tag(mode)
             }
         }

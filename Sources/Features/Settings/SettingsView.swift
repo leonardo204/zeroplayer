@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(PushRegistrar.self) private var push
     @Query private var alarms: [AlarmSetting]
     @Environment(OnDeviceReasoner.self) private var reasoner
+    @Environment(HiddenAccess.self) private var hidden
     @Query private var favorites: [Favorite]
     @Query private var sessions: [ListeningSession]
 
@@ -13,6 +14,11 @@ struct SettingsView: View {
     @AppStorage("zp.timer.fadeSeconds") private var fadeSeconds = 30
 
     @State private var isEraseConfirmPresented = false
+    /// 버전 라벨을 누른 횟수. 12번이면 지상파가 열린다. 화면에 세는 표시는 두지 않는다.
+    @State private var versionTaps = 0
+    @State private var isUnlocking = false
+    @State private var unlockError: String?
+    @State private var isHideConfirmPresented = false
 
     /// 알람 화면을 손으로 누르지 않고 열어 확인하려고 둔 통로다.
     /// `-ZPOpenAlarms 1` 로 켠다. 릴리스 빌드에서는 항상 닫혀 있다.
@@ -126,14 +132,32 @@ struct SettingsView: View {
                     .disabled(sessions.isEmpty)
                 }
 
+                if hidden.isUnlocked {
+                    Section("지상파 라디오") {
+                        Label("탐색 탭에서 들을 수 있습니다", systemImage: "antenna.radiowaves.left.and.right")
+                            .font(.subheadline)
+                        Button("목록에서 숨기기", role: .destructive) {
+                            isHideConfirmPresented = true
+                        }
+                    }
+                }
+
                 Section {
                     HStack {
                         Text("버전")
                         Spacer()
-                        Text(AppConfig.appVersion).foregroundStyle(.secondary)
+                        if isUnlocking {
+                            ProgressView()
+                        } else {
+                            Text(AppConfig.appVersion).foregroundStyle(.secondary)
+                        }
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { countVersionTap() }
                 } footer: {
-                    Text("히든 라디오 해제는 M7 에서 이 화면에 붙습니다.")
+                    if let unlockError {
+                        Text(unlockError).foregroundStyle(.red)
+                    }
                 }
             }
             .navigationTitle("설정")
@@ -151,7 +175,48 @@ struct SettingsView: View {
             } message: {
                 Text("기록 탭의 월간 리포트도 함께 비워집니다. 되돌릴 수 없습니다.")
             }
+            .confirmationDialog(
+                "지상파 라디오를 숨깁니다",
+                isPresented: $isHideConfirmPresented,
+                titleVisibility: .visible
+            ) {
+                Button("숨기기", role: .destructive) { Task { await hideRadio() } }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("탐색 탭에서 사라집니다. 같은 방법으로 다시 열 수 있습니다.")
+            }
         }
+    }
+
+    // MARK: - 지상파 해제
+
+    /// 1.x 는 40번 누르고 `exit(0)` 으로 앱을 껐다. 애플이 금지하는 동작이라
+    /// 12번으로 줄이고 앱을 끄지 않는다(`docs/05-ads-policy.md`).
+    private func countVersionTap() {
+        guard !hidden.isUnlocked, !isUnlocking else { return }
+        versionTaps += 1
+        guard versionTaps >= HiddenAccess.tapsToUnlock else { return }
+        versionTaps = 0
+        Task { await unlockRadio() }
+    }
+
+    private func unlockRadio() async {
+        isUnlocking = true
+        unlockError = nil
+        defer { isUnlocking = false }
+        do {
+            let result = try await ProxyClient().unlockHidden()
+            hidden.store(token: result.token)
+        } catch {
+            unlockError = (error as? ProxyError)?.errorDescription ?? "지금은 열 수 없습니다."
+        }
+    }
+
+    private func hideRadio() async {
+        if let token = hidden.token {
+            try? await ProxyClient().lockHidden(token: token)
+        }
+        hidden.forget()
     }
 }
 

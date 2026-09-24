@@ -30,19 +30,24 @@ struct ZeroPlayerApp: App {
     /// 기기 안 모델. 쓸 수 없는 기기에서는 가용성만 알려 주고 아무 일도 하지 않는다.
     @State private var reasoner = OnDeviceReasoner()
     @State private var push = PushRegistrar()
+    /// 히든 해제 상태. 토큰은 키체인에 있고 해제 전에는 화면 어디에도 안 나온다.
+    @State private var hiddenAccess: HiddenAccess
 
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
         let container = Self.makeContainer()
         let store = ListeningStore(context: container.mainContext)
+        let hidden = HiddenAccess()
         let player = AudioPlayerService()
         player.attach(recorder: store)
         player.attach(positions: PositionStore(context: container.mainContext))
+        player.attach(hidden: hidden)
 
         self.container = container
         self.listeningStore = store
         _player = State(initialValue: player)
+        _hiddenAccess = State(initialValue: hidden)
     }
 
     var body: some Scene {
@@ -51,9 +56,11 @@ struct ZeroPlayerApp: App {
                 .environment(player)
                 .environment(reasoner)
                 .environment(push)
+                .environment(hiddenAccess)
                 .task { await startNotifications() }
                 .task { await seedAlarmIfRequested() }
                 .task { await alarmPushIfRequested() }
+                .task { await unlockHiddenIfRequested() }
                 .task { await autoPlayIfRequested() }
                 .task { await autoPresetIfRequested() }
         }
@@ -142,8 +149,21 @@ struct ZeroPlayerApp: App {
         #endif
     }
 
+    /// 지상파 해제를 손으로 12번 누르지 않고 확인하려고 둔 통로다.
+    /// `-ZPUnlockHidden 1` 로 켠다. 릴리스 빌드에는 들어가지 않는다.
+    private func unlockHiddenIfRequested() async {
+        #if DEBUG
+        guard UserDefaults.standard.string(forKey: "ZPUnlockHidden") == "1" else { return }
+        guard !hiddenAccess.isUnlocked else { return }
+        if let result = try? await ProxyClient().unlockHidden() {
+            hiddenAccess.store(token: result.token)
+        }
+        #endif
+    }
+
     /// 재생 경로를 손으로 누르지 않고 확인하려고 둔 통로다.
-    /// `-ZPAutoPlay rb:<uuid>` 는 방송국, `-ZPAutoEpisode it:<피드>:<에피소드>` 는 에피소드다.
+    /// `-ZPAutoPlay rb:<uuid>` 는 방송국, `kr:<채널>` 은 지상파,
+    /// `-ZPAutoEpisode it:<피드>:<에피소드>` 는 에피소드다.
     /// 릴리스 빌드에는 들어가지 않는다.
     private func autoPlayIfRequested() async {
         #if DEBUG
@@ -164,7 +184,9 @@ struct ZeroPlayerApp: App {
             return
         }
         guard let id = UserDefaults.standard.string(forKey: "ZPAutoPlay"), !id.isEmpty else { return }
-        await player.play(PlayableItem(id: id, kind: .station, title: id))
+        // 'kr:' 로 시작하면 지상파다. 해제 토큰이 있어야 주소를 받는다.
+        let kind: SourceKind = id.hasPrefix("kr:") ? .hidden : .station
+        await player.play(PlayableItem(id: id, kind: kind, title: id))
         #endif
     }
 }

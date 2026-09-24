@@ -18,6 +18,13 @@ import { classifyPendingMoods, resetMoodsForRetagged } from './lib/moods'
 import { buildSets } from './lib/recommendSets'
 import { getRecommendations } from './routes/recommend'
 import {
+  getHiddenNow,
+  getHiddenStream,
+  listHiddenChannels,
+  lockHidden,
+  unlockHidden,
+} from './routes/hidden'
+import {
   createAlarm,
   deleteAlarm,
   deletePushToken,
@@ -38,7 +45,7 @@ function requireAdmin(env: Env, request: Request): Response | null {
 }
 
 async function health(env: Env): Promise<Response> {
-  const [stations, excluded, tagged, pending, moodPending, sets, podcasts, episodes, alarms, pushable, jobs] = await env.DB.batch<Record<string, unknown>>([
+  const [stations, excluded, tagged, pending, moodPending, sets, podcasts, episodes, hidden, alarms, pushable, jobs] = await env.DB.batch<Record<string, unknown>>([
     env.DB.prepare('SELECT COUNT(*) AS n FROM stations'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM station_health WHERE excluded = 1'),
     env.DB.prepare('SELECT COUNT(DISTINCT station_id) AS n FROM station_tags'),
@@ -47,6 +54,7 @@ async function health(env: Env): Promise<Response> {
     env.DB.prepare('SELECT COUNT(*) AS n FROM recommendation_sets'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM podcasts'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM episodes'),
+    env.DB.prepare('SELECT COUNT(*) AS n FROM hidden_channels WHERE enabled = 1'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM alarms WHERE enabled = 1'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM devices WHERE push_token IS NOT NULL'),
     env.DB.prepare('SELECT job, last_run_at, last_ok_at, ok, detail FROM sync_state ORDER BY job'),
@@ -62,6 +70,7 @@ async function health(env: Env): Promise<Response> {
     recommendationSets: (sets.results[0]?.n as number) ?? 0,
     podcasts: (podcasts.results[0]?.n as number) ?? 0,
     episodes: (episodes.results[0]?.n as number) ?? 0,
+    hiddenChannels: (hidden.results[0]?.n as number) ?? 0,
     podcastIndexKeys: hasKeys(env),
     enabledAlarms: (alarms.results[0]?.n as number) ?? 0,
     pushableDevices: (pushable.results[0]?.n as number) ?? 0,
@@ -112,6 +121,21 @@ export default {
 
       const episodeMatch = path.match(/^\/episodes\/([^/]+)$/)
       if (method === 'GET' && episodeMatch) return await getEpisode(env, decodeURIComponent(episodeMatch[1]))
+
+      // 히든(한국 지상파). 목록부터 토큰을 요구한다 — 채널 이름이 공개 응답에 섞이지 않게 한다.
+      if (method === 'POST' && path === '/hidden/unlock') return await unlockHidden(env, request)
+      if (method === 'POST' && path === '/hidden/lock') return await lockHidden(env, request)
+      if (method === 'GET' && path === '/hidden/channels') return await listHiddenChannels(env, request)
+
+      const hiddenStreamMatch = path.match(/^\/hidden\/channels\/([^/]+)\/stream$/)
+      if (method === 'GET' && hiddenStreamMatch) {
+        return await getHiddenStream(env, request, decodeURIComponent(hiddenStreamMatch[1]))
+      }
+
+      const hiddenNowMatch = path.match(/^\/hidden\/channels\/([^/]+)\/now$/)
+      if (method === 'GET' && hiddenNowMatch) {
+        return await getHiddenNow(env, request, decodeURIComponent(hiddenNowMatch[1]))
+      }
 
       if (method === 'POST' && path === '/push/token') return await registerPushToken(env, request)
       if (method === 'DELETE' && path === '/push/token') return await deletePushToken(env, request)

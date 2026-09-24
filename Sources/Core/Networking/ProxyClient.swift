@@ -14,6 +14,11 @@ protocol ProxyClienting: StreamReporting, Sendable {
     func createAlarm(_ payload: AlarmPayload) async throws -> AlarmCreatedDTO
     func updateAlarm(id: String, payload: AlarmPayload) async throws -> AlarmCreatedDTO
     func deleteAlarm(id: String) async throws
+    func unlockHidden() async throws -> HiddenUnlockDTO
+    func lockHidden(token: String) async throws
+    func hiddenChannels(token: String) async throws -> HiddenChannelListDTO
+    func hiddenStreamURL(channelID: String, token: String) async throws -> StreamDTO
+    func hiddenNow(channelID: String, token: String) async throws -> HiddenNowDTO
     func trendingPodcasts(country: String?, limit: Int) async throws -> PodcastListDTO
     func searchPodcasts(term: String, country: String?, limit: Int) async throws -> PodcastListDTO
     func episodes(feedID: String, cursor: String?, limit: Int) async throws -> EpisodePageDTO
@@ -44,6 +49,9 @@ struct StationQuery: Hashable, Sendable {
         (search?.isEmpty ?? true) && tag == nil && language == nil && sort == "popular"
     }
 }
+
+/// 본문이 필요 없는 POST 에 쓴다. `{}` 하나만 나간다.
+private struct EmptyBody: Encodable {}
 
 enum ProxyError: Error, LocalizedError {
     case offline
@@ -173,11 +181,35 @@ struct ProxyClient: ProxyClienting {
         }
     }
 
+    // MARK: - 히든 (한국 지상파)
+
+    /// 해제 토큰을 받는다. 이미 해제된 설치는 같은 토큰을 다시 준다.
+    func unlockHidden() async throws -> HiddenUnlockDTO {
+        try await sendJSON("/hidden/unlock", method: "POST", payload: EmptyBody())
+    }
+
+    func lockHidden(token: String) async throws {
+        try await send("/hidden/lock", method: "POST", body: nil, hiddenToken: token)
+    }
+
+    func hiddenChannels(token: String) async throws -> HiddenChannelListDTO {
+        try await get("/hidden/channels", hiddenToken: token)
+    }
+
+    /// 재생 직전에만 부른다. 방송사 주소는 저장하지 않는다.
+    func hiddenStreamURL(channelID: String, token: String) async throws -> StreamDTO {
+        try await get("/hidden/channels/\(channelID)/stream", hiddenToken: token)
+    }
+
+    func hiddenNow(channelID: String, token: String) async throws -> HiddenNowDTO {
+        try await get("/hidden/channels/\(channelID)/now", hiddenToken: token)
+    }
+
     // MARK: - 공통
 
     /// 응답 본문을 읽지 않는 요청. 실패는 그대로 던진다.
-    private func send(_ path: String, method: String, body: [String: Any]?) async throws {
-        var request = makeRequest(path: path, query: [])
+    private func send(_ path: String, method: String, body: [String: Any]?, hiddenToken: String? = nil) async throws {
+        var request = makeRequest(path: path, query: [], hiddenToken: hiddenToken)
         request.httpMethod = method
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "content-type")
@@ -218,8 +250,8 @@ struct ProxyClient: ProxyClienting {
         }
     }
 
-    private func get<T: Decodable>(_ path: String, query: [URLQueryItem] = []) async throws -> T {
-        let request = makeRequest(path: path, query: query)
+    private func get<T: Decodable>(_ path: String, query: [URLQueryItem] = [], hiddenToken: String? = nil) async throws -> T {
+        let request = makeRequest(path: path, query: query, hiddenToken: hiddenToken)
         log.debug("요청 \(request.url?.absoluteString ?? "-", privacy: .private)")
         do {
             let (data, response) = try await session.data(for: request)
@@ -238,7 +270,7 @@ struct ProxyClient: ProxyClienting {
         }
     }
 
-    private func makeRequest(path: String, query: [URLQueryItem]) -> URLRequest {
+    private func makeRequest(path: String, query: [URLQueryItem], hiddenToken: String? = nil) -> URLRequest {
         // 방송국 ID 에 콜론이 들어간다('rb:<uuid>'). appendingPathComponent 로 붙이면
         // 이미 인코딩된 문자를 한 번 더 인코딩해 서버가 못 알아본다. 경로를 직접 넣는다.
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
@@ -249,6 +281,8 @@ struct ProxyClient: ProxyClienting {
         request.setValue("ios/\(AppConfig.appVersion)", forHTTPHeaderField: "X-ZP-Client")
         request.setValue(InstallIdentity.current, forHTTPHeaderField: "X-ZP-Install")
         request.setValue(AppConfig.userAgent, forHTTPHeaderField: "User-Agent")
+        // 히든 경로에서만 붙는다. 공개 경로에는 실어 보내지 않는다.
+        if let hiddenToken { request.setValue(hiddenToken, forHTTPHeaderField: "X-ZP-Hidden") }
         return request
     }
 }

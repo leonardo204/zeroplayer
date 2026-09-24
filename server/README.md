@@ -37,6 +37,11 @@ GET  /zp/v1/stations/facets
 GET  /zp/v1/stations/{id}
 GET  /zp/v1/stations/{id}/stream
 POST /zp/v1/stations/{id}/report   { "reason": "no_audio" | "error" | "wrong_content" }
+GET  /zp/v1/hidden/channels                 (X-ZP-Hidden 토큰 필요)
+GET  /zp/v1/hidden/channels/{id}/stream
+GET  /zp/v1/hidden/channels/{id}/now
+POST /zp/v1/hidden/unlock                   → { "token": "hid_…", "alreadyUnlocked": false }
+POST /zp/v1/hidden/lock
 
 POST   /zp/v1/push/token   { "token": "<APNs 기기 토큰>", "env": "sandbox" | "prod" }
 DELETE /zp/v1/push/token
@@ -132,3 +137,27 @@ curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/stre
    걸린다. 즉시 확인하려면 쿼리 문자열을 바꿔 부른다.
 5. **평문 HTTP 스트림이 전체의 35%다.** 이것을 앱이 열 수 있는지는 아직 확정되지 않았다.
    `CONTEXT.md` 의 M2 기록을 본다.
+
+## 지상파 채널 표 고치기
+
+한국 지상파는 `hidden_channels` 한 표가 전부다. 방송사가 주소를 바꾸면 이 표만 고친다 —
+앱을 새로 올릴 필요가 없다.
+
+```sh
+# 지금 표
+npx wrangler d1 execute zeroplayer --remote \
+  --command "SELECT id, name, stream_kind, schedule_kind, enabled FROM hidden_channels ORDER BY sort_order"
+
+# 주소 바꾸기
+npx wrangler d1 execute zeroplayer --remote \
+  --command "UPDATE hidden_channels SET stream_url='<새 주소>', updated_at=datetime('now') WHERE id='kr:tbs-fm'"
+
+# 편성표 캐시 비우기 (파서를 고친 뒤 바로 확인할 때)
+npx wrangler d1 execute zeroplayer --remote --command "DELETE FROM hidden_now_cache"
+```
+
+`stream_kind` 가 `pls` 면 재생 직전에 풀어서 준다. KBS·MBC·SBS 처럼 서명이 붙는 주소는
+반드시 `pls` 로 둔다 — m3u8 을 직접 적으면 몇 시간 뒤 403 이 난다.
+`schedule_url` 은 파서에 넘기는 값이다: KBS 는 `ch_code`(21·22·24·25), MBC 는
+`TypeTitle`(`FM4U`·`표준FM`), SBS 는 `channelname`(`POWER FM`·`LOVE FM`), TBS 는
+`channelCode`(`CH_A`·`CH_B`). 편성표가 없는 채널은 `schedule_kind` 를 비운다.

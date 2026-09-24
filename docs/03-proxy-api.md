@@ -151,26 +151,44 @@ GET /zp/v1/episodes/{episodeID}/stream
 
 ```
 POST /zp/v1/hidden/unlock         → 해제 토큰 발급 (설치 UUID 기준). 상태를 바꾸므로 GET 이 아니다
-GET /zp/v1/hidden/channels        → 채널 목록 (토큰 필요)
-GET /zp/v1/hidden/channels/{id}/stream
-GET /zp/v1/hidden/channels/{id}/now
+POST /zp/v1/hidden/lock           → 해제 되돌리기
+GET  /zp/v1/hidden/channels       → 채널 목록 (토큰 필요)
+GET  /zp/v1/hidden/channels/{id}/stream
+GET  /zp/v1/hidden/channels/{id}/now
 ```
+
+토큰은 `X-ZP-Hidden` 헤더로 보낸다. `X-ZP-Install` 과 짝이 맞아야 통과하므로 토큰만 새어 나가도
+남의 설치로는 쓸 수 없다. 이미 해제된 설치가 다시 `unlock` 을 부르면 같은 토큰을 돌려준다.
 
 `now` 응답:
 
 ```json
 {
-  "programName": "볼륨을 높여요",
-  "startTime": "20:00",
-  "endTime": "22:00",
+  "programName": "가비의 슈퍼라디오",
+  "startTime": "15:30",
+  "endTime": "16:00",
   "artworkURL": "https://...",
   "refreshAfter": 300
 }
 ```
 
-편성표 파싱은 서버가 한다. **1.x 의 파싱 규칙을 그대로 옮긴다.** KBS 는 `og:image`·`og:description` 메타 태그, MBC 는 `control.imbc.com/Schedule/PCONAIR?type=radio` JSON, SBS 는 `__NEXT_DATA__` 스크립트, TBS 는 HTML 본문, CBS 는 편성표 하드코딩. 다만 앱 안에서 강제 언랩으로 자르던 것을 서버에서 실패 허용으로 바꾼다. 파싱이 실패하면 `programName` 을 비워 보내고 앱은 채널명만 표시한다.
+**스트림 주소를 표에 담아 두지 않는다.** KBS·MBC·SBS 의 m3u8 에는 서명이 붙어 있고 몇 시간이면
+만료된다(M2 에서 radio-browser 의 지상파 주소가 전부 403 이던 이유다). 채널 표에는 `.pls` 주소만
+두고 `/stream` 을 부를 때 풀어서 준다. `.pls` 안에 https 와 평문 HTTP 가 함께 있으면 https 를 고른다.
 
-`serpent0.duckdns.org` 의 `.pls` 주소는 서버의 채널 표에만 둔다. 나중에 끊기면 이 표만 고친다. 앱은 그대로 둔다.
+편성표 파싱은 서버가 한다. **1.x 의 규칙이 2026-09 기준으로 그대로 통한다.** KBS 는
+`onair.kbs.co.kr` 의 `og:image`·`og:description`, MBC 는 `control.imbc.com/Schedule/PCONAIR?type=radio`
+JSON 의 `RadioList[]`, SBS 는 `www.sbs.co.kr/ko/live` 의 `__NEXT_DATA__` 안 `props.pageProps.radio[]`,
+TBS 는 `tbs.seoul.kr/player/live.do` HTML 의 `class="time"`·`class="tit"`, CBS 는 편성표를 내주는
+자리가 없어 서버가 표를 들고 있다. 바뀐 것은 MBC 응답이 `<body><p>` 로 감싸여 오지 않는다는 점
+하나뿐이라, 감싸개가 있으면 벗기고 없으면 그대로 읽는다.
+
+**파싱이 실패해도 200 을 준다.** `programName` 을 비워 보내고 앱은 채널 이름만 표시한다.
+직전에 읽어 둔 값이 있으면 그쪽을 먼저 쓴다 — 잠깐 막힌 것일 수 있다. 응답은 `hidden_now_cache`
+에 5분 동안 남겨 방송사 페이지를 사람마다 부르지 않는다.
+
+`serpent0.duckdns.org` 의 `.pls` 주소는 서버의 채널 표에만 둔다. 나중에 끊기면 이 표만 고친다.
+앱은 그대로 둔다.
 
 ### 3.5 알람
 
@@ -217,7 +235,7 @@ APNs 는 HTTP/2 만 받는다. 배포된 Worker 의 `fetch()` 는 APNs 와 통�
 
 알람 사운드는 시스템 기본음(`"sound": "default"`)을 쓴다. 30초짜리 커스텀 사운드는 M8 에 넣는다.
 
-발급받은 APNs 키가 sandbox 전용이다. 같은 JWT 로 sandbox 는 `400 BadDeviceToken`(인증 통과), 배포 환경은 `403 BadEnvironmentKeyInToken` 이 온다. 출시 전에 배포 환경도 되는 키로 다시 만들어야 한다.
+APNs 키(`HDFVB5T2FZ`)는 Production 으로 발급해 sandbox·배포 두 환경에서 모두 인증이 통한다. 가짜 기기 토큰 64자를 `POST /zp/v1/admin/push/test` 에 보내 `400 BadDeviceToken` 이 오면 키가 맞는 것이다. 환경 제한을 건 키는 배포 환경에서 `403 BadEnvironmentKeyInToken` 이 오므로 이 확인을 먼저 한다.
 
 같은 분에 두 번 보내지 않도록 `alarm_sends(alarm_id, fired_at)` 에 먼저 줄을 잡고 발송한다. 10분 넘게 지난 알람은 보내지 않고 다음 시각으로 민다 — 아침 7시 알람이 9시에 오면 놀라기만 한다.
 
