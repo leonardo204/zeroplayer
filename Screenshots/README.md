@@ -74,3 +74,22 @@ cd Screenshots && for f in ko/*.png; do
   sips -c 2778 1284 "ko-6.7/$(basename $f)"
 done
 ```
+
+## 알파 채널을 반드시 걷어낸다
+
+`simctl io screenshot` 이 만드는 PNG 에는 알파 채널이 붙는다. App Store Connect 는
+알파가 든 스크린샷을 받지 않는데, **거부 메시지를 내지 않고 '스크린샷 업로드가 진행
+중입니다' 에 걸린 채로 둔다.** 썸네일은 목록에 보이지만 심사에 추가가 안 된다.
+
+찍은 뒤 항상 걷어낸다. 도구는 `tools/flatten-screenshots.swift` 다.
+
+```sh
+swiftc -O tools/flatten-screenshots.swift -o /tmp/zp_flatten
+cd Screenshots && /tmp/zp_flatten */*.png
+```
+
+확인하는 법.
+
+```sh
+sips -g hasAlpha Screenshots/ko-6.5/01-recommend.png   # hasAlpha: no 여야 한다
+```
