@@ -653,9 +653,13 @@ SDK 를 시작하지 않는다.
 `InfoPlist.strings` 로 옮겼다 — 이 파일은 문자열 카탈로그가 아니라 예전 방식의
 `.strings` 다. Info.plist 값은 카탈로그가 덮지 못한다.
 
-**아이폰 전용으로 좁혔다.** `TARGETED_DEVICE_FAMILY: "1"`. 1.7 은 아이패드도
-지원했고 스토어에 아이패드 스크린샷이 5장 올라가 있다. 2.0 은 아이폰 화면만 맞춰
-만들었으므로 지원을 좁혔다 — 아이패드에 1.7 을 깔아 둔 사용자는 1.7 에 남는다.
+**아이폰 전용으로 좁힐 수 없다.** `TARGETED_DEVICE_FAMILY: "1"` 로 올렸다가 업로드
+검증이 `This bundle does not support one or more of the devices supported by the previous
+app version`(QA1623) 으로 떨어졌다. **애플은 업데이트에서 지원 기기를 줄이는 것을
+막는다.** 1.7 이 아이패드를 지원했으니 2.0 도 지원해야 한다. 지금은 `"1,2"` 다.
+아이패드에서 화면이 깨지지는 않는다 — SwiftUI 라 탭바가 위로 가고 목록이 넓어질 뿐이다.
+아이폰 전용으로 내려면 번들 ID 를 바꿔 새 앱으로 내는 수밖에 없고, 그러면 1.7 사용자가
+업데이트를 못 받고 순위·리뷰가 0 에서 다시 시작한다.
 
 **릴리스 바이너리에 디버그 통로는 없다.** `ZPStartTab`·`ZPAutoPlay`·`ZPFakeNowPlaying`
 ·`ZPSkipConsentForm` 등을 `strings` 로 찾아 0건을 확인했다. `#if DEBUG` 가 제대로 걸려 있다.
@@ -666,9 +670,13 @@ App Store Connect 에 붙여 넣을 값은 `docs/09-appstore-submit.md` 에 다 
 프로모션 텍스트, 설명, 키워드, 부제, 릴리스 노트, 심사 메모를 한국어·영어로 나란히 뒀고
 글자 수 제한 안에 드는지 세어 확인했다.
 
-화면 캡처는 `Screenshots/ko`·`Screenshots/en` 에 여덟 장씩 있다. 6.9인치(1320×2868)
-한 벌만 올리면 App Store 가 나머지 크기를 줄여 쓴다. 다시 찍는 법은
-`Screenshots/README.md` 에 있다.
+화면 캡처는 `Screenshots/` 아래 여덟 장씩 네 벌이다 — 아이폰 6.9인치(1320×2868)
+`ko`·`en`, 아이패드 13인치(2064×2752) `ipad-ko`·`ipad-en`. 기기 크기마다 가장 큰 것
+한 벌만 올리면 App Store 가 나머지를 줄여 쓴다. 앱이 아이패드를 지원하는 한 아이패드
+캡처는 필수다. 다시 찍는 법은 `Screenshots/README.md` 에 있다.
+
+**기록 탭을 맨 먼저 찍는다.** `-ZPSeedHistory` 씨앗은 청취 기록이 비어 있을 때만 심긴다.
+재생 화면을 먼저 찍으면 그 재생이 기록으로 남아 씨앗이 건너뛰어지고 기록 탭이 '0분' 이 된다.
 
 **캡처 전에 시뮬레이터를 `erase` 한다.** 설치 UUID 가 키체인에 남아, 앱을 지우고 다시
 깔아도 서버에 등록해 둔 알람을 그대로 내려받는다. 영어 화면에 지난 한국어 알람 이름이
@@ -733,7 +741,7 @@ grep -rn --include='*.swift' -E 'Text\(|Label\(' Sources | grep -E '\?\?' | grep
 - [ ] AdMob 동의 메시지를 한국어로 만든다
 - [ ] 내 기기를 AdMob 테스트 기기로 등록한다 (실제 ID 로 내 광고를 누르면 무효 트래픽이다)
 - [ ] 스토어에 2.0 이 반영된 뒤 AdMob 앱 인증을 다시 누른다 (인증은 제출을 막지 않는다)
-- [x] 아이폰 스크린샷을 찍어 뒀다 — `Screenshots/ko`·`Screenshots/en` 각 여덟 장
+- [x] 스크린샷 네 벌을 찍어 뒀다 — 아이폰 `Screenshots/ko`·`en`, 아이패드 `ipad-ko`·`ipad-en`
 - [x] 한국어·영어 설명·키워드·프로모션 텍스트·릴리스 노트를 써 뒀다 (`docs/09-appstore-submit.md`)
 - [x] 심사 메모를 써 뒀다 (`docs/09-appstore-submit.md` 7번). 지침 2.3.1 때문에 반드시 넣는다
 - [ ] 알람 커스텀 사운드(30초 `.caf`)를 넣는다. 지금은 시스템 기본음이다

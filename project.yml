@@ -65,9 +65,11 @@ targets:
         PRODUCT_NAME: zeroPlayer
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
-        # 아이폰 전용이다. 1.7 은 아이패드도 지원했지만 2.0 은 아이폰 화면만
-        # 맞춰 만들었다. 아이패드에 1.7 을 깔아 둔 사용자는 1.7 에 남는다.
-        TARGETED_DEVICE_FAMILY: "1"
+        # 아이폰과 아이패드 둘 다. 1.7 이 아이패드를 지원했으므로 줄일 수 없다 —
+        # 업데이트가 이전 판이 받쳐 주던 기기를 빼면 애플이 심사 전 검증에서 막는다
+        # ("This bundle does not support one or more of the devices supported by
+        # the previous app version", QA1623). 스크린샷도 두 기기 것을 다 올린다.
+        TARGETED_DEVICE_FAMILY: "1,2"
       # 푸시는 개발과 배포의 APNs 환경이 달라 엔타이틀먼트를 따로 둔다.
       # 이 값이 없으면 실기기에서 registerForRemoteNotifications 가
       # NSCocoaErrorDomain 3000 ('aps-environment 를 찾을 수 없습니다')으로 실패한다.
@@ -91,6 +93,9 @@ targets:
           - audio
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsForMedia: true
         ZPProxyBaseURL: $(ZP_PROXY_BASE_URL)

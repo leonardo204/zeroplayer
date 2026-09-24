@@ -1,7 +1,7 @@
 # App Store 제출 자료
 
 App Store Connect 의 칸에 그대로 붙여 넣을 값이다. 한국어와 영어를 나란히 둔다.
-화면 캡처는 저장소의 `Screenshots/ko`·`Screenshots/en` 에 있다.
+화면 캡처는 저장소의 `Screenshots/` 아래 네 벌(`ko`·`en`·`ipad-ko`·`ipad-en`)에 있다.
 
 ## 1. URL 세 개
 
@@ -277,8 +277,16 @@ Not needed. No sign-in anywhere in the app.
 
 ## 8. 화면 캡처
 
-6.9인치(1320×2868) 여덟 장씩 두 벌이다. App Store 는 6.9인치 한 벌만 올리면
-나머지 크기를 알아서 줄여 쓴다. 아이폰 전용이라 아이패드 캡처는 필요 없다.
+여덟 장씩 네 벌이다. 기기 크기마다 가장 큰 것 한 벌만 올리면 App Store 가 나머지
+크기로 줄여 쓴다.
+
+| 폴더 | 기기 | 크기 |
+| --- | --- | --- |
+| `Screenshots/ko` · `Screenshots/en` | 아이폰 6.9인치 | 1320×2868 |
+| `Screenshots/ipad-ko` · `Screenshots/ipad-en` | 아이패드 13인치 | 2064×2752 |
+
+**아이패드 캡처가 필수다.** 앱이 아이패드를 지원하는 한 App Store Connect 가 요구하고,
+지원을 줄이는 것은 애플이 막는다(아래 9번).
 
 | 파일 | 담은 화면 |
 | --- | --- |
