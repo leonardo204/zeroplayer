@@ -88,6 +88,45 @@ final class ListeningStore: ListeningRecording {
         return rows.reduce(0) { $0 + $1.duration }
     }
 
+    /// 추천 재정렬이 읽는 값. 세션을 한 번만 훑어 방송국별로 접는다.
+    ///
+    /// 기록 전체를 다 보지 않고 최근 것만 본다. 반년 전에 한 번 들은 방송국이
+    /// 오늘 순서를 바꾸는 것은 개인화가 아니라 잡음이다.
+    func profiles(situation: Situation?, since: Date? = nil, limit: Int = 800) -> [String: ListeningProfile] {
+        let floor = since ?? Date().addingTimeInterval(-90 * 24 * 60 * 60)
+        var descriptor = FetchDescriptor<ListeningSession>(
+            predicate: #Predicate { $0.startedAt >= floor },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        var profiles: [String: ListeningProfile] = [:]
+        for session in (try? context.fetch(descriptor)) ?? [] {
+            var profile = profiles[session.itemID] ?? ListeningProfile()
+            profile.totalSeconds += session.duration
+            if session.skippedEarly { profile.earlySkips += 1 }
+            if let situation, session.situationRaw == situation.rawValue { profile.playsInSituation += 1 }
+            if profile.lastPlayedAt == nil || session.startedAt > profile.lastPlayedAt! {
+                profile.lastPlayedAt = session.startedAt
+            }
+            profiles[session.itemID] = profile
+        }
+        return profiles
+    }
+
+    /// 추천 품질 지표 두 가지. `docs/04-curation.md` 6번과 같다. 기기 밖으로 나가지 않는다.
+    func recommendationQuality(since: Date) -> (throughRecommendation: Double, earlySkipRate: Double, total: Int) {
+        let sessions = self.sessions(in: since..<Date().addingTimeInterval(60))
+        guard !sessions.isEmpty else { return (0, 0, 0) }
+        let fromRecommendation = sessions.filter(\.fromRecommendation)
+        let skipped = fromRecommendation.filter(\.skippedEarly).count
+        return (
+            Double(fromRecommendation.count) / Double(sessions.count),
+            fromRecommendation.isEmpty ? 0 : Double(skipped) / Double(fromRecommendation.count),
+            sessions.count
+        )
+    }
+
     func eraseAll() {
         do {
             try context.delete(model: ListeningSession.self)

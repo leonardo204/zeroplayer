@@ -14,6 +14,11 @@ final class ListeningSession {
     var fromRecommendation: Bool
     /// 30초 안에 넘겼는지.
     var skippedEarly: Bool
+    /// 어느 상황에서 틀었는지(`Situation` 의 원시값). 직접 고른 재생은 비어 있다.
+    ///
+    /// M4 에서 더한 값이라 없을 수 있다. SwiftData 가 기존 저장소를 그대로 열도록
+    /// 선택 속성으로 둔다.
+    var situationRaw: String?
 
     init(
         item: PlayableItem,
@@ -29,7 +34,10 @@ final class ListeningSession {
         self.presetName = origin.presetName
         self.fromRecommendation = origin.fromRecommendation
         self.skippedEarly = false
+        self.situationRaw = origin.situation?.rawValue
     }
 
     var kind: SourceKind { SourceKind(rawValue: kindRaw) ?? .station }
+
+    var situation: Situation? { situationRaw.flatMap(Situation.init(rawValue:)) }
 }

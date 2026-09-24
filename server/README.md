@@ -23,7 +23,7 @@ npx wrangler d1 migrations apply zeroplayer --remote
 | Worker | `zeroplayer-api` |
 | 라우트 | `ai.zerolive.co.kr/zp/v1/*` (zone `zerolive.co.kr`) |
 | D1 | `zeroplayer` · `04fa254c-e308-45cc-b258-349fc37d0b8b` |
-| Workers AI | 태그 정규화에 `@cf/meta/llama-3.3-70b-instruct-fp8-fast` |
+| Workers AI | 태그 정규화·분위기 분류·추천 문구에 `@cf/meta/llama-3.3-70b-instruct-fp8-fast` |
 
 ## 앱이 쓰는 경로
 
@@ -37,9 +37,9 @@ GET  /zp/v1/stations/{id}/stream
 POST /zp/v1/stations/{id}/report   { "reason": "no_audio" | "error" | "wrong_content" }
 ```
 
-`recommend` 의 `situation` 은 `sleep·commute·study·work·wake` 다. 상황별 태그 규칙은
-`src/lib/situations.ts` 에 있고, 규칙만 돌기 때문에 응답의 `source` 는 `"rule"` 이다
-(M4 에서 LLM 이 순서와 문구를 다듬으면 `"llm"` 이 된다).
+`recommend` 의 `situation` 은 `sleep·commute·study·work·wake` 다. 상황별 태그·분위기 규칙은
+`src/lib/situations.ts` 에 있다. 응답의 `source` 가 `llm` 이면 밤에 만들어 둔 세트를 꺼내 준
+것이고, `rule` 이면 그 자리에서 규칙으로 뽑은 것이다. 어느 쪽이든 항목 모양은 같다.
 
 **`at` 에 오프셋을 붙이지 않는다.** `+09:00` 을 붙이면 질의 문자열에서 `+` 가 공백으로 풀려
 서버가 시각을 놓치고 UTC 현재 시각으로 떨어진다. 기기 시계만 적어 보낸다.
@@ -64,6 +64,12 @@ curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/sync
 
 # 판정 대기 태그를 LLM 에 넘긴다. 한 묶음이 25개, batches 로 묶음 수를 정한다
 curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/tags/normalize?batches=4"
+
+# 분위기 분류. 태그가 있는 방송국은 규칙으로, 태그가 없는 것만 모델에 묻는다
+curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/moods/classify?batches=2"
+
+# 상황별 추천 세트 생성. sets 로 한 번에 만들 개수를 정한다. force=1 이면 오늘 만든 것도 다시 만든다
+curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/recommend/build?sets=8"
 
 # 스트림 생사 점검 한 묶음
 curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/streams/check?size=150"

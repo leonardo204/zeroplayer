@@ -3,8 +3,8 @@ import os
 
 /// 프리셋을 눌렀을 때 실제로 벌어지는 일. 소스를 정하고, 재생하고, 타이머를 건다.
 ///
-/// `.auto` 는 서버 규칙 추천(`GET /recommend`)에서 첫 항목을 가져온다. 순서를 LLM 이
-/// 다듬고 기기 기록으로 재정렬하는 단계는 M4 에서 이 자리에 붙는다.
+/// `.auto` 는 서버 추천(`GET /recommend`)에서 후보를 받아 기기 기록으로 다시 세운 뒤
+/// 맨 위에서부터 실제로 소리가 나는 것을 찾는다. 서버가 1·2단, 여기가 3단이다.
 @MainActor
 struct PresetLauncher {
     enum LaunchError: LocalizedError {
@@ -32,17 +32,21 @@ struct PresetLauncher {
     let client: ProxyClienting
     /// 서버에 닿지 못했을 때 대신 쓸 후보. 즐겨찾기를 넣어 준다.
     let fallback: () -> [PlayableItem]
+    /// 기기에 쌓인 청취 기록. 후보 순서를 다시 세우는 데 쓴다.
+    let profiles: (Situation) -> [String: ListeningProfile]
 
     private var log: Logger { Logger(subsystem: Bundle.main.bundleIdentifier ?? "zeroPlayer", category: "preset") }
 
     init(
         player: AudioPlayerService,
         client: ProxyClienting = ProxyClient(),
-        fallback: @escaping () -> [PlayableItem] = { [] }
+        fallback: @escaping () -> [PlayableItem] = { [] },
+        profiles: @escaping (Situation) -> [String: ListeningProfile] = { _ in [:] }
     ) {
         self.player = player
         self.client = client
         self.fallback = fallback
+        self.profiles = profiles
     }
 
     /// 무엇을 틀었는지 돌려준다. 화면은 이 제목을 그대로 보여준다.
@@ -50,7 +54,8 @@ struct PresetLauncher {
     func start(_ preset: Preset) async throws -> PlayableItem {
         let origin = PlaybackOrigin(
             presetName: preset.name,
-            fromRecommendation: preset.sourceKind == .auto
+            fromRecommendation: preset.sourceKind == .auto,
+            situation: preset.situation
         )
 
         let played: PlayableItem
@@ -95,8 +100,10 @@ struct PresetLauncher {
         do {
             let set = try await client.recommendations(query)
             guard !set.items.isEmpty else { throw LaunchError.emptyRecommendation }
+            // 3단. 서버 순서를 시작점으로 두고 내 기록으로 다시 세운다.
+            let ranked = Personalizer().rank(set.items, profiles: profiles(preset.situation))
             log.info("자동 선택 후보 \(set.items.count)개 (\(set.source, privacy: .public)/\(set.daypart, privacy: .public))")
-            return set.items.map(\.playable)
+            return ranked.map(\.item.playable)
         } catch let error as ProxyError {
             let backup = fallback()
             guard !backup.isEmpty else { throw LaunchError.proxy(error) }

@@ -74,8 +74,14 @@ GET /zp/v1/recommend
 
 `secure=1` 을 붙이면 HTTPS 스트림만 온다. 앱이 스스로 고르는 자리(프리셋 자동 선택)는 이걸 쓴다.
 
-응답에는 `daypart`, `dayType`, `source` 가 함께 온다. `source` 가 `"rule"` 이면 규칙만 돈
-결과이고, M4 부터 `"llm"` 이 온다. `reason` 은 지금 규칙 문구이고 M4 에서 LLM 문구로 바뀐다.
+응답에는 `daypart`, `dayType`, `source`, `model`, `builtAt` 이 함께 온다. `source` 가 `"llm"`
+이면 밤에 만들어 둔 세트를 꺼내 준 것이고, `"rule"` 이면 그 자리에서 규칙으로 뽑은 것이다.
+둘의 항목 모양은 같아서 앱은 구분하지 않아도 된다.
+
+세트는 매일 04:00 KST 배치가 만든다(`POST /zp/v1/admin/recommend/build` 로 직접 돌릴 수도
+있다). 조합은 상황 5 × 시간대 6 × 평일·주말 2 × 나라 2 로 120개고, 사용자 수와 무관하다.
+세트에는 HTTPS 스트림만 담는다 — 앱이 골라서 그대로 트는 목록이기 때문이다. 평문 HTTP 까지
+달라는 요청(`secure` 없이 `country` 를 준 경우)은 규칙으로 즉석에서 뽑아 준다.
 앱은 받은 목록을 **기기에서 다시 정렬한다**(`04-curation.md` 3단계). 서버 순서는 시작점이다.
 
 **M3 구현 상태.** 1단 규칙만 돈다. 상황 다섯 가지의 태그 규칙은 `server/src/lib/situations.ts`

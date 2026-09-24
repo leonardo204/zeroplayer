@@ -4,10 +4,13 @@ import Foundation
 struct PlaybackOrigin: Equatable, Sendable {
     var presetName: String?
     var fromRecommendation: Bool
+    /// 어느 상황에서 틀었는지. 기기 재정렬이 "같은 상황에서 몇 번 들었나"를 셀 때 쓴다.
+    var situation: Situation?
 
-    init(presetName: String? = nil, fromRecommendation: Bool = false) {
+    init(presetName: String? = nil, fromRecommendation: Bool = false, situation: Situation? = nil) {
         self.presetName = presetName
         self.fromRecommendation = fromRecommendation
+        self.situation = situation
     }
 
     /// 목록에서 직접 골라 누른 경우.

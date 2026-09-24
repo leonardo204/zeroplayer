@@ -2,7 +2,8 @@
  * 1단 규칙. 상황·시각으로 후보를 좁힌다. LLM 을 부르지 않는다.
  *
  * 태그 값은 `station_tags` 에 실제로 들어 있는 표준 태그 45개에서 골랐다.
- * 분위기(`station_moods`)는 M4 에서 채우므로 여기서는 태그만 본다.
+ * 분위기(`station_moods`)는 M4 에서 채웠고 순위를 미는 데만 쓴다 — 분위기가 비어 있는
+ * 방송국이 남아 있어서, 분위기로 후보를 자르면 목록이 얇아진다.
  */
 
 export type Situation = 'sleep' | 'commute' | 'study' | 'work' | 'wake'
@@ -13,6 +14,10 @@ export interface SituationRule {
   prefer: string[]
   /** 하나라도 붙어 있으면 뺀다 */
   exclude: string[]
+  /** 이 분위기가 붙어 있으면 위로 올린다. 후보를 자르지는 않는다 */
+  preferMoods: string[]
+  /** 이 분위기가 붙어 있으면 아래로 내린다 */
+  avoidMoods: string[]
   /** 규칙 설명. 응답의 reason 에 그대로 들어간다 */
   note: string
   /** 비트레이트가 높은 쪽을 먼저 보여줄지. 끊김이 곤란한 상황에만 켠다 */
@@ -24,12 +29,16 @@ export const SITUATIONS: Record<Situation, SituationRule> = {
     label: '취침',
     prefer: ['ambient', 'chillout', 'lounge', 'newage', 'classical', 'jazz', 'instrumental', 'soundtrack', 'blues', 'soul'],
     exclude: ['news', 'talk', 'sports', 'metal', 'punk', 'techno', 'comedy', 'religion', 'live'],
+    preferMoods: ['calm', 'late-night'],
+    avoidMoods: ['energetic', 'talky', 'morning'],
     note: '잔잔한 음악만 남기고 뉴스·토크는 뺐다',
   },
   commute: {
     label: '운전',
     prefer: ['news', 'talk', 'pop', 'rock', 'top40', 'dance', 'kpop', 'hiphop', 'culture', 'oldies'],
     exclude: ['ambient', 'newage', 'instrumental'],
+    preferMoods: ['energetic', 'talky', 'morning'],
+    avoidMoods: ['calm', 'late-night'],
     note: '말과 활기 있는 음악을 함께 두고 끊김이 적은 쪽을 앞에 놨다',
     preferHighBitrate: true,
   },
@@ -37,18 +46,24 @@ export const SITUATIONS: Record<Situation, SituationRule> = {
     label: '공부',
     prefer: ['classical', 'instrumental', 'ambient', 'chillout', 'newage', 'jazz', 'lounge', 'soundtrack'],
     exclude: ['news', 'talk', 'sports', 'metal', 'punk', 'comedy', 'hiphop', 'religion', 'live'],
+    preferMoods: ['focus', 'calm', 'background'],
+    avoidMoods: ['talky', 'energetic'],
     note: '가사와 말이 적은 채널만 남겼다',
   },
   work: {
     label: '작업',
     prefer: ['chillout', 'electronic', 'house', 'lounge', 'techno', 'jazz', 'funk', 'soul', 'indie', 'pop'],
     exclude: ['news', 'talk', 'sports', 'religion'],
+    preferMoods: ['background', 'focus'],
+    avoidMoods: ['talky'],
     note: '배경으로 깔아 두기 좋은 쪽을 골랐다',
   },
   wake: {
     label: '기상',
     prefer: ['news', 'pop', 'top40', 'dance', 'kpop', 'jpop', 'culture', 'talk'],
     exclude: ['ambient', 'newage', 'metal', 'punk'],
+    preferMoods: ['morning', 'energetic', 'talky'],
+    avoidMoods: ['late-night', 'calm'],
     note: '아침에 정신이 드는 쪽으로 뉴스와 밝은 음악을 골랐다',
   },
 }

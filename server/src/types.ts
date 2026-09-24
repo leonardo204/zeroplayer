@@ -6,6 +6,8 @@ export interface Env {
   SYNC_TOP_COUNTRIES: string
   SYNC_TOP_PER_COUNTRY: string
   STREAM_CHECK_BATCH: string
+  /** 추천 세트를 미리 만들어 둘 나라. 쉼표로 나눈다. 전 세계 세트는 항상 함께 만든다 */
+  RECOMMEND_COUNTRIES?: string
 }
 
 export interface StationRow {

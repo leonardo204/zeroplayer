@@ -16,7 +16,7 @@
 
 Swift 6 툴체인을 쓰되 **언어 모드는 처음에 5 로 두고** `SWIFT_STRICT_CONCURRENCY = complete` 경고를 켠다. `AVPlayer` 의 KVO 와 SwiftData 모델은 `Sendable` 이 아니라, 6 모드에서 처음부터 막히면 재생 구조를 잡는 M1 이 느려진다. M3 이후 경고가 0 이 되면 6 모드로 올린다. 1.x 의 전역 static 변수가 전부 없어지므로 올리는 데 구조적 장애는 없다.
 
-`FoundationModels` 는 iOS 26 프레임워크다. 최소 iOS 가 17 이므로 `#if canImport(FoundationModels)` 와 `@available(iOS 26, *)` 로 감싸고, iOS 17 기기에서 프레임워크 로드 실패로 앱이 죽지 않는지 M4 에서 실기기로 확인한다.
+`FoundationModels` 는 iOS 26 프레임워크다. 최소 iOS 가 17 이므로 `#if canImport(FoundationModels)` 와 `@available(iOS 26, *)` 로 감싸고, iOS 17 기기에서 프레임워크 로드 실패로 앱이 죽지 않는지는 실기기로 확인해야 한다(아직 안 했다).
 
 ## 2. 디렉터리
 

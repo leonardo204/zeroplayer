@@ -111,9 +111,11 @@ struct PresetsView: View {
         startingID = preset.presetID
         defer { startingID = nil }
 
-        let launcher = PresetLauncher(player: player, fallback: {
-            FavoriteStore(context: modelContext).all().map(\.playable)
-        })
+        let launcher = PresetLauncher(
+            player: player,
+            fallback: { FavoriteStore(context: modelContext).all().map(\.playable) },
+            profiles: { ListeningStore(context: modelContext).profiles(situation: $0) }
+        )
         do {
             let item = try await launcher.start(preset)
             startedTitle = "\(preset.name) · \(item.title)"

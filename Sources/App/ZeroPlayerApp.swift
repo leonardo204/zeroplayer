@@ -6,6 +6,8 @@ struct ZeroPlayerApp: App {
     private let container: ModelContainer
     private let listeningStore: ListeningStore
     @State private var player: AudioPlayerService
+    /// 기기 안 모델. 쓸 수 없는 기기에서는 가용성만 알려 주고 아무 일도 하지 않는다.
+    @State private var reasoner = OnDeviceReasoner()
 
     init() {
         let container = Self.makeContainer()
@@ -22,6 +24,7 @@ struct ZeroPlayerApp: App {
         WindowGroup {
             RootView()
                 .environment(player)
+                .environment(reasoner)
                 .task { await autoPlayIfRequested() }
                 .task { await autoPresetIfRequested() }
         }
@@ -58,9 +61,11 @@ struct ZeroPlayerApp: App {
         }
         let presets = (try? context.fetch(FetchDescriptor<Preset>(sortBy: [SortDescriptor(\Preset.order)]))) ?? []
         guard let preset = presets.first(where: { $0.name == name }) else { return }
-        let launcher = PresetLauncher(player: player, fallback: {
-            FavoriteStore(context: context).all().map(\.playable)
-        })
+        let launcher = PresetLauncher(
+            player: player,
+            fallback: { FavoriteStore(context: context).all().map(\.playable) },
+            profiles: { ListeningStore(context: context).profiles(situation: $0) }
+        )
         _ = try? await launcher.start(preset)
         #endif
     }

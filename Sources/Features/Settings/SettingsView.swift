@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(OnDeviceReasoner.self) private var reasoner
     @Query private var favorites: [Favorite]
     @Query private var sessions: [ListeningSession]
 
@@ -10,6 +11,16 @@ struct SettingsView: View {
     @AppStorage("zp.timer.fadeSeconds") private var fadeSeconds = 30
 
     @State private var isEraseConfirmPresented = false
+
+    /// 추천 품질 지표. 기록이 바뀔 때만 다시 센다.
+    private var quality: (throughRecommendation: Double, earlySkipRate: Double, total: Int) {
+        ListeningStore(context: modelContext)
+            .recommendationQuality(since: Date().addingTimeInterval(-30 * 24 * 60 * 60))
+    }
+
+    private func percent(_ value: Double) -> String {
+        quality.total == 0 ? "기록 없음" : "\(Int((value * 100).rounded()))%"
+    }
 
     var body: some View {
         NavigationStack {
@@ -25,6 +36,30 @@ struct SettingsView: View {
                             Text(seconds == 0 ? "없음" : "\(seconds)초").tag(seconds)
                         }
                     }
+                }
+
+                Section {
+                    LabeledContent("기기 안 모델") {
+                        Text(reasoner.availability.isReady ? "사용 중" : "쓰지 않음")
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("추천")
+                } footer: {
+                    Text(reasoner.availability.message)
+                }
+
+                Section {
+                    LabeledContent("추천으로 시작한 재생") {
+                        Text(percent(quality.throughRecommendation)).foregroundStyle(.secondary)
+                    }
+                    LabeledContent("30초 안에 넘긴 비율") {
+                        Text(percent(quality.earlySkipRate)).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("최근 30일")
+                } footer: {
+                    Text("추천이 실제로 일하고 있는지 보는 값입니다. 기기 안에만 있고 서버로 보내지 않습니다.")
                 }
 
                 Section("기기에 쌓인 것") {
@@ -55,6 +90,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("설정")
+            .task { await reasoner.warmUp() }
             .confirmationDialog(
                 "청취 기록을 모두 지웁니다",
                 isPresented: $isEraseConfirmPresented,
@@ -73,5 +109,6 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
+        .environment(OnDeviceReasoner())
         .modelContainer(for: [Favorite.self, ListeningSession.self], inMemory: true)
 }
