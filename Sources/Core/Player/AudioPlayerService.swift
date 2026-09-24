@@ -10,6 +10,8 @@ protocol AudioPlaying: AnyObject {
     var elapsed: TimeInterval { get }
     /// ICY 메타데이터로 들어온 곡명. 안 주는 방송국이 많아서 없을 수 있다.
     var streamTitle: String? { get }
+    /// 에피소드 길이. 라디오는 0 이다.
+    var duration: TimeInterval { get }
 
     func play(_ item: PlayableItem, origin: PlaybackOrigin) async
     func pause()
@@ -29,6 +31,12 @@ final class AudioPlayerService: AudioPlaying {
     private(set) var current: PlayableItem?
     private(set) var elapsed: TimeInterval = 0
     private(set) var streamTitle: String?
+    /// 에피소드 길이. 라디오는 0 으로 둔다.
+    private(set) var duration: TimeInterval = 0
+    /// 재생 속도. 에피소드에만 쓴다. 고른 값은 다음 재생에도 이어진다.
+    private(set) var playbackRate: Double = UserDefaults.standard.double(forKey: "zp.podcast.rate") > 0
+        ? UserDefaults.standard.double(forKey: "zp.podcast.rate")
+        : 1.0
 
     /// 첫 오디오를 이 시간 안에 못 받으면 실패로 본다.
     static let firstAudioTimeout: Duration = .seconds(15)
@@ -60,6 +68,17 @@ final class AudioPlayerService: AudioPlaying {
     /// 지금 재생이 어디서 시작됐는지. 청취 기록에 그대로 들어간다.
     @ObservationIgnored private var origin: PlaybackOrigin = .manual
     @ObservationIgnored private var isSessionOpen = false
+    /// 듣던 위치를 남길 곳. 에피소드에만 쓴다.
+    @ObservationIgnored private var positions: (any PlaybackPositionKeeping)?
+    /// 준비되면 이 위치로 옮긴다. 이어듣기 값이다.
+    @ObservationIgnored private var pendingSeek: TimeInterval?
+    @ObservationIgnored private var lastSavedPosition: TimeInterval = 0
+    @ObservationIgnored private var endObserver: NSObjectProtocol?
+
+    /// 되감기·건너뛰기 폭. 잠금화면 단추와 화면 단추가 같은 값을 쓴다.
+    static let skipBackSeconds: TimeInterval = 15
+    static let skipForwardSeconds: TimeInterval = 30
+    static let rateChoices: [Double] = [1.0, 1.2, 1.5, 2.0]
 
     init(
         resolver: StreamResolving = ProxyStreamResolver(),
@@ -77,6 +96,11 @@ final class AudioPlayerService: AudioPlaying {
         self.recorder = recorder
     }
 
+    /// 듣던 위치를 남길 곳을 꽂는다. 앱이 뜰 때 한 번만 부른다.
+    func attach(positions: any PlaybackPositionKeeping) {
+        self.positions = positions
+    }
+
     // MARK: - 재생 조작
 
     func play(_ item: PlayableItem, origin: PlaybackOrigin = .manual) async {
@@ -86,6 +110,10 @@ final class AudioPlayerService: AudioPlaying {
         self.origin = origin
         current = item
         streamTitle = nil
+        duration = item.durationSeconds ?? 0
+        // 에피소드는 듣던 자리에서 잇는다. 준비되면 이 값으로 옮긴다.
+        pendingSeek = item.kind == .podcast ? positions?.position(for: item.id) : nil
+        lastSavedPosition = 0
         elapsed = 0
         liveAccumulated = 0
         liveStartedAt = nil
@@ -123,6 +151,8 @@ final class AudioPlayerService: AudioPlaying {
 
         let player = AVPlayer(playerItem: playerItem)
         player.automaticallyWaitsToMinimizeStalling = true
+        // `play()` 는 재생 속도를 1 로 되돌린다. 기본 속도를 정해 두면 그 값으로 시작한다.
+        player.defaultRate = item.kind == .podcast ? Float(playbackRate) : 1
         // 지난 재생이 페이드아웃 중에 끝났을 수 있다. 볼륨은 항상 1 에서 시작한다.
         player.volume = 1
         observeRate(of: player)
@@ -136,6 +166,7 @@ final class AudioPlayerService: AudioPlaying {
     func pause() {
         guard state == .playing else { return }
         player?.pause()
+        savePosition(force: true)
         accumulateLiveElapsed()
         pausedByInterruption = false
         state = .paused
@@ -158,6 +189,7 @@ final class AudioPlayerService: AudioPlaying {
     }
 
     func stop() {
+        savePosition(force: true)
         closeListeningSession()
         sleepTimer.reset()
         teardownCurrentItem()
@@ -166,6 +198,7 @@ final class AudioPlayerService: AudioPlaying {
         streamTitle = nil
         state = .idle
         elapsed = 0
+        duration = 0
         liveAccumulated = 0
         liveStartedAt = nil
         pushNowPlaying()
@@ -198,6 +231,32 @@ final class AudioPlayerService: AudioPlaying {
         }
     }
 
+    // MARK: - 에피소드 조작
+
+    /// 진행 바를 끌었을 때. 라디오에는 옮길 자리가 없다.
+    func seek(to seconds: TimeInterval) {
+        guard let player, let item = current, item.kind == .podcast else { return }
+        let target = max(0, duration > 0 ? min(seconds, duration - 1) : seconds)
+        player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        elapsed = target
+        lastSavedPosition = target
+        pushNowPlaying()
+    }
+
+    func skip(by delta: TimeInterval) {
+        guard current?.kind == .podcast else { return }
+        seek(to: elapsed + delta)
+    }
+
+    func setRate(_ rate: Double) {
+        playbackRate = rate
+        UserDefaults.standard.set(rate, forKey: "zp.podcast.rate")
+        guard let player, current?.kind == .podcast else { return }
+        player.defaultRate = Float(rate)
+        if state == .playing { player.rate = Float(rate) }
+        pushNowPlaying()
+    }
+
     func next() async {
         // M3: 프리셋의 다음 소스, 또는 추천 목록의 다음 항목.
     }
@@ -222,12 +281,21 @@ final class AudioPlayerService: AudioPlaying {
                     self.fail(.network)
                 case .readyToPlay:
                     self.log.info("AVPlayerItem 준비됨")
+                    self.applyReadyState()
                 case .unknown:
                     break
                 @unknown default:
                     break
                 }
             }
+        }
+
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleReachedEnd() }
         }
 
         failureObserver = NotificationCenter.default.addObserver(
@@ -293,8 +361,46 @@ final class AudioPlayerService: AudioPlaying {
             elapsed = liveAccumulated + since
         } else {
             elapsed = max(0, CMTimeGetSeconds(time))
+            savePosition(force: false)
         }
         recorder?.progress(elapsed)
+    }
+
+    /// 준비된 뒤에 한 번 돈다. 길이를 확정하고 듣던 자리로 옮긴다.
+    private func applyReadyState() {
+        guard let player, let item = current, item.kind == .podcast else { return }
+        let itemDuration = CMTimeGetSeconds(player.currentItem?.duration ?? .indefinite)
+        if itemDuration.isFinite, itemDuration > 0 { duration = itemDuration }
+
+        if let target = pendingSeek {
+            pendingSeek = nil
+            log.info("듣던 자리에서 잇는다: \(Int(target))초")
+            seek(to: target)
+        }
+        player.defaultRate = Float(playbackRate)
+        if state == .playing { player.rate = Float(playbackRate) }
+        nowPlaying.setScrubEnabled(true)
+        pushNowPlaying()
+    }
+
+    /// 에피소드를 끝까지 들었다. 이어듣기 자리를 지우고 멈춘다.
+    private func handleReachedEnd() {
+        guard let item = current else { return }
+        log.info("끝까지 재생했다: \(item.title, privacy: .public)")
+        if item.kind == .podcast { positions?.clear(itemID: item.id) }
+        closeListeningSession()
+        player?.pause()
+        state = .paused
+        elapsed = duration
+        pushNowPlaying()
+    }
+
+    /// 듣던 위치를 남긴다. 5초마다 한 번, 멈출 때는 바로.
+    private func savePosition(force: Bool) {
+        guard let item = current, item.kind == .podcast, elapsed > 0 else { return }
+        guard force || abs(elapsed - lastSavedPosition) >= 5 else { return }
+        lastSavedPosition = elapsed
+        positions?.save(item: item, seconds: elapsed, duration: duration)
     }
 
     // MARK: - 청취 기록
@@ -372,7 +478,10 @@ final class AudioPlayerService: AudioPlaying {
             pause: { [weak self] in self?.pause() },
             stop: { [weak self] in self?.stop() },
             next: { [weak self] in Task { await self?.next() } },
-            previous: { [weak self] in Task { await self?.previous() } }
+            previous: { [weak self] in Task { await self?.previous() } },
+            skipBackward: { [weak self] in self?.skip(by: -Self.skipBackSeconds) },
+            skipForward: { [weak self] in self?.skip(by: Self.skipForwardSeconds) },
+            seek: { [weak self] seconds in self?.seek(to: seconds) }
         ))
         nowPlaying.setSkipEnabled(false)
     }
@@ -382,6 +491,8 @@ final class AudioPlayerService: AudioPlaying {
             item: current,
             streamTitle: streamTitle,
             elapsed: elapsed,
+            duration: duration,
+            rate: current?.kind == .podcast ? playbackRate : 1.0,
             isPlaying: state == .playing
         )
     }
@@ -433,6 +544,11 @@ final class AudioPlayerService: AudioPlaying {
             NotificationCenter.default.removeObserver(failureObserver)
         }
         failureObserver = nil
+
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+        }
+        endObserver = nil
 
         if let metadataOutput, let playerItem = player?.currentItem {
             playerItem.remove(metadataOutput)

@@ -46,6 +46,9 @@ final class RecommendModel {
         }
     }
 
+    /// 자동 종료 기본값. 설정에서 고른 값이고, 서버가 이 길이에 맞는 에피소드를 섞어 준다.
+    var timerMinutes: Int = UserDefaults.standard.integer(forKey: "zp.timer.defaultMinutes")
+
     func load(listening: ListeningStore, reasoner: OnDeviceReasoning) async {
         isLoading = true
         errorText = nil
@@ -57,7 +60,8 @@ final class RecommendModel {
             at: .now,
             limit: 20,
             // 앱이 고른 것을 그대로 트는 자리라 열리는 스트림만 받는다(`CONTEXT.md` 6번).
-            secureOnly: true
+            secureOnly: true,
+            timerMinutes: timerMinutes
         )
 
         let set: RecommendationSetDTO

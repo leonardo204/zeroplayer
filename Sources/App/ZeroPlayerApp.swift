@@ -14,6 +14,7 @@ struct ZeroPlayerApp: App {
         let store = ListeningStore(context: container.mainContext)
         let player = AudioPlayerService()
         player.attach(recorder: store)
+        player.attach(positions: PositionStore(context: container.mainContext))
 
         self.container = container
         self.listeningStore = store
@@ -36,6 +37,7 @@ struct ZeroPlayerApp: App {
     private static func makeContainer() -> ModelContainer {
         let models: [any PersistentModel.Type] = [
             CachedStation.self, Preset.self, Favorite.self, ListeningSession.self,
+            PlaybackPosition.self,
         ]
         let schema = Schema(models)
         do {
@@ -71,9 +73,26 @@ struct ZeroPlayerApp: App {
     }
 
     /// 재생 경로를 손으로 누르지 않고 확인하려고 둔 통로다.
-    /// `-ZPAutoPlay rb:<uuid>` 로 켠다. 릴리스 빌드에는 들어가지 않는다.
+    /// `-ZPAutoPlay rb:<uuid>` 는 방송국, `-ZPAutoEpisode it:<피드>:<에피소드>` 는 에피소드다.
+    /// 릴리스 빌드에는 들어가지 않는다.
     private func autoPlayIfRequested() async {
         #if DEBUG
+        if let id = UserDefaults.standard.string(forKey: "ZPAutoEpisode"), !id.isEmpty {
+            let feedID = id.split(separator: ":").prefix(2).joined(separator: ":")
+            await player.play(PlayableItem(
+                id: id,
+                kind: .podcast,
+                title: "확인용 에피소드",
+                subtitle: feedID,
+                feedID: feedID
+            ))
+            // 이어듣기가 저장되는지 보려고 조금 앞으로 옮겨 둔다.
+            if let jump = UserDefaults.standard.string(forKey: "ZPSeekTo"), let seconds = Double(jump) {
+                try? await Task.sleep(for: .seconds(4))
+                player.seek(to: seconds)
+            }
+            return
+        }
         guard let id = UserDefaults.standard.string(forKey: "ZPAutoPlay"), !id.isEmpty else { return }
         await player.play(PlayableItem(id: id, kind: .station, title: id))
         #endif

@@ -23,7 +23,14 @@ struct RootView: View {
         return .recommend
         #endif
     }
-    @State private var isPlayerPresented = false
+    /// `-ZPShowPlayer 1` 로 재생 화면을 바로 띄운다. 릴리스 빌드에서는 항상 닫혀 있다.
+    @State private var isPlayerPresented = {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "ZPShowPlayer") == "1"
+        #else
+        false
+        #endif
+    }()
 
     var body: some View {
         TabView(selection: $selection) {

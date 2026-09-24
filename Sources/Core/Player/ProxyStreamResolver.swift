@@ -9,7 +9,9 @@ struct ProxyStreamResolver: StreamResolving {
     }
 
     func streamURL(for item: PlayableItem) async throws -> URL {
-        let dto = try await client.streamURL(stationID: item.id)
+        let dto = item.kind == .podcast
+            ? try await client.episodeStream(episodeID: item.id)
+            : try await client.streamURL(stationID: item.id)
         guard let url = URL(string: dto.url) else {
             throw StreamResolveError.notFound(item.id)
         }

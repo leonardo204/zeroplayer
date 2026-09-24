@@ -94,7 +94,9 @@ struct PresetLauncher {
             limit: 20,
             // 평문 HTTP 스트림은 지금 기기에서 열리지 않는다(`CONTEXT.md` 5번).
             // 사람이 고른 것이 아니라 앱이 고르는 자리라서, 열리는 것만 받는다.
-            secureOnly: true
+            secureOnly: true,
+            // 타이머를 켠 프리셋이면 그 길이에 맞는 에피소드도 후보에 들어온다.
+            timerMinutes: preset.timerMinutes
         )
 
         do {

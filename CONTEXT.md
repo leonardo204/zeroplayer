@@ -3,13 +3,14 @@
 다른 세션에서 이 저장소를 처음 열었을 때 읽는 문서다. 지금까지 한 일과 다음에 할 일만 적는다.
 기획 배경과 근거는 `docs/` 에 번호순으로 있다. 처음이면 `docs/00-concept.md` 부터 읽는다.
 
-마지막 갱신: 2026-09-24 (M4 완료, 실기기 확인 전)
+마지막 갱신: 2026-09-24 (M5 완료, 실기기 확인 전)
 
 ## 1. 현재 상태
 
-M4 까지 들어갔다. 추천 탭에서 상황을 고르면 서버가 밤에 만들어 둔 목록이 나오고, 그 목록이
+M5 까지 들어갔다. 추천 탭에서 상황을 고르면 서버가 밤에 만들어 둔 목록이 나오고, 그 목록이
 기기에 쌓인 청취 기록으로 다시 세워진다. 프리셋을 누르면 같은 경로로 고른 방송이 재생되고,
 타이머가 끝나면 페이드아웃으로 꺼지고, 그 재생이 기록 탭에 남는다.
+탐색 탭에서 팟캐스트를 찾아 에피소드를 재생할 수 있고, 듣던 자리에서 이어진다.
 실기기 확인(백그라운드 30분, 전화 인터럽트, 잠금화면 조작, 평문 HTTP)은 아직 안 했다.
 
 ```sh
@@ -221,9 +222,70 @@ D1 에 줄 단위로 쓰는 코드를 새로 쓸 때는 먼저 묶는다.
 답이 나온다. 순서는 `Personalizer` 의 점수식이 정하고(같은 입력에 같은 순서가 나온다),
 기기 모델은 맨 위 한 건의 이유 한 줄만 쓴다.
 
-## 6-6. 다음 할 일 — M5 (팟캐스트)
+## 6-6. M5 에서 알아낸 것
 
-`docs/07-roadmap.md` 의 M5 를 따른다. Podcast Index 키 발급이 먼저다.
+**iTunes Search 는 Worker 에서 못 쓴다.** 나가는 IP 가 Cloudflare 공용이라 Apple 쪽 한도에
+이미 걸려 있다 — `Rate limit has been exceeded for: itunes-apple-com|general|2a06:98c0:3600::103`
+로 429 나 403 만 돌아온다. 분당 20회 제한 문제가 아니라 아예 안 열린다(`docs/03-proxy-api.md` 7번의
+전제가 틀렸다). 같은 주소가 맥에서는 200 이다. 반면 애플 인기 목록
+(`rss.marketingtools.apple.com`)은 Worker 에서도 200 이라 순위는 받을 수 있다. 다만 순위에는
+피드 주소가 없다.
+
+**그래서 피드를 주소로 직접 등록한다.** `POST /admin/podcasts/add?feed=<RSS 주소>&id=it:<번호>`
+가 RSS 를 읽어 팟캐스트와 에피소드를 넣는다. 지금 들어 있는 48개(한국 25·미국 20 + 확인용)는
+맥에서 iTunes lookup 으로 주소를 모아 이 경로로 넣은 것이다. Podcast Index 키가 들어오면
+검색·인기 목록이 그쪽으로 바뀌고, 이 경로는 손으로 더하는 용도로 남는다.
+키가 없는 동안 `/podcasts/search` 는 이미 받아 둔 것 안에서 찾는다(응답 `source: "local"`).
+
+**팟캐스트 오디오도 평문 HTTP 가 많다.** SBS 계열은 `http://podcastdown.sbs.co.kr/...` 이고
+MBC 계열은 HTTPS 다. 방송국과 같은 문제라 에피소드 응답에도 `isSecure` 를 담고,
+프리셋 자동 선택처럼 앱이 고르는 자리에서는 `secure=1` 로 HTTPS 만 받는다.
+
+**RSS 는 정규식으로 읽는다.** Workers 에 `DOMParser` 가 없다(`server/src/lib/rss.ts`).
+`itunes:duration` 은 `00:36:26`·`36:26`·`2186` 세 가지가 다 오고, 설명에 HTML 과 CDATA 가
+섞인다. 피드 하나가 어긋나도 그 항목만 버리고 넘어간다.
+
+**죽은 피드가 섞여 있다.** 애플 한국 순위 30개 중 2개는 피드가 404 였다(삼프로TV 등).
+순위에 있다고 살아 있는 것이 아니다. 등록 실패는 502 `feed_error` 로 구분해 돌려준다.
+
+**에피소드 주소도 앱에 두지 않는다.** `docs/03-proxy-api.md` 3.3 은 목록에 `audioURL` 을
+담는다고 적었지만, 방송국과 같은 규칙(4번)을 지켜 목록에서는 빼고 재생 직전에
+`GET /episodes/{id}/stream` 으로만 준다. 문서는 고쳐 뒀다.
+
+## 6-7. M5 에서 새로 생긴 것
+
+| 경로 | 하는 일 |
+| --- | --- |
+| `server/src/lib/rss.ts` | RSS 읽기. 에피소드·길이·발행일 |
+| `server/src/lib/itunes.ts` | iTunes 검색·조회와 애플 인기 목록. 검색 쪽은 지금 막혀 있다 |
+| `server/src/lib/podcastIndex.ts` | Podcast Index 클라이언트. 시크릿 `PI_KEY`·`PI_SECRET` 이 있으면 켜진다 |
+| `server/src/lib/podcasts.ts` | 팟캐스트·에피소드 저장과 배치 |
+| `server/src/routes/podcasts.ts` | 검색·인기·에피소드·스트림 |
+| `Core/Persistence/Models/PlaybackPosition.swift` | 어디까지 들었는지(에피소드만) |
+| `Core/Persistence/Store/PositionStore.swift` | 이어듣기 읽고 쓰기 |
+| `Core/Player/PlaybackPositionKeeping.swift` | 재생 코드가 SwiftData 를 모르게 하는 통로 |
+| `Features/Podcasts/` | 팟캐스트 목록·에피소드 목록 |
+
+`AudioPlayerService` 에 길이·구간 이동·되감기(15초)·건너뛰기(30초)·재생 속도가 붙었다.
+속도는 `AVPlayer.defaultRate` 로 둔다 — `play()` 가 속도를 1 로 되돌리기 때문이다.
+잠금화면에도 진행 바와 되감기 단추가 나온다(에피소드일 때만 켠다).
+
+**M5 완료 기준은 채웠다.** 취침 프리셋(타이머 45분)을 누르니 45분짜리 에피소드가 골라져
+재생됐고, 앱을 끄고 다시 여니 620초 자리에서 이어졌다.
+
+## 6-8. 다음 할 일 — M6 (알람)
+
+`docs/07-roadmap.md` 의 M6 을 따른다. APNs 인증 키(.p8) 발급이 먼저다.
+App Store Connect API 키와 다른 것이라 개발자 포털 Keys 에서 APNs 용으로 새로 만든다.
+
+**Podcast Index 키가 들어오면** 시크릿 두 개를 넣고 배포하면 검색과 인기 목록이 그쪽으로
+바뀐다. 코드는 이미 그 길로 갈라져 있다.
+
+```sh
+cd server
+npx wrangler secret put PI_KEY
+npx wrangler secret put PI_SECRET
+```
 
 **실기기에서 확인할 것** — M1 부터 밀린 것이다.
 
@@ -239,6 +301,8 @@ D1 에 줄 단위로 쓰는 코드를 새로 쓸 때는 먼저 묶는다.
 - [ ] 탐색 탭에서 줄을 밀어 즐겨찾기에 넣고 빼는 동작
 - [ ] 재생 화면의 하트와 자동 종료 단추
 - [ ] 추천 탭에서 상황을 바꿔 가며 목록이 바뀌는지
+- [ ] 팟캐스트 검색·에피소드 목록·이어듣기 줄을 눌러 여는 동작
+- [ ] 재생 화면의 진행 바를 끌어 옮기기와 재생 속도 바꾸기
 
 ## 7. 정해둔 것과 아직 안 정한 것
 
@@ -261,6 +325,7 @@ D1 에 줄 단위로 쓰는 코드를 새로 쓸 때는 먼저 묶는다.
 **아직 안 정한 것**
 
 - APNs 인증 키(.p8)를 아직 안 만들었다. App Store Connect 키와 별개다. M6 에서 필요하다
+- Podcast Index 키를 신청했고 검증 메일을 기다리는 중이다. 없어도 M5 기능은 돈다(6-6 참고)
 - 방송국을 받아오는 나라는 지금 15개다. 사용자가 실제로 듣는 나라를 보고 넓힌다
   (`server/wrangler.toml` 의 `SYNC_TOP_COUNTRIES`)
 - AdMob 광고 단위 ID 를 아직 안 만들었다. M8

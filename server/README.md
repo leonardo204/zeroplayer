@@ -24,6 +24,7 @@ npx wrangler d1 migrations apply zeroplayer --remote
 | 라우트 | `ai.zerolive.co.kr/zp/v1/*` (zone `zerolive.co.kr`) |
 | D1 | `zeroplayer` · `04fa254c-e308-45cc-b258-349fc37d0b8b` |
 | Workers AI | 태그 정규화·분위기 분류·추천 문구에 `@cf/meta/llama-3.3-70b-instruct-fp8-fast` |
+| 팟캐스트 | 애플 나라별 인기 순위 + RSS. Podcast Index 는 시크릿 `PI_KEY`·`PI_SECRET` 을 넣으면 켜진다 |
 
 ## 앱이 쓰는 경로
 
@@ -35,7 +36,16 @@ GET  /zp/v1/stations/facets
 GET  /zp/v1/stations/{id}
 GET  /zp/v1/stations/{id}/stream
 POST /zp/v1/stations/{id}/report   { "reason": "no_audio" | "error" | "wrong_content" }
+
+GET  /zp/v1/podcasts/trending?country=KR&limit=30
+GET  /zp/v1/podcasts/search?q=&country=KR&limit=30
+GET  /zp/v1/podcasts/{feedID}
+GET  /zp/v1/podcasts/{feedID}/episodes?limit=50&cursor=&secure=1
+GET  /zp/v1/episodes/{episodeID}/stream
 ```
+
+추천에 `timer=45` 를 붙이면 35~55분 에피소드가 앞에 섞인다. 에피소드 오디오 주소는
+목록에 담지 않고 `/episodes/{id}/stream` 으로만 준다.
 
 `recommend` 의 `situation` 은 `sleep·commute·study·work·wake` 다. 상황별 태그·분위기 규칙은
 `src/lib/situations.ts` 에 있다. 응답의 `source` 가 `llm` 이면 밤에 만들어 둔 세트를 꺼내 준
@@ -70,6 +80,16 @@ curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/mood
 
 # 상황별 추천 세트 생성. sets 로 한 번에 만들 개수를 정한다. force=1 이면 오늘 만든 것도 다시 만든다
 curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/recommend/build?sets=8"
+
+# 팟캐스트 피드를 주소로 등록한다(iTunes 검색이 Worker 에서 막혀 지금은 이게 주 경로다)
+curl -X POST -H "x-zp-admin: $TOKEN" \
+  "https://ai.zerolive.co.kr/zp/v1/admin/podcasts/add?feed=<RSS%20주소>&id=it:437788220&country=KR"
+
+# 인기 목록과 그 피드들의 에피소드를 받아 둔다(매일 03:10 KST 배치와 같은 일)
+curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/podcasts/sync?country=KR&feeds=25"
+
+# 워커에서 특정 주소가 열리는지 본다
+curl -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/probe?url=<주소>"
 
 # 스트림 생사 점검 한 묶음
 curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/streams/check?size=150"

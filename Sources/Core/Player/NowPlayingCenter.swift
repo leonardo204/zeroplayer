@@ -12,6 +12,10 @@ final class NowPlayingCenter {
         var stop: () -> Void
         var next: () -> Void
         var previous: () -> Void
+        var skipBackward: () -> Void
+        var skipForward: () -> Void
+        /// 잠금화면 진행 바를 끌었을 때 옮길 자리(초).
+        var seek: (TimeInterval) -> Void
     }
 
     private let infoCenter = MPNowPlayingInfoCenter.default()
@@ -48,17 +52,47 @@ final class NowPlayingCenter {
             return .success
         }
 
-        // 라디오에는 구간 이동이 없다. M5 에서 팟캐스트를 붙일 때 되감기를 켠다.
-        commandCenter.changePlaybackPositionCommand.isEnabled = false
-        commandCenter.skipForwardCommand.isEnabled = false
-        commandCenter.skipBackwardCommand.isEnabled = false
+        commandCenter.skipBackwardCommand.preferredIntervals = [15]
+        commandCenter.skipForwardCommand.preferredIntervals = [30]
+        commandCenter.skipBackwardCommand.addTarget { _ in
+            MainActor.assumeIsolated { commands.skipBackward() }
+            return .success
+        }
+        commandCenter.skipForwardCommand.addTarget { _ in
+            MainActor.assumeIsolated { commands.skipForward() }
+            return .success
+        }
+        commandCenter.changePlaybackPositionCommand.addTarget { event in
+            guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+            let target = event.positionTime
+            MainActor.assumeIsolated { commands.seek(target) }
+            return .success
+        }
+
+        // 라디오에는 옮길 자리가 없다. 에피소드가 준비되면 켠다.
+        setScrubEnabled(false)
+    }
+
+    /// 구간 이동·되감기 단추를 켜고 끈다. 에피소드일 때만 켠다.
+    func setScrubEnabled(_ enabled: Bool) {
+        commandCenter.changePlaybackPositionCommand.isEnabled = enabled
+        commandCenter.skipForwardCommand.isEnabled = enabled
+        commandCenter.skipBackwardCommand.isEnabled = enabled
     }
 
     /// 재생 중인 항목이 바뀌거나 곡명이 들어올 때마다 부른다.
-    func update(item: PlayableItem?, streamTitle: String?, elapsed: TimeInterval, isPlaying: Bool) {
+    func update(
+        item: PlayableItem?,
+        streamTitle: String?,
+        elapsed: TimeInterval,
+        duration: TimeInterval = 0,
+        rate: Double = 1.0,
+        isPlaying: Bool
+    ) {
         guard let item else {
             infoCenter.nowPlayingInfo = nil
             infoCenter.playbackState = .stopped
+            setScrubEnabled(false)
             return
         }
 
@@ -66,10 +100,12 @@ final class NowPlayingCenter {
             MPMediaItemPropertyTitle: streamTitle ?? item.title,
             MPMediaItemPropertyArtist: streamTitle == nil ? (item.subtitle ?? "") : item.title,
             MPNowPlayingInfoPropertyIsLiveStream: item.isLive,
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? rate : 0.0,
+            MPNowPlayingInfoPropertyDefaultPlaybackRate: rate,
         ]
         if !item.isLive {
             info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = elapsed
+            if duration > 0 { info[MPMediaItemPropertyPlaybackDuration] = duration }
         }
 
         infoCenter.nowPlayingInfo = info

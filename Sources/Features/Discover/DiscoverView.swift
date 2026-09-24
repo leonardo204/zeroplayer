@@ -11,9 +11,53 @@ struct DiscoverView: View {
     @State private var model = DiscoverModel()
     @State private var store: StationStore?
     @State private var showFavoritesOnly = false
+    @State private var mode: Mode = DiscoverView.initialMode
+
+    /// 탐색 탭이 두 가지를 담는다. 탭은 다섯 개로 고정이라(`docs/01-features.md` 1번)
+    /// 팟캐스트를 여섯 번째 탭으로 두지 않고 여기에 넣는다.
+    enum Mode: String, CaseIterable, Identifiable {
+        case stations, podcasts
+        var id: String { rawValue }
+        var label: String { self == .stations ? "라디오" : "팟캐스트" }
+    }
+
+    /// 시뮬레이터에서 팟캐스트 쪽을 바로 열어 보려고 둔 통로다.
+    /// `-ZPDiscoverMode podcasts` 로 켠다. 릴리스 빌드에서는 항상 라디오다.
+    private static var initialMode: Mode {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "ZPDiscoverMode") == "podcasts" ? .podcasts : .stations
+        #else
+        .stations
+        #endif
+    }
 
     var body: some View {
         NavigationStack {
+            Group {
+                switch mode {
+                case .stations: stationList
+                case .podcasts: PodcastListContent()
+                }
+            }
+            .navigationTitle("탐색")
+            .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { modePicker }
+        }
+    }
+
+    private var modePicker: some View {
+        Picker("무엇을 찾을지", selection: $mode) {
+            ForEach(Mode.allCases) { mode in
+                Text(mode.label).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
+    private var stationList: some View {
             List {
                 if model.fromCache {
                     Label("네트워크에 닿지 못해 저장해 둔 목록을 보여줍니다. 재생은 연결된 뒤에 됩니다.",
@@ -78,8 +122,6 @@ struct DiscoverView: View {
                 }
             }
             .listStyle(.plain)
-            .navigationTitle("탐색")
-            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $model.search, prompt: "방송국 이름")
             .onSubmit(of: .search) { Task { await refresh() } }
             .refreshable { await refresh() }
@@ -92,7 +134,6 @@ struct DiscoverView: View {
                 favoritesToggle
             }
             .task { await start() }
-        }
     }
 
     // MARK: - 조각

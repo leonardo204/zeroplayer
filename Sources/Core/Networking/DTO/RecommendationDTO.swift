@@ -12,14 +12,19 @@ struct RecommendationDTO: Codable, Hashable, Sendable {
     let tags: [String]
     let moods: [String]
     let isSecure: Bool?
+    /// 에피소드일 때만 온다.
+    let durationSeconds: Int?
+
+    var isEpisode: Bool { kind == "episode" || kind == "podcast" }
 
     var playable: PlayableItem {
         PlayableItem(
             id: id,
-            kind: kind == "podcast" ? .podcast : .station,
+            kind: isEpisode ? .podcast : .station,
             title: title,
             subtitle: subtitle,
-            artworkURL: artworkURL.flatMap(URL.init(string:))
+            artworkURL: artworkURL.flatMap(URL.init(string:)),
+            durationSeconds: (durationSeconds ?? 0) > 0 ? TimeInterval(durationSeconds ?? 0) : nil
         )
     }
 }
@@ -41,6 +46,8 @@ struct RecommendQuery: Hashable, Sendable {
     var at: Date = .now
     var limit: Int = 20
     var secureOnly: Bool = false
+    /// 자동 종료 타이머 분. 0 이면 에피소드를 섞지 않는다.
+    var timerMinutes: Int = 0
 
     /// 서버는 현지 시각을 문자열 앞부분에서 읽는다.
     ///

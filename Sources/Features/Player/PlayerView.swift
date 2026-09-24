@@ -8,6 +8,10 @@ struct PlayerView: View {
 
     @Query private var favorites: [Favorite]
     @State private var isTimerPresented = false
+    /// 진행 바를 끌고 있는 동안의 값. 손을 떼면 그 자리로 옮기고 비운다.
+    @State private var scrub: Double?
+
+    private var isEpisode: Bool { player.current?.kind == .podcast }
 
     var body: some View {
         VStack(spacing: 20) {
@@ -44,12 +48,28 @@ struct PlayerView: View {
 
     // MARK: - 조각
 
+    @ViewBuilder
     private var artwork: some View {
+        if let url = player.current?.artworkURL {
+            AsyncImage(url: url) { phase in
+                if let image = phase.image {
+                    image.resizable().scaledToFill()
+                } else {
+                    placeholderArtwork
+                }
+            }
+            .frame(width: 240, height: 240)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        } else {
+            placeholderArtwork.frame(width: 240, height: 240)
+        }
+    }
+
+    private var placeholderArtwork: some View {
         RoundedRectangle(cornerRadius: 16)
             .fill(.quaternary)
-            .frame(width: 240, height: 240)
             .overlay {
-                Image(systemName: "waveform")
+                Image(systemName: isEpisode ? "mic" : "waveform")
                     .font(.system(size: 56))
                     .foregroundStyle(.secondary)
             }
@@ -77,9 +97,13 @@ struct PlayerView: View {
                     .buttonStyle(.bordered)
             }
         case .playing, .paused:
-            Text(elapsedText)
-                .font(.footnote.monospacedDigit())
-                .foregroundStyle(.secondary)
+            if isEpisode && player.duration > 0 {
+                progressBar
+            } else {
+                Text(elapsedText)
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
         case .idle:
             EmptyView()
         }
@@ -92,13 +116,55 @@ struct PlayerView: View {
         return String(format: "%d:%02d 재생 중", minutes, seconds)
     }
 
+    private var progressBar: some View {
+        VStack(spacing: 2) {
+            Slider(
+                value: Binding(
+                    get: { scrub ?? player.elapsed },
+                    set: { scrub = $0 }
+                ),
+                in: 0...max(player.duration, 1),
+                onEditingChanged: { editing in
+                    guard !editing, let target = scrub else { return }
+                    player.seek(to: target)
+                    scrub = nil
+                }
+            )
+            HStack {
+                Text(timeText(scrub ?? player.elapsed))
+                Spacer()
+                Text("-" + timeText(max(0, player.duration - (scrub ?? player.elapsed))))
+            }
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 32)
+    }
+
+    private func timeText(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds.rounded())
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let rest = total % 60
+        return hours > 0
+            ? String(format: "%d:%02d:%02d", hours, minutes, rest)
+            : String(format: "%d:%02d", minutes, rest)
+    }
+
     private var controls: some View {
         HStack(spacing: 40) {
-            Button { Task { await player.previous() } } label: {
-                Image(systemName: "backward.fill").font(.title2)
+            if isEpisode {
+                Button { player.skip(by: -AudioPlayerService.skipBackSeconds) } label: {
+                    Image(systemName: "gobackward.15").font(.title2)
+                }
+                .accessibilityLabel("15초 되감기")
+            } else {
+                Button { Task { await player.previous() } } label: {
+                    Image(systemName: "backward.fill").font(.title2)
+                }
+                .accessibilityLabel("이전")
+                .disabled(true)
             }
-            .accessibilityLabel("이전")
-            .disabled(true)
 
             Button {
                 if player.state == .playing { player.pause() } else { player.resume() }
@@ -108,11 +174,18 @@ struct PlayerView: View {
             }
             .accessibilityLabel(player.state == .playing ? "일시정지" : "재생")
 
-            Button { Task { await player.next() } } label: {
-                Image(systemName: "forward.fill").font(.title2)
+            if isEpisode {
+                Button { player.skip(by: AudioPlayerService.skipForwardSeconds) } label: {
+                    Image(systemName: "goforward.30").font(.title2)
+                }
+                .accessibilityLabel("30초 건너뛰기")
+            } else {
+                Button { Task { await player.next() } } label: {
+                    Image(systemName: "forward.fill").font(.title2)
+                }
+                .accessibilityLabel("다음")
+                .disabled(true)
             }
-            .accessibilityLabel("다음")
-            .disabled(true)
         }
         .buttonStyle(.plain)
     }
@@ -129,6 +202,28 @@ struct PlayerView: View {
             .buttonStyle(.plain)
             .disabled(player.current == nil)
             .accessibilityLabel(isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가")
+
+            if isEpisode {
+                Menu {
+                    ForEach(AudioPlayerService.rateChoices, id: \.self) { rate in
+                        Button {
+                            player.setRate(rate)
+                        } label: {
+                            if player.playbackRate == rate {
+                                Label(rateText(rate), systemImage: "checkmark")
+                            } else {
+                                Text(rateText(rate))
+                            }
+                        }
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "speedometer").font(.title3)
+                        Text(rateText(player.playbackRate)).font(.caption2.monospacedDigit())
+                    }
+                }
+                .accessibilityLabel("재생 속도")
+            }
 
             Button { isTimerPresented = true } label: {
                 VStack(spacing: 4) {
@@ -155,6 +250,10 @@ struct PlayerView: View {
             .accessibilityLabel("정지")
         }
         .foregroundStyle(.secondary)
+    }
+
+    private func rateText(_ rate: Double) -> String {
+        rate == 1.0 ? "1배" : String(format: "%.1f배", rate)
     }
 
     // MARK: - 즐겨찾기

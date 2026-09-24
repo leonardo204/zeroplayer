@@ -121,13 +121,31 @@ Body: { "reason": "no_audio" | "error" | "wrong_content" }
 ### 3.3 팟캐스트
 
 ```
-GET /zp/v1/podcasts/search?q=&lang=ko&limit=30
+GET /zp/v1/podcasts/trending?country=KR&limit=30
+GET /zp/v1/podcasts/search?q=&country=KR&limit=30
 GET /zp/v1/podcasts/{feedID}
-GET /zp/v1/podcasts/{feedID}/episodes?limit=50&cursor=
-GET /zp/v1/podcasts/trending?country=KR
+GET /zp/v1/podcasts/{feedID}/episodes?limit=50&cursor=&secure=1
+GET /zp/v1/episodes/{episodeID}
+GET /zp/v1/episodes/{episodeID}/stream
 ```
 
-에피소드 응답에 `audioURL`, `durationSeconds`, `publishedAt`, `description` 을 담는다. `audioURL` 은 원본 그대로 준다. 팟캐스트 RSS 는 공개 배포가 목적이라 중계할 이유가 없고, 중계하면 대역폭만 먹는다.
+`feedID` 는 `it:<애플 번호>` 또는 `pi:<Podcast Index 번호>` 이고, 에피소드 ID 는
+`<feedID>:<guid 해시>` 다. 에피소드 응답에는 `durationSeconds`·`publishedAt`·`isSecure` 가 있다.
+
+**에피소드 오디오 주소는 목록에 담지 않는다.** 방송국과 같은 규칙(`02-architecture.md` 5번)을
+지켜 재생 직전에 `/episodes/{id}/stream` 으로만 준다. 팟캐스트 오디오도 평문 HTTP 가 흔해서
+`isSecure` 로 구분하고, 앱이 고르는 자리에서는 `secure=1` 로 HTTPS 만 받는다.
+
+**소스는 세 가지이고 순서가 있다.** Podcast Index 키(`PI_KEY`·`PI_SECRET`)가 있으면 그쪽,
+없으면 D1 에 이미 있는 것에서 찾는다(`source: "local"`). 애플 나라별 인기 순위
+(`rss.marketingtools.apple.com`)는 키 없이 열려서 순위에 쓴다.
+
+**iTunes Search 는 Worker 에서 안 열린다.** 나가는 IP 가 Cloudflare 공용이라 Apple 한도에
+이미 걸려 있어 429·403 만 온다(2026-09 실측). 아래 7번의 '분당 약 20회' 는 자기 컴퓨터에서
+부를 때 이야기다. 그래서 피드는 `POST /admin/podcasts/add?feed=<RSS 주소>&id=it:<번호>` 로
+직접 등록한다. 등록은 RSS 를 읽어 팟캐스트와 에피소드를 함께 넣는다.
+
+추천에 `timer=45` 를 붙이면 35~55분 에피소드가 목록 맨 앞에 최대 3편 섞인다.
 
 ### 3.4 히든 — 한국 지상파
 
@@ -339,9 +357,9 @@ CREATE INDEX idx_alarms_due ON alarms(enabled, next_fire_at);
 | --- | --- | --- | --- |
 | radio-browser | 데이터는 퍼블릭 도메인, 소프트웨어는 오픈소스. *"You may use it in free and non free software"* [[S1]](#s1) [[S2]](#s2) | 무료, 키 없음 | User-Agent 필수. 서버 주소 하드코딩 금지 |
 | Podcast Index | MIT. *"always be available for free, for any use"* [[S3]](#s3) | 무료, 키 발급 | 재판매 금지. 사용량 제한은 서버 재량 |
-| iTunes Search | 명시 없음 | 무료, 키 없음 | **분당 약 20회** (IP 기준) [[S4]](#s4) |
+| iTunes Search | 명시 없음 | 무료, 키 없음 | **분당 약 20회** (IP 기준) [[S4]](#s4). 다만 Cloudflare Worker 에서는 공용 IP 가 이미 한도에 걸려 429·403 만 온다(2026-09 실측) |
 
-iTunes Search 는 주 소스로 쓰지 않는다. Podcast Index 에 한국 팟캐스트 메타데이터가 빈약할 때 보완용으로만 쓰고, 결과는 D1 에 캐시해 호출 수를 줄인다.
+iTunes Search 는 주 소스로 쓰지 않는다. 애초에 Worker 에서 열리지 않아 지금은 보완용으로도 못 쓴다 — 피드는 관리 경로로 직접 등록한다(3.3). Podcast Index 에 한국 팟캐스트 메타데이터가 빈약할 때 보완용으로만 쓰고, 결과는 D1 에 캐시해 호출 수를 줄인다.
 
 ## 8. 출처
 

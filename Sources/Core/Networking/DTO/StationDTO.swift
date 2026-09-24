@@ -30,6 +30,8 @@ struct StreamDTO: Codable, Sendable {
     let bitrate: Int
     let recheckAfter: Int
     let degraded: Bool?
+    /// 에피소드일 때만 온다. 라디오는 길이가 없다.
+    let durationSeconds: Int?
 }
 
 struct FacetValueDTO: Codable, Hashable, Sendable {

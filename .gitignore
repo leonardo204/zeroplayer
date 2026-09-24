@@ -8,6 +8,8 @@ xcuserdata/
 *.xcuserstate
 
 # secrets
+.env
+.env.*
 Secrets.xcconfig
 *.p12
 *.cer

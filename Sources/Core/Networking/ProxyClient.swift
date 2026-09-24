@@ -8,6 +8,10 @@ protocol ProxyClienting: StreamReporting, Sendable {
     func streamURL(stationID: String) async throws -> StreamDTO
     func facets() async throws -> FacetsDTO
     func recommendations(_ query: RecommendQuery) async throws -> RecommendationSetDTO
+    func trendingPodcasts(country: String?, limit: Int) async throws -> PodcastListDTO
+    func searchPodcasts(term: String, country: String?, limit: Int) async throws -> PodcastListDTO
+    func episodes(feedID: String, cursor: String?, limit: Int) async throws -> EpisodePageDTO
+    func episodeStream(episodeID: String) async throws -> StreamDTO
 }
 
 struct StationQuery: Hashable, Sendable {
@@ -88,7 +92,35 @@ struct ProxyClient: ProxyClienting {
         ]
         if let country = query.country { items.append(.init(name: "country", value: country)) }
         if query.secureOnly { items.append(.init(name: "secure", value: "1")) }
+        if query.timerMinutes > 0 { items.append(.init(name: "timer", value: String(query.timerMinutes))) }
         return try await get("/recommend", query: items)
+    }
+
+    // MARK: - 팟캐스트
+
+    func trendingPodcasts(country: String?, limit: Int) async throws -> PodcastListDTO {
+        var items: [URLQueryItem] = [.init(name: "limit", value: String(limit))]
+        if let country { items.append(.init(name: "country", value: country)) }
+        return try await get("/podcasts/trending", query: items)
+    }
+
+    func searchPodcasts(term: String, country: String?, limit: Int) async throws -> PodcastListDTO {
+        var items: [URLQueryItem] = [
+            .init(name: "q", value: term),
+            .init(name: "limit", value: String(limit)),
+        ]
+        if let country { items.append(.init(name: "country", value: country)) }
+        return try await get("/podcasts/search", query: items)
+    }
+
+    func episodes(feedID: String, cursor: String?, limit: Int) async throws -> EpisodePageDTO {
+        var items: [URLQueryItem] = [.init(name: "limit", value: String(limit))]
+        if let cursor { items.append(.init(name: "cursor", value: cursor)) }
+        return try await get("/podcasts/\(feedID)/episodes", query: items)
+    }
+
+    func episodeStream(episodeID: String) async throws -> StreamDTO {
+        try await get("/episodes/\(episodeID)/stream")
     }
 
     /// 신고는 실패해도 사용자에게 알리지 않는다. 재생 복구가 먼저다.
