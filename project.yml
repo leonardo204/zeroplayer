@@ -38,9 +38,27 @@ targets:
       - path: Sources
     dependencies:
       - package: GoogleMobileAds
+    # 광고 ID 가 빌드마다 다르다. Debug 는 구글 테스트 ID, Release 는 실제 단위다.
     configFiles:
-      Debug: Configs/Base.xcconfig
-      Release: Configs/Base.xcconfig
+      Debug: Configs/Debug.xcconfig
+      Release: Configs/Release.xcconfig
+    # 테스트 ID 로 아카이브하면 출시 첫날 수익이 0 이고 빌드를 다시 올려야 한다.
+    # 아카이브(ACTION=install)일 때만 막는다 — 평소 Release 빌드는 그대로 된다.
+    preBuildScripts:
+      - name: AdMob ID 확인
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ "$ACTION" != "install" ]; then exit 0; fi
+          for value in "$ZP_ADMOB_APP_ID" "$ZP_ADMOB_BANNER_RECOMMEND" \
+                       "$ZP_ADMOB_BANNER_DISCOVER" "$ZP_ADMOB_BANNER_PRESETS" \
+                       "$ZP_ADMOB_BANNER_STATS"; do
+            case "$value" in
+              *3940256099942544*)
+                echo "error: AdMob 값이 아직 구글 테스트 ID 다($value). Configs/Release.xcconfig 를 채운다."
+                exit 1
+                ;;
+            esac
+          done
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zerolive.cloudRadioN

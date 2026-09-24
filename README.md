@@ -39,7 +39,7 @@ open zeroPlayer.xcodeproj
 
 `.xcodeproj` 와 `Sources/App/Info.plist` 는 XcodeGen 이 만들므로 커밋하지 않는다. `project.yml` 을 고치면 `xcodegen generate` 를 다시 돌린다.
 
-빌드 설정 기본값은 `Configs/Base.xcconfig` 에 있고, 프록시 주소를 로컬이나 스테이징으로 돌리거나 AdMob 키를 넣을 때만 루트에 `Secrets.xcconfig` 를 만든다(`Secrets.xcconfig.example` 참고). 없어도 빌드된다. 인증서와 키는 어떤 형태로도 저장소에 넣지 않는다.
+빌드 설정은 `Configs/` 에 있다. 두 빌드가 함께 쓰는 값은 `Base.xcconfig`, 광고 ID 처럼 빌드마다 다른 값은 `Debug.xcconfig`(구글 테스트 ID)와 `Release.xcconfig`(실제 광고 단위)에 나눠 둔다. 프록시 주소를 로컬이나 스테이징으로 돌릴 때만 루트에 `Secrets.xcconfig` 를 만든다(`Secrets.xcconfig.example` 참고). 없어도 빌드된다. 인증서와 키는 어떤 형태로도 저장소에 넣지 않는다.
 
 ## 진행 상황
 

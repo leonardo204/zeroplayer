@@ -572,8 +572,14 @@ SDK 를 시작하지 않는다.
 | `Features/Settings/YouTubeRemovedView.swift` | 유튜브 기능이 없어진 이유. 1.7 사용자에게 한 번 |
 | `docs/08-release.md` | App Privacy 표기와 심사 메모. 콘솔에서 할 일 |
 
-광고 ID 는 `Configs/Base.xcconfig` → Info.plist 로 들어간다. 실제 값은
-저장소 루트 `Secrets.xcconfig` 에서 덮어쓴다(커밋하지 않는다).
+**광고 ID 는 빌드마다 다르다.** 개발 빌드는 `Configs/Debug.xcconfig` 의 구글 테스트 ID,
+배포 빌드는 `Configs/Release.xcconfig` 의 실제 광고 단위를 쓴다. 개발하면서 실제 광고를
+누르면 무효 트래픽이라 게시자 계정이 막힐 수 있어서 갈라 뒀다 — 계정 정지는 앱 단위가
+아니라 계정 단위다. 두 파일 다 커밋한다. 광고 ID 는 비밀이 아니라 Info.plist 에 그대로
+박히는 값이고, 저장소를 새로 받은 사람의 배포 빌드도 실제 광고로 나가야 하기 때문이다.
+
+테스트 ID 가 남아 있으면 **아카이브가 안 된다.** `project.yml` 의 'AdMob ID 확인' 단계가
+`ACTION=install` 일 때만 값을 보고 막는다. 평소 Release 빌드는 그대로 된다.
 
 **마이그레이션은 한 번만 돈다.** `UserDefaults` 의 `zp.migration.v1.done` 이 표시다.
 원본 JSON 은 지우지 않는다. 다시 돌려 보려면 앱을 지웠다 깔고 파일을 다시 심는다.
@@ -661,9 +667,9 @@ SDK 를 시작하지 않는다.
 **콘솔에서 할 일**
 
 - [ ] App Store Connect 2.0 버전 정보에 마케팅 URL·지원 URL·개인정보처리방침 URL 을 넣는다
-- [ ] **제출 전에** AdMob 에 앱을 등록하고 배너 광고 단위 4개를 받아 `Secrets.xcconfig` 에 넣는다.
-      스토어 게시를 기다릴 필요가 없다 — 앱 추가할 때 '스토어에 등록되어 있나요' 에 아니요를
-      고르면 된다. 테스트 ID 로 제출하면 첫날 수익이 0 이고 빌드를 또 올려야 한다
+- [x] AdMob 배너 광고 단위 4개를 만들어 `Configs/Release.xcconfig` 에 넣었다
+- [ ] **AdMob 앱 ID** 를 같은 파일의 `ZP_ADMOB_APP_ID` 에 넣는다. 아직 테스트 값이라
+      아카이브가 막혀 있다. 테스트 ID 로 제출하면 첫날 수익이 0 이고 빌드를 또 올려야 한다
 - [ ] AdMob 동의 메시지를 한국어로 만든다
 - [ ] 내 기기를 AdMob 테스트 기기로 등록한다 (실제 ID 로 내 광고를 누르면 무효 트래픽이다)
 - [ ] 스토어에 2.0 이 반영된 뒤 AdMob 앱 인증을 다시 누른다 (인증은 제출을 막지 않는다)

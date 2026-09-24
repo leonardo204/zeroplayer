@@ -1,0 +1,17 @@
+// 개발 빌드. 광고는 구글이 공개한 테스트 ID 만 쓴다.
+//
+// 실제 광고 단위로 개발하면 내가 내 광고를 누르게 되고, 그건 무효 트래픽이라
+// 게시자 계정이 막힐 수 있다. 계정 정지는 앱 단위가 아니라 계정 단위라
+// 다른 앱 수익까지 함께 멈춘다(`docs/05-ads-policy.md` 6번).
+
+#include "Base.xcconfig"
+
+ZP_ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511
+ZP_ADMOB_BANNER_RECOMMEND = ca-app-pub-3940256099942544/2934735716
+ZP_ADMOB_BANNER_DISCOVER = ca-app-pub-3940256099942544/2934735716
+ZP_ADMOB_BANNER_PRESETS = ca-app-pub-3940256099942544/2934735716
+ZP_ADMOB_BANNER_STATS = ca-app-pub-3940256099942544/2934735716
+
+// 로컬에서만 바꿀 값은 저장소 루트의 Secrets.xcconfig 에 둔다.
+// 기본값보다 뒤에 둬서 같은 키가 있으면 그쪽이 이긴다.
+#include? "../Secrets.xcconfig"

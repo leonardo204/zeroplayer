@@ -1,0 +1,19 @@
+// 배포 빌드. 실제 AdMob 광고 단위를 쓴다.
+//
+// 이 값들은 비밀이 아니다. 앱 Info.plist 에 그대로 박혀 있어 누구나 꺼내 볼 수 있다.
+// 그래서 Secrets.xcconfig 가 아니라 여기 둔다 — 저장소를 새로 받은 사람이
+// 아무것도 안 해도 배포 빌드가 실제 광고로 나가야 하기 때문이다.
+
+#include "Base.xcconfig"
+
+// TODO: AdMob 콘솔의 앱 ID 로 바꾼다. 지금은 구글 테스트 앱 ID 라
+// 아카이브할 때 빌드가 멈춘다(project.yml 의 'AdMob ID 확인' 단계).
+// 앱 ID 는 ~ 로, 광고 단위 ID 는 / 로 갈린다.
+ZP_ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511
+
+ZP_ADMOB_BANNER_RECOMMEND = ca-app-pub-4410880415888380/3748424266
+ZP_ADMOB_BANNER_DISCOVER = ca-app-pub-4410880415888380/6084611864
+ZP_ADMOB_BANNER_PRESETS = ca-app-pub-4410880415888380/5019027929
+ZP_ADMOB_BANNER_STATS = ca-app-pub-4410880415888380/2047137814
+
+#include? "../Secrets.xcconfig"
