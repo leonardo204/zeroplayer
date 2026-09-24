@@ -664,6 +664,37 @@ app version`(QA1623) 으로 떨어졌다. **애플은 업데이트에서 지원 
 **릴리스 바이너리에 디버그 통로는 없다.** `ZPStartTab`·`ZPAutoPlay`·`ZPFakeNowPlaying`
 ·`ZPSkipConsentForm` 등을 `strings` 로 찾아 0건을 확인했다. `#if DEBUG` 가 제대로 걸려 있다.
 
+## 6-16-3-1. 업로드 검증에서 막힌 것 두 가지
+
+둘 다 아카이브는 되는데 App Store Connect 업로드 검증에서 떨어진다. Xcode 빌드로는
+알 수 없고, 실제로 올려 봐야 나온다.
+
+**기기 지원을 줄일 수 없다.**
+
+> This bundle does not support one or more of the devices supported by the previous
+> app version. (QA1623)
+
+1.7 이 아이패드를 지원했으므로 2.0 도 지원해야 한다. `TARGETED_DEVICE_FAMILY` 는
+`"1,2"` 다. 아이폰 전용으로 내려면 번들 ID 를 바꿔 새 앱으로 올리는 수밖에 없고,
+그러면 1.7 사용자가 업데이트를 못 받고 순위·리뷰가 0 에서 다시 시작한다.
+
+**아이패드는 네 방향을 다 적어야 한다.**
+
+> The "Portrait,PortraitUpsideDown" orientations were provided ... but you need to
+> include all of the "Portrait,PortraitUpsideDown,LandscapeLeft,LandscapeRight"
+> orientations to support iPad multitasking.
+
+`UISupportedInterfaceOrientations~ipad` 에 가로 둘을 더했다. 아이폰 쪽
+(`UISupportedInterfaceOrientations`)은 세로 하나 그대로다.
+
+예전에는 `UIRequiresFullScreen = true` 로 멀티태스킹에서 빠져 세로만 지원할 수
+있었는데, **iPadOS 26 에서 그 키가 무시된다.** 그래서 빠져나갈 길이 없다.
+
+가로 화면이 깨지지는 않는다 — SwiftUI 목록과 TabView 라 늘어날 뿐이고, 고정 크기는
+앨범 그림 240pt 와 44pt 단추뿐이라 아이패드 가로 높이(834~1032pt)에 넉넉히 들어간다.
+다만 **시뮬레이터를 헤드리스로 돌리면 회전을 못 시켜** 눈으로 확인하지 못했다.
+실기기 확인 목록에 넣어 뒀다.
+
 ## 6-16-4. 제출 자료 — 문구와 화면 캡처
 
 App Store Connect 에 붙여 넣을 값은 `docs/09-appstore-submit.md` 에 다 있다. URL 세 개,
@@ -749,6 +780,7 @@ grep -rn --include='*.swift' -E 'Text\(|Label\(' Sources | grep -E '\?\?' | grep
 
 **실기기에서 확인할 것** — M1 부터 밀린 것이다.
 
+- [ ] 아이패드를 가로로 돌렸을 때와 Slide Over 로 좁혔을 때 화면이 깨지지 않는지
 - [ ] 화면을 끄고 30분 이상 끊기지 않는지
 - [ ] 전화를 받고 끊으면 재생이 이어지는지
 - [ ] 잠금화면에서 일시정지·재생이 되는지

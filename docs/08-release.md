@@ -67,6 +67,11 @@ App Store 에 2.0 을 올리기 전에 채워야 하는 것을 모은다. 코드
 - **방송 콘텐츠** — 스트림을 그대로 재생하고 방송국 광고를 지우지 않는다. 방송국 정보와
   홈페이지 링크를 표시한다(`docs/05-ads-policy.md` 4번).
 
+**아이패드는 네 방향을 다 적는다.** `UISupportedInterfaceOrientations~ipad` 에 가로
+둘이 빠지면 업로드 검증에서 떨어진다("you need to include all of the ... orientations
+to support iPad multitasking"). `UIRequiresFullScreen` 으로 빠져나가던 길은
+iPadOS 26 에서 막혔다. 아이폰은 세로 하나 그대로다.
+
 ## 4. AdMob — 제출 전에 광고 단위를 먼저 만든다
 
 **스토어 게시를 기다릴 필요가 없다.** AdMob 에서 앱을 추가할 때 "앱이 지원되는 스토어에

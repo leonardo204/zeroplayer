@@ -93,9 +93,15 @@ targets:
           - audio
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        # 아이패드는 네 방향을 다 적어야 한다. 하나라도 빠지면 업로드가 막힌다
+        # ("you need to include all of the ... orientations to support iPad
+        # multitasking"). 예전에는 UIRequiresFullScreen 으로 멀티태스킹을 빠져나갈 수
+        # 있었지만 iPadOS 26 에서 그 키가 무시된다. 아이폰은 세로 하나로 둔다.
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsForMedia: true
         ZPProxyBaseURL: $(ZP_PROXY_BASE_URL)
