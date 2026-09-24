@@ -19,7 +19,19 @@ final class RecommendModel {
         var id: String { item.id }
     }
 
-    var situation: Situation = RecommendModel.situationForNow()
+    var situation: Situation = RecommendModel.initialSituation()
+
+    /// 스토어 스크린샷을 찍을 때 상황을 고정한다. `-ZPSituation sleep` 로 켠다.
+    /// 릴리스 빌드에서는 언제나 시계를 보고 고른다.
+    static func initialSituation() -> Situation {
+        #if DEBUG
+        if let raw = UserDefaults.standard.string(forKey: "ZPSituation"),
+           let fixed = Situation(rawValue: raw) {
+            return fixed
+        }
+        #endif
+        return situationForNow()
+    }
     private(set) var entries: [Entry] = []
     private(set) var isLoading = false
     private(set) var errorText: String?

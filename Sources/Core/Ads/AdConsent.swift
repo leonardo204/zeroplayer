@@ -42,6 +42,15 @@ final class AdConsent {
         guard !didStart else { return }
         didStart = true
 
+        #if DEBUG
+        // 스토어 스크린샷을 찍을 때 쓴다. 동의창·추적 허가창을 띄우지 않고
+        // 배너도 그리지 않는다. `-ZPNoAds 1` 로 켠다. 릴리스 빌드에는 들어가지 않는다.
+        if UserDefaults.standard.string(forKey: "ZPNoAds") == "1" {
+            log.info("스크린샷 모드 — 광고를 띄우지 않는다")
+            return
+        }
+        #endif
+
         await requestConsent()
         await requestTracking()
         startSDK()

@@ -53,7 +53,9 @@ struct PresetEditorView: View {
                             isPickingStation = true
                         } label: {
                             HStack {
-                                Text(stationTitle ?? "방송국 고르기")
+                                Group {
+                                    if let stationTitle { Text(stationTitle) } else { Text("방송국 고르기") }
+                                }
                                     .foregroundStyle(stationTitle == nil ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                                 Spacer()
                                 Image(systemName: "chevron.right")

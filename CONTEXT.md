@@ -660,6 +660,66 @@ SDK 를 시작하지 않는다.
 **릴리스 바이너리에 디버그 통로는 없다.** `ZPStartTab`·`ZPAutoPlay`·`ZPFakeNowPlaying`
 ·`ZPSkipConsentForm` 등을 `strings` 로 찾아 0건을 확인했다. `#if DEBUG` 가 제대로 걸려 있다.
 
+## 6-16-4. 제출 자료 — 문구와 화면 캡처
+
+App Store Connect 에 붙여 넣을 값은 `docs/09-appstore-submit.md` 에 다 있다. URL 세 개,
+프로모션 텍스트, 설명, 키워드, 부제, 릴리스 노트, 심사 메모를 한국어·영어로 나란히 뒀고
+글자 수 제한 안에 드는지 세어 확인했다.
+
+화면 캡처는 `Screenshots/ko`·`Screenshots/en` 에 여덟 장씩 있다. 6.9인치(1320×2868)
+한 벌만 올리면 App Store 가 나머지 크기를 줄여 쓴다. 다시 찍는 법은
+`Screenshots/README.md` 에 있다.
+
+**캡처 전에 시뮬레이터를 `erase` 한다.** 설치 UUID 가 키체인에 남아, 앱을 지우고 다시
+깔아도 서버에 등록해 둔 알람을 그대로 내려받는다. 영어 화면에 지난 한국어 알람 이름이
+섞여 나오는 것이 그 때문이었다.
+
+캡처용 DEBUG 통로가 다섯 개 늘었다 — `ZPNoAds`(광고를 그리지 않는다),
+`ZPFakePushGranted`(알림 꺼짐 카드를 감춘다), `ZPSituation`(추천 상황 고정),
+`ZPShowTimer`(자동 종료 시트), `ZPSeedHistory`(지난 청취 기록 심기).
+릴리스 바이너리에 이 문자열이 하나도 없는 것을 확인했다.
+
+## 6-16-5. `??` 로 문자열을 합치면 번역이 건너뛰어진다
+
+`Text("가")` 는 `LocalizedStringKey` 로 잡혀 번역되지만, `Text(값 ?? "가")` 는
+`Text(String)` 오버로드가 골라져 **한국어 원문이 그대로 화면에 나온다.** 컴파일도 되고
+경고도 없어서 영어 화면을 눈으로 보기 전에는 모른다. 실제로 재생 화면의 '자동 종료' 가
+영어 기기에서 한국어로 남아 있었다.
+
+값이 있을 때와 없을 때를 갈라 각각 `Text` 를 만든다.
+
+```swift
+// 잘못됨
+Text(player.sleepTimer.remainingText ?? "자동 종료")
+
+// 맞음
+private var sleepTimerLabel: Text {
+    if let remaining = player.sleepTimer.remainingText { return Text(remaining) }
+    return Text("자동 종료")
+}
+```
+
+삼항(`Text(a ? "가" : "나")`)은 양쪽이 리터럴이면 `LocalizedStringKey` 로 추론되어 번역된다.
+`??` 만 문제다. 찾는 법:
+
+```sh
+grep -rn --include='*.swift' -E 'Text\(|Label\(' Sources | grep -E '\?\?' | grep -E '[가-힣]'
+```
+
+**기기에 저장하는 문자열도 같은 함정이 있다.** 기본 프리셋 이름이나 알람 이름처럼
+`String` 으로 저장되는 값은 만들 때의 언어로 굳는다. `String(localized:)` 로 만들어야
+영어 기기에 처음 깔았을 때 영어로 들어간다.
+
+## 6-16-6. 영어 LLM 문구는 길이 하한이 다르다
+
+한국어 추천 문구는 잘 나오는데 영어가 "For sleep", "Calming rain" 처럼 조각으로 왔다.
+`merge()` 의 쓸 만한 문장 판정이 `6자 이상` 이라 영어 조각이 그대로 통과했기 때문이다.
+한국어는 한 글자에 뜻이 많아 여섯 자면 문장이지만 영어에서 여섯 자는 조각이다.
+
+언어별로 갈랐다 — 영어는 25~95자, 한국어는 6~80자. 프롬프트에도 "30자 이상 한 문장,
+마침표로 끝낸다"와 "For sleep 같은 조각으로 답하지 않는다"를 적었다.
+옛 문구로 만들어 둔 영어 세트 120개는 지우고 다시 만들었다.
+
 ## 6-17. 다음 할 일 — 출시
 
 `docs/08-release.md` 를 따른다. 코드는 다 들어갔고 남은 것은 콘솔 작업과 실기기 확인이다.
@@ -667,14 +727,15 @@ SDK 를 시작하지 않는다.
 **콘솔에서 할 일**
 
 - [ ] App Store Connect 2.0 버전 정보에 마케팅 URL·지원 URL·개인정보처리방침 URL 을 넣는다
+      (값은 `docs/09-appstore-submit.md` 1번)
 - [x] AdMob 앱 ID 와 배너 광고 단위 4개를 `Configs/Release.xcconfig` 에 넣었다.
       아카이브까지 확인했다 — 테스트 ID 가 남아 있으면 아카이브가 멈춘다
 - [ ] AdMob 동의 메시지를 한국어로 만든다
 - [ ] 내 기기를 AdMob 테스트 기기로 등록한다 (실제 ID 로 내 광고를 누르면 무효 트래픽이다)
 - [ ] 스토어에 2.0 이 반영된 뒤 AdMob 앱 인증을 다시 누른다 (인증은 제출을 막지 않는다)
-- [ ] 아이폰 스크린샷만 올린다. 2.0 은 아이폰 전용이라 아이패드 스크린샷이 필요 없다
-- [ ] 영어 스토어 설명을 함께 올린다 (앱이 한국어·영어 둘을 지원한다)
-- [ ] 심사 메모에 히든 라디오 여는 방법을 적는다 (지침 2.3.1 — 숨긴 기능 금지)
+- [x] 아이폰 스크린샷을 찍어 뒀다 — `Screenshots/ko`·`Screenshots/en` 각 여덟 장
+- [x] 한국어·영어 설명·키워드·프로모션 텍스트·릴리스 노트를 써 뒀다 (`docs/09-appstore-submit.md`)
+- [x] 심사 메모를 써 뒀다 (`docs/09-appstore-submit.md` 7번). 지침 2.3.1 때문에 반드시 넣는다
 - [ ] 알람 커스텀 사운드(30초 `.caf`)를 넣는다. 지금은 시스템 기본음이다
 - [ ] Time Sensitive 승인이 나면 `Sources/App/zeroPlayer*.entitlements` 에 한 줄 더한다
 

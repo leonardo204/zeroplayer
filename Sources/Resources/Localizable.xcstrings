@@ -958,7 +958,22 @@
         }
       }
     },
-    "무음 모드에서는 알람 소리가 나지 않습니다. 알림음은 한 번만 울리고 시계 앱처럼 끌 때까지 반복하지 않습니다. 알림을 눌러야 재생이 시작됩니다.": {},
+    "무음 모드에서는 알람 소리가 나지 않습니다. 알림음은 한 번만 울리고 시계 앱처럼 끌 때까지 반복하지 않습니다. 알림을 눌러야 재생이 시작됩니다.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sound in silent mode. The alert rings once and does not repeat until dismissed like the Clock app. Playback starts when you tap the notification."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무음 모드에서는 알람 소리가 나지 않습니다. 알림음은 한 번만 울리고 시계 앱처럼 끌 때까지 반복하지 않습니다. 알림을 눌러야 재생이 시작됩니다."
+          }
+        }
+      }
+    },
     "반복": {
       "extractionState": "manual",
       "localizations": {
@@ -1598,7 +1613,22 @@
         }
       }
     },
-    "유튜브는 화면을 끈 채 소리만 재생하는 것을 약관에서 막고 있습니다. 이 앱은 취침·운전처럼 화면을 보지 않는 상황에 쓰는 앱이라, 약관을 지키면서 그 기능을 유지할 방법이 없었습니다.": {},
+    "유튜브는 화면을 끈 채 소리만 재생하는 것을 약관에서 막고 있습니다. 이 앱은 취침·운전처럼 화면을 보지 않는 상황에 쓰는 앱이라, 약관을 지키면서 그 기능을 유지할 방법이 없었습니다.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YouTube's terms do not allow playing only the audio with the screen off. This app is for moments when you are not looking at the screen — falling asleep, driving — so keeping that feature would have meant breaking those terms."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유튜브는 화면을 끈 채 소리만 재생하는 것을 약관에서 막고 있습니다. 이 앱은 취침·운전처럼 화면을 보지 않는 상황에 쓰는 앱이라, 약관을 지키면서 그 기능을 유지할 방법이 없었습니다."
+          }
+        }
+      }
+    },
     "이 기기는 Apple Intelligence 를 지원하지 않습니다. 추천은 그대로 나옵니다.": {
       "extractionState": "manual",
       "localizations": {
@@ -2768,6 +2798,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "OK"
+          }
+        }
+      }
+    },
+    "아침": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Morning"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아침"
           }
         }
       }

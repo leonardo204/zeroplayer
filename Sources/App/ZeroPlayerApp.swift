@@ -67,6 +67,7 @@ struct ZeroPlayerApp: App {
                 .task { await adConsent.start() }
                 .task { await startNotifications() }
                 .task { await seedAlarmIfRequested() }
+                .task { seedHistoryIfRequested() }
                 .task { await alarmPushIfRequested() }
                 .task { await unlockHiddenIfRequested() }
                 .task { await autoPlayIfRequested() }
@@ -115,6 +116,45 @@ struct ZeroPlayerApp: App {
 
     /// 알람을 손으로 만들지 않고 확인하려고 둔 통로다.
     /// `-ZPSeedAlarm 07:00` 으로 켠다. 릴리스 빌드에는 들어가지 않는다.
+    /// 스토어 스크린샷에서 기록 탭이 비어 보이지 않게 지난 청취 기록을 심는다.
+    /// `-ZPSeedHistory 1` 로 켠다. 릴리스 빌드에는 들어가지 않는다.
+    private func seedHistoryIfRequested() {
+        #if DEBUG
+        guard UserDefaults.standard.string(forKey: "ZPSeedHistory") == "1" else { return }
+        let context = container.mainContext
+        guard ((try? context.fetch(FetchDescriptor<ListeningSession>()))?.isEmpty ?? true) else { return }
+
+        // 실제로 쌓였을 법한 모양으로 둔다 — 프리셋으로 켠 것과 목록에서 고른 것이 섞인다.
+        let sleep = String(localized: "취침")
+        let study = String(localized: "공부")
+        let work = String(localized: "작업")
+        let rows: [(String, String, Situation?, String?, Int, Int)] = [
+            ("rb:sample.jazz24", "Jazz24", .sleep, sleep, 45, 1),
+            ("rb:sample.classic", "KBS Classic FM", .study, study, 92, 1),
+            ("rb:sample.spa", "0R - SPA LOUNGE", .sleep, sleep, 45, 2),
+            ("rb:sample.paradise", "Radio Paradise", .work, work, 128, 2),
+            ("rb:sample.jazz24", "Jazz24", .sleep, sleep, 45, 3),
+            ("rb:sample.gugak", "Gugak FM", nil, nil, 26, 4),
+            ("rb:sample.classic", "KBS Classic FM", .study, study, 88, 5),
+            ("rb:sample.paradise", "Radio Paradise", .work, work, 74, 6),
+            ("rb:sample.jazz24", "Jazz24", .sleep, sleep, 45, 7),
+            ("rb:sample.spa", "0R - SPA LOUNGE", .sleep, sleep, 39, 8),
+        ]
+        for (id, title, situation, preset, minutes, daysAgo) in rows {
+            let item = PlayableItem(id: id, kind: .station, title: title)
+            let origin = PlaybackOrigin(
+                presetName: preset, fromRecommendation: preset != nil, situation: situation)
+            let session = ListeningSession(
+                item: item,
+                origin: origin,
+                startedAt: Calendar.current.date(byAdding: .day, value: -daysAgo, to: .now) ?? .now,
+                duration: TimeInterval(minutes * 60))
+            context.insert(session)
+        }
+        try? context.save()
+        #endif
+    }
+
     private func seedAlarmIfRequested() async {
         #if DEBUG
         guard let raw = UserDefaults.standard.string(forKey: "ZPSeedAlarm"), raw.contains(":") else { return }
@@ -125,7 +165,7 @@ struct ZeroPlayerApp: App {
         await store.add(AlarmSetting(
             hour: parts[0], minute: parts[1],
             weekdays: [2, 3, 4, 5, 6],
-            sourceKind: .auto, situation: .wake, label: "아침"))
+            sourceKind: .auto, situation: .wake, label: String(localized: "아침")))
         #endif
     }
 
@@ -209,7 +249,12 @@ struct ZeroPlayerApp: App {
         guard let id = UserDefaults.standard.string(forKey: "ZPAutoPlay"), !id.isEmpty else { return }
         // 'kr:' 로 시작하면 지상파다. 해제 토큰이 있어야 주소를 받는다.
         let kind: SourceKind = id.hasPrefix("kr:") ? .hidden : .station
-        await player.play(PlayableItem(id: id, kind: kind, title: id))
+        // 이름을 서버에서 받아 온다. 그냥 ID 를 제목으로 쓰면 화면이 무엇을 트는지 안 보인다.
+        var item = PlayableItem(id: id, kind: kind, title: id)
+        if kind == .station, let dto = try? await ProxyClient().station(id: id) {
+            item = dto.playable
+        }
+        await player.play(item)
 
         // 일시정지했다가 다시 재생하는 길을 손으로 누르지 않고 확인한다.
         // `-ZPPauseResume 1` 로 켠다.

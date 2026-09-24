@@ -209,7 +209,11 @@ struct DiscoverView: View {
                     }
                 }
             } label: {
-                Label(model.country ?? "전체", systemImage: "globe")
+                if let country = model.country {
+                    Label(country, systemImage: "globe")
+                } else {
+                    Label("전체", systemImage: "globe")
+                }
             }
         }
     }

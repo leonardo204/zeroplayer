@@ -64,7 +64,9 @@ struct AlarmEditorView: View {
                             HStack {
                                 Text("방송국")
                                 Spacer()
-                                Text(sourceTitle ?? "고르기")
+                                Group {
+                                    if let sourceTitle { Text(sourceTitle) } else { Text("고르기") }
+                                }
                                     .foregroundStyle(sourceTitle == nil ? .secondary : .primary)
                                     .lineLimit(1)
                             }

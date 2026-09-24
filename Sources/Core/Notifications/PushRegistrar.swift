@@ -27,7 +27,14 @@ final class PushRegistrar: NSObject {
         }
     }
 
-    private(set) var permission: Permission = .notAsked
+    private(set) var permission: Permission = {
+        #if DEBUG
+        // 스토어 스크린샷에서 '알림이 꺼져 있습니다' 카드를 띄우지 않으려고 둔다.
+        // `-ZPFakePushGranted 1` 로 켠다. 릴리스 빌드에는 들어가지 않는다.
+        if UserDefaults.standard.string(forKey: "ZPFakePushGranted") == "1" { return .granted }
+        #endif
+        return .notAsked
+    }()
     /// APNs 에 등록됐는지. 시뮬레이터는 토큰을 받아도 실제 발송이 닿지 않는다.
     private(set) var hasToken = false
     private(set) var lastError: String?
@@ -58,6 +65,10 @@ final class PushRegistrar: NSObject {
     }
 
     func refreshPermission() async {
+        #if DEBUG
+        // 스크린샷 모드에서는 실제 상태로 덮어쓰지 않는다.
+        if UserDefaults.standard.string(forKey: "ZPFakePushGranted") == "1" { return }
+        #endif
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         switch settings.authorizationStatus {
         case .authorized, .provisional, .ephemeral: permission = .granted

@@ -55,7 +55,8 @@ function systemPrompt(lang: Lang, situation: Situation, daypart: Daypart, dayTyp
       'Reorder them to fit the moment and attach one English sentence to each channel.',
       '',
       'Sentence rules:',
-      '- One sentence, 90 characters or fewer.',
+      '- One full sentence between 30 and 90 characters, ending with a period.',
+      '- Never answer with a fragment like "For sleep" or "Calming rain".',
       '- Say only why it fits the moment. Do not repeat the channel name.',
       '- Plain words. Avoid "perfect", "ultimate", "a variety of", "seamless".',
       '- Invent nothing that is not in the tags. If unsure, use only the tags and moods.',
@@ -109,7 +110,12 @@ function merge(
     used.add(answer.id)
     const reason = answer.reason.trim()
     // 문장이 비었거나 지나치게 길면 규칙 문구를 쓴다. 화면에서 두 줄을 넘기지 않게.
-    const usable = reason.length >= 6 && reason.length <= 80
+    //
+    // 길이 하한이 언어마다 다르다. 한국어는 한 글자에 뜻이 많아 여섯 자면 문장이지만,
+    // 영어에서 여섯 자는 'For sleep' 같은 조각이다. 조각이 들어오면 규칙 문구가 낫다.
+    const floor = lang === 'en' ? 25 : 6
+    const ceiling = lang === 'en' ? 95 : 80
+    const usable = reason.length >= floor && reason.length <= ceiling
     items.push(toItem(candidate, usable ? reason : ruleReason(candidate, situation, lang)))
     if (items.length >= limit) break
   }

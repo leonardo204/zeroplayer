@@ -7,7 +7,14 @@ struct PlayerView: View {
     @Environment(\.dismiss) private var dismiss
 
     @Query private var favorites: [Favorite]
-    @State private var isTimerPresented = false
+    /// `-ZPShowTimer 1` 로 자동 종료 시트를 바로 띄운다. 릴리스 빌드에서는 항상 닫혀 있다.
+    @State private var isTimerPresented = {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "ZPShowTimer") == "1"
+        #else
+        false
+        #endif
+    }()
     /// 진행 바를 끌고 있는 동안의 값. 손을 떼면 그 자리로 옮기고 비운다.
     @State private var scrub: Double?
 
@@ -20,7 +27,7 @@ struct PlayerView: View {
             artwork
 
             VStack(spacing: 6) {
-                Text(player.streamTitle ?? player.current?.title ?? "재생 중인 항목이 없습니다")
+                nowPlayingTitle
                     .font(.title3.weight(.semibold))
                     .multilineTextAlignment(.center)
                 if let second = secondLine {
@@ -217,7 +224,7 @@ struct PlayerView: View {
                 VStack(spacing: 4) {
                     Image(systemName: player.sleepTimer.isRunning ? "timer.circle.fill" : "timer")
                         .font(.title3)
-                    Text(player.sleepTimer.remainingText ?? "자동 종료")
+                    sleepTimerLabel
                         .font(.caption2.monospacedDigit())
                 }
             }
@@ -238,6 +245,18 @@ struct PlayerView: View {
             .accessibilityLabel("정지")
         }
         .foregroundStyle(.secondary)
+    }
+
+    /// `??` 로 문자열을 합치면 `Text(String)` 이 골라져 번역이 건너뛰어진다.
+    /// 값이 있을 때와 없을 때를 갈라 각각 `Text` 를 만든다.
+    private var nowPlayingTitle: Text {
+        if let title = player.streamTitle ?? player.current?.title { return Text(title) }
+        return Text("재생 중인 항목이 없습니다")
+    }
+
+    private var sleepTimerLabel: Text {
+        if let remaining = player.sleepTimer.remainingText { return Text(remaining) }
+        return Text("자동 종료")
     }
 
     private func rateText(_ rate: Double) -> String {
