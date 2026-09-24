@@ -6,10 +6,8 @@
 
 #include "Base.xcconfig"
 
-// TODO: AdMob 콘솔의 앱 ID 로 바꾼다. 지금은 구글 테스트 앱 ID 라
-// 아카이브할 때 빌드가 멈춘다(project.yml 의 'AdMob ID 확인' 단계).
 // 앱 ID 는 ~ 로, 광고 단위 ID 는 / 로 갈린다.
-ZP_ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511
+ZP_ADMOB_APP_ID = ca-app-pub-4410880415888380~5460302040
 
 ZP_ADMOB_BANNER_RECOMMEND = ca-app-pub-4410880415888380/3748424266
 ZP_ADMOB_BANNER_DISCOVER = ca-app-pub-4410880415888380/6084611864
