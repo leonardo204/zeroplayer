@@ -75,7 +75,15 @@ export async function listStations(env: Env, url: URL): Promise<Response> {
   const q = url.searchParams.get('q')?.trim()
   const sort = url.searchParams.get('sort') ?? 'popular'
 
-  const where: string[] = ['s.is_hidden = 0', 'COALESCE(h.excluded, 0) = 0']
+  // 만료되는 서명이 붙은 주소는 목록에 올리지 않는다. 등록된 날에는 살아 있어
+  // 생사 점검으로는 안 걸러지고, 하루만 지나면 앱에서 403 이 난다.
+  // 만료되는 서명이 붙은 주소는 목록에 올리지 않는다. 등록된 날에는 살아 있어
+  // 생사 점검으로는 안 걸러지고, 하루만 지나면 앱에서 403 이 난다.
+  // is_primary 는 같은 방송의 코덱 변종 가운데 대표 한 줄만 남기는 값이다.
+  const where: string[] = [
+    's.is_hidden = 0', 'COALESCE(h.excluded, 0) = 0',
+    's.stream_signed = 0', 's.is_primary = 1',
+  ]
   const binds: unknown[] = []
   if (country) { where.push('s.country_code = ?'); binds.push(country) }
   if (lang) { where.push('s.language = ?'); binds.push(lang) }
@@ -119,7 +127,7 @@ export async function getStation(env: Env, id: string): Promise<Response> {
   const row = await env.DB.prepare(`
     SELECT s.id, s.name, s.country_code, s.language, s.codec, s.bitrate,
            s.votes, s.clicks, s.favicon, s.homepage, s.stream_url, s.updated_at
-    FROM stations s WHERE s.id = ? AND s.is_hidden = 0
+    FROM stations s WHERE s.id = ? AND s.is_hidden = 0 AND s.stream_signed = 0
   `).bind(id).first<Row>()
   if (!row) return fail(404, 'not_found', '그런 방송국이 없다.')
   const tagMap = await tagsFor(env, [id])
@@ -133,7 +141,7 @@ export async function getStream(env: Env, id: string): Promise<Response> {
            COALESCE(h.excluded, 0) AS excluded
     FROM stations s
     LEFT JOIN station_health h ON h.station_id = s.id
-    WHERE s.id = ? AND s.is_hidden = 0
+    WHERE s.id = ? AND s.is_hidden = 0 AND s.stream_signed = 0
   `).bind(id).first<{ url: string; codec: string | null; bitrate: number | null; excluded: number }>()
   if (!row) return fail(404, 'not_found', '그런 방송국이 없다.')
 
@@ -147,11 +155,11 @@ export async function getStream(env: Env, id: string): Promise<Response> {
 }
 
 export async function getFacets(env: Env): Promise<Response> {
-  const base = 'FROM stations s LEFT JOIN station_health h ON h.station_id = s.id WHERE s.is_hidden = 0 AND COALESCE(h.excluded, 0) = 0'
+  const base = 'FROM stations s LEFT JOIN station_health h ON h.station_id = s.id WHERE s.is_hidden = 0 AND COALESCE(h.excluded, 0) = 0 AND s.stream_signed = 0 AND s.is_primary = 1'
   const [countries, languages, tags] = await env.DB.batch<{ value: string; count: number }>([
     env.DB.prepare(`SELECT s.country_code AS value, COUNT(*) AS count ${base} AND s.country_code IS NOT NULL GROUP BY s.country_code ORDER BY count DESC`),
     env.DB.prepare(`SELECT s.language AS value, COUNT(*) AS count ${base} AND s.language IS NOT NULL AND s.language != '' GROUP BY s.language ORDER BY count DESC LIMIT 60`),
-    env.DB.prepare(`SELECT t.tag AS value, COUNT(*) AS count FROM station_tags t JOIN stations s ON s.id = t.station_id LEFT JOIN station_health h ON h.station_id = s.id WHERE s.is_hidden = 0 AND COALESCE(h.excluded, 0) = 0 GROUP BY t.tag ORDER BY count DESC`),
+    env.DB.prepare(`SELECT t.tag AS value, COUNT(*) AS count FROM station_tags t JOIN stations s ON s.id = t.station_id LEFT JOIN station_health h ON h.station_id = s.id WHERE s.is_hidden = 0 AND COALESCE(h.excluded, 0) = 0 AND s.stream_signed = 0 AND s.is_primary = 1 GROUP BY t.tag ORDER BY count DESC`),
   ])
 
   return json({

@@ -29,8 +29,6 @@ targets:
     platform: iOS
     sources:
       - path: Sources
-    entitlements:
-      path: Sources/App/zeroPlayer.entitlements
     configFiles:
       Debug: Configs/Base.xcconfig
       Release: Configs/Base.xcconfig
@@ -41,6 +39,14 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1,2"
+      # 푸시는 개발과 배포의 APNs 환경이 달라 엔타이틀먼트를 따로 둔다.
+      # 이 값이 없으면 실기기에서 registerForRemoteNotifications 가
+      # NSCocoaErrorDomain 3000 ('aps-environment 를 찾을 수 없습니다')으로 실패한다.
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: Sources/App/zeroPlayer.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: Sources/App/zeroPlayerRelease.entitlements
     info:
       path: Sources/App/Info.plist
       properties:

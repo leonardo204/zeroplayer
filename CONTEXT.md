@@ -3,7 +3,7 @@
 다른 세션에서 이 저장소를 처음 열었을 때 읽는 문서다. 지금까지 한 일과 다음에 할 일만 적는다.
 기획 배경과 근거는 `docs/` 에 번호순으로 있다. 처음이면 `docs/00-concept.md` 부터 읽는다.
 
-마지막 갱신: 2026-09-24 (M7 완료, 실기기 확인 전)
+마지막 갱신: 2026-09-24 (M7 완료 + 첫 실기기 확인에서 나온 것 세 가지 수정)
 
 ## 1. 현재 상태
 
@@ -410,7 +410,53 @@ mount 가 사라졌다 — `.pls` 가 200 을 주지만 `NumberOfEntries=0` 이�
 앱을 끄지 않고 '지상파' 가 나타난다. 채널 14개가 방송사별로 묶여 나오고 지금 방송 중인
 프로그램과 시각이 함께 뜬다. KBS 쿨FM 을 눌러 실제로 소리가 났다.
 
-## 6-12. 다음 할 일 — M8 (광고와 출시)
+## 6-12. 첫 실기기 확인에서 나온 것
+
+실기기에서 앱을 돌려 보고 세 가지를 고쳤다.
+
+**푸시 등록이 실패했다.** `registerForRemoteNotifications` 가
+`NSCocoaErrorDomain 3000 — aps-environment 인타이틀먼트를 찾을 수 없습니다` 로 떨어졌다.
+엔타이틀먼트 파일을 만들어 두기만 하고 안이 비어 있었다. `aps-environment` 는 Time Sensitive
+와 다른 것이라 승인을 기다릴 필요가 없다 — 번들 ID 에 Push Notifications 를 켜 뒀으면 바로
+쓴다. 개발과 배포의 값이 달라서 파일을 둘로 나누고 `project.yml` 에서 빌드 설정별로 지정한다.
+
+| 빌드 | 파일 | aps-environment |
+| --- | --- | --- |
+| Debug | `Sources/App/zeroPlayer.entitlements` | `development` |
+| Release | `Sources/App/zeroPlayerRelease.entitlements` | `production` |
+
+시뮬레이터 빌드로는 확인할 수 없다. 서명할 때 이 값을 떼어 내기 때문에
+`codesign -d --entitlements` 가 빈 사전을 보여준다. 실기기에서만 붙는다.
+
+**KBS Classic FM 이 403 으로 재생되지 않았다.** radio-browser 에 올라온 주소에 CloudFront
+서명이 붙어 있었고 그 서명이 하루 전에 만료돼 있었다. 등록된 날에는 살아 있으니 스트림 생사
+점검으로는 영영 안 걸러진다 — 점검이 성공한 다음 날 만료되기 때문이다. 주소 모양으로 가려야
+한다(`Policy`+`Signature`, `Key-Pair-Id`, `token=eyJ`, `_lsu_sa_`, Akamai `hdnts`).
+3,012줄 가운데 33줄이고 전부 KBS·MBC·SBS·CPBC 다. 이 방송들은 히든 채널 표에 `.pls` 로
+들어 있어 거기서는 재생 직전에 새 서명을 받아 멀쩡히 나온다.
+
+**같은 방송이 목록에 여러 줄 보였다.** 'Listen.moe Kpop' 과 'Listen.moe Kpop (MP3)' 는
+코덱만 다른 같은 방송이고, 'KBS Classic FM' 은 올린 사람만 다른 줄이 열여섯 개였다.
+`dedupe_key`(`나라|정규화한 이름`)로 묶고 묶음마다 `is_primary` 를 하나만 세운다.
+3,012줄이 2,644묶음이 됐다.
+
+정규화는 **코덱과 비트레이트 표기만** 뗀다. 'no pub'(광고 없음)·'hifi'·'original' 처럼
+내용이 갈리는 말은 남긴다 — 'FIP' 와 'FIP (no pub)' 을 합치면 사용자가 찾던 쪽이 사라진다.
+이름 **앞**에 붙은 짧은 괄호만 예외로 뗀다. 거기 오는 건 올린 사람 표기다('(BSOD) KBS...').
+
+대표를 `is_primary` 로 미리 정해 두는 이유는 목록과 추천이 같은 줄을 보게 하려는 것이다.
+목록은 묶음 질의로, 추천은 먼저 나온 줄로 대표를 고르면 화면마다 다른 이름이 나온다.
+
+**이미 만들어 둔 추천 세트는 옛 목록을 들고 있다.** 세트는 하루에 한 번만 다시 만들어서
+그 사이에 빠진 방송국이 그대로 남는다. `loadSet` 이 꺼낼 때 지금 목록에 없는 방송국을
+걸러 낸다. 규칙을 크게 바꿨을 때는 `DELETE FROM recommendation_sets` 로 비우고 다시 만든다.
+
+**시뮬레이터에서 재생이 안 된다.** `-ZPAutoPlay` 로 띄우면 앱이 2초 안에 조용히 죽는다.
+크래시 리포트도 로그도 남지 않는다. 기기를 바꿔도, M7 커밋 상태로 되돌려 빌드해도 같으므로
+앱 코드 회귀가 아니고, 같은 빌드가 실기기에서는 잘 재생된다. 맥의 오디오 쪽 문제로 보인다.
+재생을 확인할 일이 있으면 실기기를 쓴다. 목록·추천·화면은 시뮬레이터로 그대로 확인된다.
+
+## 6-13. 다음 할 일 — M8 (광고와 출시)
 
 `docs/07-roadmap.md` 의 M8 을 따른다. AdMob 앱 인증이 먼저다(6-13 참고).
 `Core/Ads/AdPlacement.swift` 에 어느 화면에 붙일지 판정이 이미 있으니 배너만 얹는다.
@@ -423,7 +469,7 @@ mount 가 사라졌다 — `.pls` 가 200 을 주지만 `NumberOfEntries=0` 이�
 - [ ] 잠금화면에서 일시정지·재생이 되는지
 - [ ] 평문 HTTP 스트림이 실기기에서도 막히는지
 - [ ] 기기 안 모델이 실기기(A17 Pro 이상)에서는 실제로 문구를 만드는지
-- [ ] 알림 권한을 허용하면 APNs 토큰이 잡히고 서버에 등록되는지
+- [ ] 알림 권한을 허용하면 APNs 토큰이 잡히고 서버에 등록되는지 (엔타이틀먼트를 고쳤으니 다시 재 본다)
 - [ ] 앱을 완전히 종료한 상태에서 알람 시각에 알림이 오고, 탭하면 재생되는지
 - [ ] 비행기 모드에서 로컬 백업 알림이 울리는지
 - [ ] 잠금화면 알림의 '재생'·'5분 뒤 다시' 단추
@@ -439,7 +485,7 @@ mount 가 사라졌다 — `.pls` 가 200 을 주지만 `NumberOfEntries=0` 이�
 - [ ] 알람 만들기·고치기·요일 고르기·켜고 끄기
 - [ ] 설정의 버전 줄을 실제로 12번 눌러 지상파가 열리는지, '목록에서 숨기기' 로 되돌아가는지
 
-## 6-13. 랜딩 페이지와 광고 준비
+## 6-14. 랜딩 페이지와 광고 준비
 
 앱 소개와 광고 게시자 선언을 맡는 Worker 가 `worker/` 에 따로 있다. 앱이 부르는 API
 (`server/`, `ai.zerolive.co.kr/zp/v1`)와 다른 Worker 다. 둘을 섞지 않는다.
@@ -489,7 +535,8 @@ golf·wander·hamzzi-diet)의 바닥글과 live-translate 의 `llms.txt` 에도 
 
 - Podcast Index 키를 받아 Worker 시크릿 `PI_KEY`·`PI_SECRET` 에 넣었다. 검색과 인기 목록이
   Podcast Index 로 돈다(`/zp/v1/health` 의 `podcastIndexKeys` 로 확인한다)
-- APNs 인증 키를 받았다. **Key ID `HDFVB5T2FZ`**(Production), Team `XU8HS9JUTS`. 파일은
+- APNs 인증 키를 받았다. **Key ID `HDFVB5T2FZ`**(Production), Team `XU8HS9JUTS`.
+  sandbox·배포 두 환경 모두 통한다(가짜 토큰에 양쪽 다 `400 BadDeviceToken`). 파일은
   `AuthKey_HDFVB5T2FZ.p8` 이고 저장소 맨 위에 두되 `.gitignore` 의 `*.p8` 로 막혀 있다.
   **재다운로드가 안 되는 유일본이다** — 집 서버 `~/work/backup/certs/` 와 R2 에 사본을 둔다.
   먼저 만든 `J32837LLMM` 은 개발 환경 전용이라 더 쓰지 않는다(포털에서 지워도 된다).

@@ -2,6 +2,7 @@ import type { Env } from '../types'
 import { nowISO } from './http'
 import { stationsByCountry, type RBStation } from './radioBrowser'
 import { loadAliases, recordUnknownTags, resolveTags, splitRawTags } from './tags'
+import { dedupeKey, isExpiringSignedURL } from './stationKeys'
 
 /** url_resolved 를 기본으로 쓰되, 원본 쪽만 HTTPS 면 그쪽을 고른다. */
 function pickStreamURL(s: RBStation): string | null {
@@ -33,8 +34,8 @@ export async function syncCountry(
   const upsert = env.DB.prepare(`
     INSERT INTO stations (
       id, source, name, stream_url, homepage, favicon, country_code, language,
-      codec, bitrate, votes, clicks, is_hidden, raw_tags, updated_at
-    ) VALUES (?, 'radio_browser', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+      codec, bitrate, votes, clicks, is_hidden, raw_tags, stream_signed, dedupe_key, updated_at
+    ) VALUES (?, 'radio_browser', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       stream_url = excluded.stream_url,
@@ -47,6 +48,8 @@ export async function syncCountry(
       votes = excluded.votes,
       clicks = excluded.clicks,
       raw_tags = excluded.raw_tags,
+      stream_signed = excluded.stream_signed,
+      dedupe_key = excluded.dedupe_key,
       updated_at = excluded.updated_at
   `)
   const ensureHealth = env.DB.prepare(
@@ -72,6 +75,7 @@ export async function syncCountry(
 
     const id = `rb:${s.stationuuid}`
     seen.push(id)
+    const country = (s.countrycode || countryCode).toUpperCase()
     const rawTags = splitRawTags(s.tags)
     rawTags.forEach((t) => unknownTags.add(t))
 
@@ -82,13 +86,15 @@ export async function syncCountry(
         url,
         s.homepage || null,
         s.favicon || null,
-        (s.countrycode || countryCode).toUpperCase(),
+        country,
         (s.languagecodes || s.language || '').split(',')[0]?.trim() || null,
         s.hls === 1 ? 'hls' : (s.codec || '').toLowerCase() || null,
         Number.isFinite(s.bitrate) ? s.bitrate : 0,
         Number.isFinite(s.votes) ? s.votes : 0,
         Number.isFinite(s.clickcount) ? s.clickcount : 0,
         s.tags || null,
+        isExpiringSignedURL(url) ? 1 : 0,
+        dedupeKey(s.name.trim(), country, id),
         at,
       ),
       ensureHealth.bind(id),

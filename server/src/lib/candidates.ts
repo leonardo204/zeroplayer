@@ -13,6 +13,7 @@ export interface Candidate {
   clicks: number | null
   favicon: string | null
   stream_url: string
+  dedupe_key: string | null
   hits: number
   boosts: number
   moodHits: number
@@ -69,7 +70,12 @@ async function query(env: Env, options: QueryOptions): Promise<Row[]> {
   const goodMoods = preferMoods.length ? preferMoods : [' ']
   const badMoods = avoidMoods.length ? avoidMoods : [' ']
 
-  const where: string[] = ['s.is_hidden = 0', 'COALESCE(h.excluded, 0) = 0']
+  // 만료되는 서명이 붙은 주소는 추천에 올리지 않고, 같은 방송은 대표 한 줄만 본다
+  // (`stations.ts` 와 같은 조건이라 목록과 추천에 같은 줄이 나온다).
+  const where: string[] = [
+    's.is_hidden = 0', 'COALESCE(h.excluded, 0) = 0',
+    's.stream_signed = 0', 's.is_primary = 1',
+  ]
   const binds: unknown[] = [...prefer, ...boostList, ...goodMoods, ...badMoods]
 
   if (country) { where.push('s.country_code = ?'); binds.push(country) }
@@ -87,7 +93,7 @@ async function query(env: Env, options: QueryOptions): Promise<Row[]> {
 
   const { results } = await env.DB.prepare(`
     SELECT s.id, s.name, s.country_code, s.language, s.codec, s.bitrate, s.votes, s.clicks,
-           s.favicon, s.stream_url,
+           s.favicon, s.stream_url, s.dedupe_key,
            (SELECT COUNT(*) FROM station_tags t WHERE t.station_id = s.id AND t.tag IN (${holes(prefer)})) AS hits,
            (SELECT COUNT(*) FROM station_tags b WHERE b.station_id = s.id AND b.tag IN (${holes(boostList)})) AS boosts,
            (SELECT COUNT(*) FROM station_moods m WHERE m.station_id = s.id AND m.mood IN (${holes(goodMoods)})) AS moodHits,
@@ -178,7 +184,8 @@ export async function collectCandidates(
     for (const row of rows) {
       if (picked.size >= limit) break
       if (picked.has(row.id)) continue
-      const nameKey = row.name.toLowerCase().replace(/[^a-z0-9가-힣]+/g, '')
+      // 같은 방송의 코덱 변종은 한 번만 넣는다. 열쇠는 동기화할 때 계산해 둔 것을 쓴다.
+      const nameKey = row.dedupe_key ?? row.id
       if (seenNames.has(nameKey)) continue
       seenNames.add(nameKey)
       const scope = country && row.country_code === country ? 'country' : pass.scope

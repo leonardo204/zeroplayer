@@ -259,11 +259,39 @@ export async function loadSet(
   }>()
   if (!row) return null
 
+  let items: RecommendItem[]
   try {
-    const items = JSON.parse(row.payload) as RecommendItem[]
-    if (!Array.isArray(items) || !items.length) return null
-    return { items, model: row.model, createdAt: row.created_at }
+    items = JSON.parse(row.payload) as RecommendItem[]
   } catch {
     return null
   }
+  if (!Array.isArray(items) || !items.length) return null
+
+  const live = await keepPlayable(env, items)
+  if (!live.length) return null
+  return { items: live, model: row.model, createdAt: row.created_at }
+}
+
+/**
+ * 세트를 만든 뒤에 목록에서 빠진 방송국을 걸러 낸다.
+ *
+ * 세트는 하루에 한 번만 다시 만들어서, 그 사이에 죽거나 만료 서명이 드러난
+ * 방송국, 또는 같은 방송의 대표에서 밀려난 줄이 그대로 남아 있을 수 있다. 앱은 이 목록을 눌러 바로 재생하므로
+ * 여기서 걸러 주지 않으면 사용자가 403 을 본다. 에피소드는 방송국 표에 없으니
+ * 그대로 통과시킨다.
+ */
+async function keepPlayable(env: Env, items: RecommendItem[]): Promise<RecommendItem[]> {
+  const stationIDs = items.filter((i) => i.kind === 'station').map((i) => i.id)
+  if (!stationIDs.length) return items
+
+  const holes = stationIDs.map(() => '?').join(',')
+  const { results } = await env.DB.prepare(`
+    SELECT s.id FROM stations s
+    LEFT JOIN station_health h ON h.station_id = s.id
+    WHERE s.id IN (${holes}) AND s.is_hidden = 0
+      AND s.stream_signed = 0 AND s.is_primary = 1 AND COALESCE(h.excluded, 0) = 0
+  `).bind(...stationIDs).all<{ id: string }>()
+
+  const alive = new Set(results.map((r) => r.id))
+  return items.filter((i) => i.kind !== 'station' || alive.has(i.id))
 }

@@ -85,6 +85,10 @@ curl -X POST -H "x-zp-admin: $TOKEN" \
 # 설정에 적힌 나라 전부
 curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/sync"
 
+# 방송국의 파생 값을 다시 계산한다 — 중복 묶음 열쇠(dedupe_key), 묶음별 대표(is_primary),
+# 만료 서명 주소 표시(stream_signed). 정규화 규칙을 고쳤으면 반드시 한 번 돌린다.
+curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/stations/rekey"
+
 # 판정 대기 태그를 LLM 에 넘긴다. 한 묶음이 25개, batches 로 묶음 수를 정한다
 curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/tags/normalize?batches=4"
 

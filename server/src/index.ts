@@ -15,6 +15,7 @@ import {
 import { addFeedByURL, syncPodcasts } from './lib/podcasts'
 import { hasKeys } from './lib/podcastIndex'
 import { classifyPendingMoods, resetMoodsForRetagged } from './lib/moods'
+import { rekeyStations } from './lib/stationKeys'
 import { buildSets } from './lib/recommendSets'
 import { getRecommendations } from './routes/recommend'
 import {
@@ -45,7 +46,7 @@ function requireAdmin(env: Env, request: Request): Response | null {
 }
 
 async function health(env: Env): Promise<Response> {
-  const [stations, excluded, tagged, pending, moodPending, sets, podcasts, episodes, hidden, alarms, pushable, jobs] = await env.DB.batch<Record<string, unknown>>([
+  const [stations, excluded, tagged, pending, moodPending, sets, podcasts, episodes, signed, unkeyed, hidden, alarms, pushable, jobs] = await env.DB.batch<Record<string, unknown>>([
     env.DB.prepare('SELECT COUNT(*) AS n FROM stations'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM station_health WHERE excluded = 1'),
     env.DB.prepare('SELECT COUNT(DISTINCT station_id) AS n FROM station_tags'),
@@ -54,6 +55,8 @@ async function health(env: Env): Promise<Response> {
     env.DB.prepare('SELECT COUNT(*) AS n FROM recommendation_sets'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM podcasts'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM episodes'),
+    env.DB.prepare('SELECT COUNT(*) AS n FROM stations WHERE stream_signed = 1'),
+    env.DB.prepare('SELECT COUNT(*) AS n FROM stations WHERE is_primary = 1 AND stream_signed = 0'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM hidden_channels WHERE enabled = 1'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM alarms WHERE enabled = 1'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM devices WHERE push_token IS NOT NULL'),
@@ -70,6 +73,8 @@ async function health(env: Env): Promise<Response> {
     recommendationSets: (sets.results[0]?.n as number) ?? 0,
     podcasts: (podcasts.results[0]?.n as number) ?? 0,
     episodes: (episodes.results[0]?.n as number) ?? 0,
+    signedStreams: (signed.results[0]?.n as number) ?? 0,
+    listedStations: (unkeyed.results[0]?.n as number) ?? 0,
     hiddenChannels: (hidden.results[0]?.n as number) ?? 0,
     podcastIndexKeys: hasKeys(env),
     enabledAlarms: (alarms.results[0]?.n as number) ?? 0,
@@ -161,6 +166,9 @@ export default {
             return json(await syncCountry(env, country.toUpperCase(), limit, prune))
           }
           return json({ results: await syncAll(env) })
+        }
+        if (method === 'POST' && path === '/admin/stations/rekey') {
+          return json(await rekeyStations(env))
         }
         if (method === 'POST' && path === '/admin/tags/normalize') {
           const batches = Number.parseInt(url.searchParams.get('batches') ?? '6', 10) || 6
