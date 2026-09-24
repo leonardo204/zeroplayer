@@ -7,6 +7,7 @@ protocol ProxyClienting: StreamReporting, Sendable {
     func stations(_ query: StationQuery) async throws -> StationPageDTO
     func streamURL(stationID: String) async throws -> StreamDTO
     func facets() async throws -> FacetsDTO
+    func recommendations(_ query: RecommendQuery) async throws -> RecommendationSetDTO
 }
 
 struct StationQuery: Hashable, Sendable {
@@ -77,6 +78,17 @@ struct ProxyClient: ProxyClienting {
 
     func facets() async throws -> FacetsDTO {
         try await get("/stations/facets")
+    }
+
+    func recommendations(_ query: RecommendQuery) async throws -> RecommendationSetDTO {
+        var items: [URLQueryItem] = [
+            .init(name: "situation", value: query.situation.rawValue),
+            .init(name: "at", value: query.atText),
+            .init(name: "limit", value: String(query.limit)),
+        ]
+        if let country = query.country { items.append(.init(name: "country", value: country)) }
+        if query.secureOnly { items.append(.init(name: "secure", value: "1")) }
+        return try await get("/recommend", query: items)
     }
 
     /// 신고는 실패해도 사용자에게 알리지 않는다. 재생 복구가 먼저다.

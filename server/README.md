@@ -29,12 +29,20 @@ npx wrangler d1 migrations apply zeroplayer --remote
 
 ```
 GET  /zp/v1/health
+GET  /zp/v1/recommend?situation=sleep&at=2026-09-24T23:10:00&country=KR&secure=1&limit=20
 GET  /zp/v1/stations?country=KR&tag=jazz&lang=ko&q=&sort=popular&secure=1&limit=50&cursor=
 GET  /zp/v1/stations/facets
 GET  /zp/v1/stations/{id}
 GET  /zp/v1/stations/{id}/stream
 POST /zp/v1/stations/{id}/report   { "reason": "no_audio" | "error" | "wrong_content" }
 ```
+
+`recommend` 의 `situation` 은 `sleep·commute·study·work·wake` 다. 상황별 태그 규칙은
+`src/lib/situations.ts` 에 있고, 규칙만 돌기 때문에 응답의 `source` 는 `"rule"` 이다
+(M4 에서 LLM 이 순서와 문구를 다듬으면 `"llm"` 이 된다).
+
+**`at` 에 오프셋을 붙이지 않는다.** `+09:00` 을 붙이면 질의 문자열에서 `+` 가 공백으로 풀려
+서버가 시각을 놓치고 UTC 현재 시각으로 떨어진다. 기기 시계만 적어 보낸다.
 
 `secure=1` 은 HTTPS 스트림만 내려준다. 목록 응답의 `isSecure` 도 같은 정보를 담는다.
 평문 HTTP 스트림을 못 여는 기기에서 걸러 내려고 둔 것이다(아래 5번).

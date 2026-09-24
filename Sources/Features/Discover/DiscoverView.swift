@@ -6,8 +6,11 @@ struct DiscoverView: View {
     @Environment(AudioPlayerService.self) private var player
     @Environment(\.modelContext) private var modelContext
 
+    @Query(sort: \Favorite.addedAt, order: .reverse) private var favorites: [Favorite]
+
     @State private var model = DiscoverModel()
     @State private var store: StationStore?
+    @State private var showFavoritesOnly = false
 
     var body: some View {
         NavigationStack {
@@ -19,7 +22,29 @@ struct DiscoverView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if let errorText = model.errorText {
+                if showFavoritesOnly {
+                    if favorites.isEmpty {
+                        ContentUnavailableView(
+                            "즐겨찾기가 없습니다",
+                            systemImage: "heart",
+                            description: Text("목록을 왼쪽으로 밀거나 재생 화면의 하트를 눌러 담습니다.")
+                        )
+                    } else {
+                        ForEach(favorites) { favorite in
+                            Button {
+                                Task { await player.play(favorite.playable) }
+                            } label: {
+                                favoriteRow(for: favorite)
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing) {
+                                Button("빼기", systemImage: "heart.slash", role: .destructive) {
+                                    FavoriteStore(context: modelContext).toggle(favorite.playable)
+                                }
+                            }
+                        }
+                    }
+                } else if let errorText = model.errorText {
                     ContentUnavailableView {
                         Label("목록을 가져오지 못했습니다", systemImage: "exclamationmark.triangle")
                     } description: {
@@ -37,6 +62,13 @@ struct DiscoverView: View {
                             row(for: station)
                         }
                         .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing) {
+                            let isOn = isFavorite(station.id)
+                            Button(isOn ? "빼기" : "즐겨찾기", systemImage: isOn ? "heart.slash" : "heart") {
+                                FavoriteStore(context: modelContext).toggle(station.playable)
+                            }
+                            .tint(isOn ? .gray : .pink)
+                        }
                         .task { await loadMore(after: station) }
                     }
 
@@ -52,8 +84,13 @@ struct DiscoverView: View {
             .onSubmit(of: .search) { Task { await refresh() } }
             .refreshable { await refresh() }
             .overlay { if model.isLoading && model.items.isEmpty { ProgressView() } }
-            .safeAreaInset(edge: .top, spacing: 0) { filterBar }
-            .toolbar { countryMenu }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if !showFavoritesOnly { filterBar }
+            }
+            .toolbar {
+                countryMenu
+                favoritesToggle
+            }
             .task { await start() }
         }
     }
@@ -112,6 +149,43 @@ struct DiscoverView: View {
         }
     }
 
+    private var favoritesToggle: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                showFavoritesOnly.toggle()
+            } label: {
+                Image(systemName: showFavoritesOnly ? "heart.fill" : "heart")
+            }
+            .accessibilityLabel(showFavoritesOnly ? "전체 목록 보기" : "즐겨찾기만 보기")
+        }
+    }
+
+    private func favoriteRow(for favorite: Favorite) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(favorite.title)
+                    .font(.body.weight(.medium))
+                    .lineLimit(1)
+                if let subtitle = favorite.subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 8)
+            if player.current?.id == favorite.itemID {
+                Image(systemName: player.state == .playing ? "speaker.wave.2.fill" : "pause.fill")
+                    .foregroundStyle(.tint)
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func isFavorite(_ id: String) -> Bool {
+        favorites.contains { $0.itemID == id }
+    }
+
     private func row(for station: StationDTO) -> some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -126,6 +200,11 @@ struct DiscoverView: View {
                 }
             }
             Spacer(minLength: 8)
+            if isFavorite(station.id) {
+                Image(systemName: "heart.fill")
+                    .font(.caption)
+                    .foregroundStyle(.pink)
+            }
             if player.current?.id == station.id {
                 Image(systemName: player.state == .playing ? "speaker.wave.2.fill" : "pause.fill")
                     .foregroundStyle(.tint)

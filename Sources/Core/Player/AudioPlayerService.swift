@@ -11,7 +11,7 @@ protocol AudioPlaying: AnyObject {
     /// ICY 메타데이터로 들어온 곡명. 안 주는 방송국이 많아서 없을 수 있다.
     var streamTitle: String? { get }
 
-    func play(_ item: PlayableItem) async
+    func play(_ item: PlayableItem, origin: PlaybackOrigin) async
     func pause()
     func resume()
     func stop()
@@ -33,8 +33,12 @@ final class AudioPlayerService: AudioPlaying {
     /// 첫 오디오를 이 시간 안에 못 받으면 실패로 본다.
     static let firstAudioTimeout: Duration = .seconds(15)
 
+    /// 자동 종료 타이머. 앱에 하나뿐이라 여기 둔다.
+    let sleepTimer = SleepTimer()
+
     @ObservationIgnored private let resolver: StreamResolving
     @ObservationIgnored private let reporter: StreamReporting
+    @ObservationIgnored private weak var recorder: (any ListeningRecording)?
     @ObservationIgnored private let session = AudioSessionManager()
     @ObservationIgnored private let nowPlaying = NowPlayingCenter()
     @ObservationIgnored private let log = Logger(subsystem: "com.zerolive.cloudRadioN", category: "player")
@@ -53,6 +57,9 @@ final class AudioPlayerService: AudioPlaying {
     @ObservationIgnored private var liveAccumulated: TimeInterval = 0
     /// 인터럽트 때문에 우리가 멈춘 것인지 구분한다.
     @ObservationIgnored private var pausedByInterruption = false
+    /// 지금 재생이 어디서 시작됐는지. 청취 기록에 그대로 들어간다.
+    @ObservationIgnored private var origin: PlaybackOrigin = .manual
+    @ObservationIgnored private var isSessionOpen = false
 
     init(
         resolver: StreamResolving = ProxyStreamResolver(),
@@ -62,13 +69,21 @@ final class AudioPlayerService: AudioPlaying {
         self.reporter = reporter
         wireSession()
         wireRemoteCommands()
+        wireSleepTimer()
+    }
+
+    /// 청취 기록을 남길 곳을 꽂는다. 앱이 뜰 때 한 번만 부른다.
+    func attach(recorder: any ListeningRecording) {
+        self.recorder = recorder
     }
 
     // MARK: - 재생 조작
 
-    func play(_ item: PlayableItem) async {
+    func play(_ item: PlayableItem, origin: PlaybackOrigin = .manual) async {
+        closeListeningSession()
         teardownCurrentItem()
 
+        self.origin = origin
         current = item
         streamTitle = nil
         elapsed = 0
@@ -108,6 +123,8 @@ final class AudioPlayerService: AudioPlaying {
 
         let player = AVPlayer(playerItem: playerItem)
         player.automaticallyWaitsToMinimizeStalling = true
+        // 지난 재생이 페이드아웃 중에 끝났을 수 있다. 볼륨은 항상 1 에서 시작한다.
+        player.volume = 1
         observeRate(of: player)
         observeTime(of: player)
         self.player = player
@@ -141,6 +158,8 @@ final class AudioPlayerService: AudioPlaying {
     }
 
     func stop() {
+        closeListeningSession()
+        sleepTimer.reset()
         teardownCurrentItem()
         session.deactivate()
         current = nil
@@ -155,7 +174,28 @@ final class AudioPlayerService: AudioPlaying {
     /// 실패한 뒤 사용자가 다시 시도할 때 쓴다.
     func retry() async {
         guard let item = current else { return }
-        await play(item)
+        await play(item, origin: origin)
+    }
+
+    // MARK: - 자동 종료 타이머
+
+    func startSleepTimer(minutes: Int, fadeOutSeconds: Int) {
+        sleepTimer.start(minutes: minutes, fadeOutSeconds: fadeOutSeconds)
+    }
+
+    func cancelSleepTimer() {
+        sleepTimer.cancel()
+    }
+
+    private func wireSleepTimer() {
+        sleepTimer.onVolume = { [weak self] volume in
+            self?.player?.volume = volume
+        }
+        sleepTimer.onFinish = { [weak self] in
+            guard let self else { return }
+            self.log.info("자동 종료 타이머가 끝나 재생을 멈춘다")
+            self.stop()
+        }
     }
 
     func next() async {
@@ -230,6 +270,7 @@ final class AudioPlayerService: AudioPlaying {
             if state != .playing {
                 log.info("재생 시작됨")
                 state = .playing
+                openListeningSession()
                 pushNowPlaying()
             }
         case .paused:
@@ -253,6 +294,21 @@ final class AudioPlayerService: AudioPlaying {
         } else {
             elapsed = max(0, CMTimeGetSeconds(time))
         }
+        recorder?.progress(elapsed)
+    }
+
+    // MARK: - 청취 기록
+
+    private func openListeningSession() {
+        guard !isSessionOpen, let item = current else { return }
+        recorder?.begin(item: item, origin: origin)
+        isSessionOpen = true
+    }
+
+    private func closeListeningSession() {
+        guard isSessionOpen else { return }
+        isSessionOpen = false
+        recorder?.finish(elapsed)
     }
 
     private func accumulateLiveElapsed() {
@@ -345,6 +401,8 @@ final class AudioPlayerService: AudioPlaying {
 
     private func fail(_ reason: PlaybackFailure) {
         let reported = current
+        closeListeningSession()
+        sleepTimer.reset()
         teardownCurrentItem()
         session.deactivate()
         state = .failed(reason)

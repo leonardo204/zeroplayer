@@ -4,6 +4,7 @@ import { getFacets, getStation, getStream, listStations, reportStation } from '.
 import { markSync, rebuildTags, syncAll, syncCountry } from './lib/sync'
 import { checkStreamBatch } from './lib/streamCheck'
 import { normalizePendingTags } from './lib/tags'
+import { getRecommendations } from './routes/recommend'
 
 const PREFIX = '/zp/v1'
 
@@ -42,6 +43,7 @@ export default {
 
     try {
       if (method === 'GET' && path === '/health') return await health(env)
+      if (method === 'GET' && path === '/recommend') return await getRecommendations(env, url)
       if (method === 'GET' && path === '/stations') return await listStations(env, url)
       if (method === 'GET' && path === '/stations/facets') return await getFacets(env)
 

@@ -18,6 +18,13 @@ struct MiniPlayerView: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 8)
+                if let remaining = player.sleepTimer.remainingText {
+                    Label(remaining, systemImage: "timer")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .labelStyle(.titleAndIcon)
+                        .accessibilityLabel("자동 종료까지 \(remaining)")
+                }
                 controlButton
             }
             .padding(.horizontal, 12)

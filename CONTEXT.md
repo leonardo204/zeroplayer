@@ -3,12 +3,12 @@
 다른 세션에서 이 저장소를 처음 열었을 때 읽는 문서다. 지금까지 한 일과 다음에 할 일만 적는다.
 기획 배경과 근거는 `docs/` 에 번호순으로 있다. 처음이면 `docs/00-concept.md` 부터 읽는다.
 
-마지막 갱신: 2026-09-24 (M2 완료, 실기기 확인 전)
+마지막 갱신: 2026-09-24 (M3 완료, 실기기 확인 전)
 
 ## 1. 현재 상태
 
-M2 까지 들어갔다. 프록시 Worker 가 돌고 있고, 앱의 탐색 탭이 서버에서 받은 방송국 2,845개를
-띄우고 그중 하나를 누르면 재생된다. 앱 소스에 스트림 주소는 한 줄도 없다.
+M3 까지 들어갔다. 프리셋을 누르면 서버가 지금 시각에 맞는 방송을 골라 주고, 그 방송이 재생되고,
+타이머가 끝나면 페이드아웃으로 꺼지고, 그 재생이 기록 탭에 남는다. 즐겨찾기도 된다.
 실기기 확인(백그라운드 30분, 전화 인터럽트, 잠금화면 조작, 평문 HTTP)은 아직 안 했다.
 
 ```sh
@@ -31,6 +31,14 @@ xcrun simctl spawn booted log stream --style compact --level info \
 ```
 
 `ZPStartTab` 은 처음 열리는 탭, `ZPAutoPlay` 는 바로 재생할 방송국 ID 다.
+프리셋과 타이머는 통로가 두 개 더 있다. `ZPAutoPreset` 은 그 이름의 프리셋을 눌러 준 것처럼
+실행하고, `ZPTimerSeconds` 는 타이머의 분을 초로 바꿔 준다(45분을 45초로 줄여 확인한다).
+
+```sh
+xcrun simctl launch booted com.zerolive.cloudRadioN \
+  -ZPStartTab presets -ZPAutoPreset 취침 -ZPTimerSeconds 45
+```
+
 `Logger.info` 는 기본 로그 스트림에 안 나온다. `--level info` 를 빼면 실패 줄만 보인다.
 
 ## 2. 저장소 두 곳
@@ -122,17 +130,65 @@ JSON 스키마 강제 출력을 받는 모델이라야 태그 판정이 안정�
 **M2 완료 기준은 채웠다.** 앱 소스에 스트림 주소가 없고(`zerolive.co.kr` 외 도메인 0건),
 프록시에 닿지 못하면 캐시 50건이 그대로 보이며, D1 에서 방송국 한 줄을 지우니 목록에서 사라졌다.
 
-## 6-2. 다음 할 일 — M3 (프리셋과 타이머)
+## 6-2. M3 에서 알아낸 것
 
-`docs/07-roadmap.md` 의 M3 을 따른다. 그 전에 실기기 확인 네 줄을 끝내는 편이 낫다 —
-평문 HTTP 결과에 따라 목록에 `secure=1` 을 붙일지가 갈린다.
+**프리셋의 자동 선택은 서버 규칙으로 돌린다.** `GET /zp/v1/recommend` 를 M3 에서 만들었다.
+LLM 은 아직 안 부른다 — 상황별 태그 규칙과 시간대 가중치만으로 후보를 고르고, `reason` 에는
+무엇으로 걸렀는지 그대로 적는다(`source: "rule"`). M4 에서 이 자리에 LLM 순서와 문구가 들어간다.
 
-**실기기에서 확인할 것**
+**시각을 보낼 때 오프셋을 붙이지 않는다.** `at=2026-09-24T23:10:00+09:00` 로 보내면 질의
+문자열에서 `+` 가 공백으로 풀려 서버가 시각을 통째로 놓친다(그러면 UTC 현재 시각으로 떨어져
+한낮에 새벽 목록이 온다). 그래서 앱은 오프셋 없이 기기 시계만 보내고, 서버는 문자열 앞부분에서
+시·요일을 읽는다. 서버는 오프셋이 붙어 와도 읽도록 해뒀다.
+
+**앱이 고르는 자리에서는 HTTPS 스트림만 받는다.** 자동 선택은 사람이 고른 것이 아니라서
+평문 HTTP 를 물어 오면 그대로 실패한다. 그래서 `secure=1` 로 요청한다. 탐색 탭은 그대로 둬서
+사용자가 직접 고를 수 있다.
+
+**고른 방송이 죽어 있으면 다음 후보로 넘어간다.** 실측에서 첫 후보 KBS Classic FM 이 403 이었고
+두 번째 후보로 넘어가 재생됐다. 자동 선택은 최대 세 번까지 시도한다.
+
+**M3 완료 기준은 채웠다.** 취침 프리셋을 실행하니 후보 20개를 받아 두 번째 후보가 재생됐고,
+타이머 종료 30초 전에 페이드아웃이 시작됐고, 시간이 되자 재생이 멈췄고, 기록 탭에 50초짜리
+세션이 프리셋 이름과 함께 남았다.
+
+## 6-3. M3 에서 새로 생긴 것
+
+| 경로 | 하는 일 |
+| --- | --- |
+| `server/src/routes/recommend.ts` | 상황별 추천(1단 규칙) |
+| `server/src/lib/situations.ts` | 상황 다섯 가지의 태그 규칙과 시간대 구간 |
+| `Core/Player/SleepTimer.swift` | 자동 종료와 페이드아웃. 앱에 타이머는 이것 하나뿐이다 |
+| `Core/Player/PlaybackOrigin.swift` | 이 재생이 어디서 시작됐는지. 기록에 그대로 들어간다 |
+| `Core/Persistence/Models/Preset.swift` | 프리셋. 기본 다섯 개도 여기 있다 |
+| `Core/Persistence/Models/Favorite.swift` | 즐겨찾기 |
+| `Core/Persistence/Models/ListeningSession.swift` | 청취 기록 |
+| `Core/Persistence/Store/ListeningStore.swift` | 기록을 쓰고 읽는다. 30초마다 중간 저장한다 |
+| `Core/Persistence/Store/FavoriteStore.swift` | 즐겨찾기 넣고 빼기 |
+| `Core/Networking/DTO/RecommendationDTO.swift` | 추천 응답 구조체 |
+| `Features/Presets/PresetLauncher.swift` | 프리셋을 누르면 벌어지는 일 전부 |
+| `Features/Presets/PresetEditorView.swift` | 프리셋 편집 |
+| `Features/Presets/StationPickerView.swift` | 프리셋에 걸 방송국 고르기 |
+| `Features/Player/SleepTimerSheet.swift` | 타이머 화면 |
+| `Features/Stats/MonthlyReport.swift` | 월간 리포트 계산. 화면과 떼어 뒀다 |
+
+## 6-4. 다음 할 일 — M4 (큐레이션)
+
+`docs/07-roadmap.md` 의 M4 를 따른다. 1단 규칙은 M3 에서 이미 돌고 있으니 2단(LLM 순서·문구),
+3단(기기 재정렬), 추천 탭 화면이 남았다. 재정렬이 읽을 청취 기록은 M3 에서 쌓이기 시작했다.
+
+**실기기에서 확인할 것** — M1 부터 밀린 것이다.
 
 - [ ] 화면을 끄고 30분 이상 끊기지 않는지
 - [ ] 전화를 받고 끊으면 재생이 이어지는지
 - [ ] 잠금화면에서 일시정지·재생이 되는지
 - [ ] 평문 HTTP 스트림이 실기기에서도 막히는지
+
+**손으로 눌러 봐야 하는 것** — 시뮬레이터에서 자동으로 확인하지 못했다.
+
+- [ ] 프리셋 편집(이름·아이콘·방송국 고르기·타이머)이 저장되는지
+- [ ] 탐색 탭에서 줄을 밀어 즐겨찾기에 넣고 빼는 동작
+- [ ] 재생 화면의 하트와 자동 종료 단추
 
 ## 7. 정해둔 것과 아직 안 정한 것
 
@@ -141,12 +197,15 @@ JSON 스키마 강제 출력을 받는 모델이라야 태그 판정이 안정�
 - 최소 iOS 17.0. SwiftUI + SwiftData + `@Observable`
 - 의존성은 SPM 만 쓴다. CocoaPods 를 쓰지 않는다
 - Swift 6 툴체인을 쓰되 언어 모드는 5 로 시작한다. `AVPlayer` KVO 와 SwiftData 모델이
-  `Sendable` 이 아니라 M1 에서 막힌다. M3 이후에 올린다.
-  지금 남은 경고는 하나뿐이고(`AVMetadataItem.stringValue` deprecated) 이유는 코드 주석에 적어뒀다
+  `Sendable` 이 아니라 막힌다. 지금 남은 경고는 `AVMetadataItem.stringValue` deprecated 하나와
+  SwiftData `#Predicate` 의 KeyPath 경고들이다. 뒤엣것은 SwiftData 쪽이라 우리가 못 고친다.
+  언어 모드는 M5 이후에 다시 본다
 - 프록시 중계를 하지 않는다 — 오디오 대역폭이 전부 Worker 를 거치면 비용이 사용자 수에 비례한다.
-  단 평문 HTTP 를 `NSAllowsArbitraryLoadsForMedia` 로 받겠다던 부분은 6번대로 흔들리고 있다
+  단 평문 HTTP 를 `NSAllowsArbitraryLoadsForMedia` 로 받겠다던 부분은 6번대로 흔들리고 있다.
+  앱이 방송을 고르는 자리(프리셋 자동 선택)는 이미 `secure=1` 로 HTTPS 만 받는다
 - 서버 LLM 은 분류·정규화를 Workers AI, 추천 문구를 OpenRouter 로 나눈다. 요청마다 부르지 않고
-  하루 한 번 배치로 만들어 D1 에 넣어둔다
+  하루 한 번 배치로 만들어 D1 에 넣어둔다. M3 의 추천은 아직 LLM 없이 규칙만 돈다
+- 청취 기록·즐겨찾기·프리셋은 전부 기기 안(SwiftData)에만 둔다. 서버로 보내지 않는다
 - 기기 LLM(Foundation Models)은 iOS 26 · A17 Pro 이상에서만 켜지는 덤이다. 없으면 점수 계산만 돌린다
 
 **아직 안 정한 것**
