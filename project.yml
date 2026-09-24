@@ -20,7 +20,7 @@ settings:
     DEVELOPMENT_TEAM: XU8HS9JUTS
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "2.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "2"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     SWIFT_EMIT_LOC_STRINGS: YES
 
@@ -82,6 +82,9 @@ targets:
       path: Sources/App/Info.plist
       properties:
         CFBundleDisplayName: zeroPlayer
+        # iOS 11 부터 필수 키다. 자산 카탈로그 컴파일러가 CFBundleIcons 안에는 넣어 주지만
+        # 최상위 키는 빠뜨린다 — 빠지면 업로드 뒤 '잘못된 바이너리' 가 된다(ITMS-90713).
+        CFBundleIconName: AppIcon
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
