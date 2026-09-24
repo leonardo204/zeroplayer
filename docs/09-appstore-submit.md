@@ -92,7 +92,7 @@ Pick one moment — sleep, driving, study, work or waking up — and the app pic
 
 ■ 기록은 기기 안에만
 
-무엇을 얼마나 들었는지는 이 아이폰 안에만 남습니다. 서버로 보내지 않고 광고에도 쓰지
+무엇을 얼마나 들었는지는 이 기기 안에만 남습니다. 서버로 보내지 않고 광고에도 쓰지
 않습니다. 월간 리포트에서 이번 달에 몇 시간을 들었고 무엇을 가장 많이 들었는지 봅니다.
 
 한국어와 영어를 지원합니다. 화면 테마를 라이트·다크로 고를 수 있습니다.
@@ -115,7 +115,7 @@ hour, the weekday and your country into account, so the same "sleep" gives you s
 different from one night to the next.
 
 As you listen, the order moves toward you. Stations you return to rise; stations you
-skipped within thirty seconds fall. That history stays on the iPhone.
+skipped within thirty seconds fall. That history stays on your device.
 
 
 ■ It stops on its own
@@ -158,7 +158,7 @@ current track name and cover art, both are shown. Playback resumes after a phone
 
 ■ Your history stays here
 
-What you listened to, and for how long, stays on this iPhone. It is never sent to a
+What you listened to, and for how long, stays on your device. It is never sent to a
 server and never used for ads. A monthly report shows the hours and what you played most.
 
 Korean and English. Light and dark appearance.
@@ -314,7 +314,7 @@ Not needed. No sign-in anywhere in the app.
 | 저작권 | `2026 YONGSUB LEE` |
 | 가격 | 무료 |
 | 지원 언어 | 한국어, 영어 |
-| 기기 | iPhone (iOS 17.0 이상) |
+| 기기 | iPhone·iPad (iOS 17.0 이상) |
 
 **App Privacy 표기는 `docs/08-release.md` 2번에 있다.** 앱이 보내는 것 넷과 AdMob 이
 가져가는 것을 나눠 적어 뒀다.
