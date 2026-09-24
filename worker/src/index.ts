@@ -245,6 +245,7 @@ google.com, pub-4410880415888380, DIRECT, f08c47fec0942fa0.
 - RoundOn (golf score): https://golf.zerolive.co.kr
 - Wandery (travel): https://wander.zerolive.co.kr
 - 햄찌 다이어트 (diet): https://hamzzi-diet.zerolive.co.kr
+- Live Translate (real-time translation): https://live-translate.zerolive.co.kr
 `;
 }
 
