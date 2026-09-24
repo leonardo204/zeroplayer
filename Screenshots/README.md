@@ -93,3 +93,18 @@ cd Screenshots && /tmp/zp_flatten */*.png
 ```sh
 sips -g hasAlpha Screenshots/ko-6.5/01-recommend.png   # hasAlpha: no 여야 한다
 ```
+
+## 업로드가 '진행 중' 에서 안 끝날 때
+
+App Store Connect 가 자산 하나를 물고 있으면 화면 어디에도 표시가 안 되고
+"아직 스크린샷 업로드가 진행 중입니다" 만 남는다. 거부 사유를 따로 알려 주지 않는다.
+
+파일 쪽에서 할 수 있는 것은 다음 셋이고, 여기 있는 캡처는 전부 마쳐 뒀다.
+
+1. **알파 채널을 없앤다.** `simctl` 이 찍는 PNG 에는 알파가 붙는다. `tools/flatten-screenshots.swift`
+2. **부가 청크를 걷어낸다.** `sips` 가 `sRGB`·`eXIf` 청크를 남긴다. IHDR·IDAT·IEND 만 남긴다.
+3. **JPG 로 바꿔 올린다.** PNG 가 걸릴 때 JPG 는 통과하는 경우가 있다. `jpg-*` 폴더가 그것이다.
+
+크기 칸은 **가장 큰 것 하나만** 채운다. iPhone 은 6.9(1320×2868), iPad 는 13"(2064×2752).
+아래 크기는 "6.9 디스플레이 사용" 으로 자동 상속된다 — 그 칸은 흐리게 보이고 '모두 삭제' 가
+꺼져 있다. 업로드 중이 아니라 상속된 것이니 건드리지 않는다.
