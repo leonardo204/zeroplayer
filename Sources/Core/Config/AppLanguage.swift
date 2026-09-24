@@ -40,8 +40,8 @@ enum AppTheme: String, CaseIterable, Identifiable, Sendable {
     var label: String {
         switch self {
         case .system: return String(localized: "기기 설정 따름")
-        case .light: return String(localized: "밝게")
-        case .dark: return String(localized: "어둡게")
+        case .light: return String(localized: "라이트")
+        case .dark: return String(localized: "다크")
         }
     }
 

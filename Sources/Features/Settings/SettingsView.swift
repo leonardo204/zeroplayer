@@ -82,7 +82,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Picker("화면 밝기", selection: $themeRaw) {
+                    Picker("테마", selection: $themeRaw) {
                         ForEach(AppTheme.allCases) { theme in
                             Text(theme.label).tag(theme.rawValue)
                         }

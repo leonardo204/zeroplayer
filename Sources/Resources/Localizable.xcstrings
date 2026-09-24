@@ -320,6 +320,7 @@
         }
       }
     },
+    "Apple Intelligence": {},
     "Apple Intelligence 가 꺼져 있습니다. 추천은 그대로 나옵니다.": {
       "extractionState": "manual",
       "localizations": {
@@ -747,6 +748,23 @@
         }
       }
     },
+    "다크": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다크"
+          }
+        }
+      }
+    },
     "닫기": {
       "extractionState": "manual",
       "localizations": {
@@ -798,6 +816,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Radio"
+          }
+        }
+      }
+    },
+    "라이트": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라이트"
           }
         }
       }
@@ -931,23 +966,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Repeat"
-          }
-        }
-      }
-    },
-    "밝게": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Light"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "밝게"
           }
         }
       }
@@ -1410,23 +1428,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notifications are on. Alarms come from the server, and a backup notification on this device rings if the server cannot be reached."
-          }
-        }
-      }
-    },
-    "어둡게": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dark"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어둡게"
           }
         }
       }
@@ -2506,6 +2507,23 @@
         }
       }
     },
+    "테마": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "테마"
+          }
+        }
+      }
+    },
     "테스트 단위": {
       "extractionState": "manual",
       "localizations": {
@@ -2739,23 +2757,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "화면"
-          }
-        }
-      }
-    },
-    "화면 밝기": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Appearance"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "화면 밝기"
           }
         }
       }
