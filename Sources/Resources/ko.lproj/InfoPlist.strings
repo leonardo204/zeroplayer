@@ -1,0 +1,2 @@
+/* 추적 허가창에 뜨는 문구. Info.plist 의 NSUserTrackingUsageDescription 을 덮어쓴다. */
+"NSUserTrackingUsageDescription" = "관심사에 맞는 광고를 보여주는 데에만 씁니다. 허용하지 않아도 앱 기능은 모두 그대로 쓸 수 있고, 광고가 관심사와 무관한 것으로 바뀔 뿐입니다.";

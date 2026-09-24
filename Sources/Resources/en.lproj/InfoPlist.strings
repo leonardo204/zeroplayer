@@ -1,0 +1,2 @@
+/* Shown in the tracking permission prompt. Overrides NSUserTrackingUsageDescription. */
+"NSUserTrackingUsageDescription" = "Used only to show ads that match your interests. Every feature keeps working if you decline — the ads just become less relevant.";
