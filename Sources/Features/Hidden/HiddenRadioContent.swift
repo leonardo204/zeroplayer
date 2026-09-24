@@ -54,6 +54,14 @@ struct HiddenRadioContent: View {
 
     private func row(for channel: HiddenChannelDTO) -> some View {
         HStack(spacing: 12) {
+            // 편성표가 주는 프로그램 그림이 있으면 그쪽이 낫다. 없으면 방송사 로고다.
+            ArtworkView(
+                url: (model.nowByChannel[channel.id]?.artworkURL ?? channel.artworkURL)
+                    .flatMap(URL.init(string:)),
+                title: channel.name,
+                size: 44,
+                cornerRadius: 8
+            )
             VStack(alignment: .leading, spacing: 3) {
                 Text(channel.name)
                     .font(.body.weight(.medium))

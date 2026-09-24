@@ -1,7 +1,8 @@
 import type { Env } from '../types'
 import { episodesForTimer } from '../lib/podcasts'
 import { clampLimit, fail, json } from '../lib/http'
-import { collectCandidates, ruleReason, toItem } from '../lib/candidates'
+import { fallbackArtwork } from '../lib/logos'
+import { collectCandidates, ruleReason, toItem, type RecommendItem } from '../lib/candidates'
 import { daypartOf, isSituation, readLocalTime, SITUATIONS } from '../lib/situations'
 import { GLOBAL_COUNTRY, loadSet, recommendCountries } from '../lib/recommendSets'
 
@@ -47,6 +48,16 @@ async function timerEpisodes(
   }
 }
 
+/**
+ * 저장된 세트는 만들 때의 썸네일을 그대로 들고 있다. 방송사 로고 표를 고쳐도
+ * 다음 배치가 돌기 전까지는 반영되지 않으므로, 내보낼 때 한 번 더 메운다.
+ */
+function withArtwork(item: RecommendItem): RecommendItem {
+  if (item.artworkURL || item.kind !== 'station') return item
+  const country = (item.subtitle || '').split(' · ')[0] || null
+  return { ...item, artworkURL: fallbackArtwork(item.title, country) }
+}
+
 export async function getRecommendations(env: Env, url: URL): Promise<Response> {
   const situation = url.searchParams.get('situation')
   if (!isSituation(situation)) {
@@ -81,7 +92,7 @@ export async function getRecommendations(env: Env, url: URL): Promise<Response> 
         source: stored.model && stored.model !== 'rule' ? 'llm' : 'rule',
         model: stored.model,
         builtAt: stored.createdAt,
-        items: [...episodes, ...stored.items].slice(0, limit),
+        items: [...episodes, ...stored.items.map(withArtwork)].slice(0, limit),
       }, {
         // 타이머를 끼면 사람마다 값이 달라 엣지에 오래 남겨 두지 않는다.
         headers: { 'cache-control': timerMinutes > 0 ? 'public, max-age=300' : 'public, max-age=900' },

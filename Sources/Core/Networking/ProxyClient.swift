@@ -5,6 +5,8 @@ import os
 /// radio-browser·Podcast Index·방송사 주소는 앱에 없다.
 protocol ProxyClienting: StreamReporting, Sendable {
     func stations(_ query: StationQuery) async throws -> StationPageDTO
+    /// 방송국 한 건. 프리셋·알람처럼 목록을 거치지 않고 튼 자리에서 썸네일을 채우려고 쓴다.
+    func station(id: String) async throws -> StationDTO
     func streamURL(stationID: String) async throws -> StreamDTO
     func facets() async throws -> FacetsDTO
     func recommendations(_ query: RecommendQuery) async throws -> RecommendationSetDTO
@@ -88,6 +90,10 @@ struct ProxyClient: ProxyClienting {
         if let cursor = query.cursor { items.append(.init(name: "cursor", value: cursor)) }
         items.append(.init(name: "sort", value: query.sort))
         return try await get("/stations", query: items)
+    }
+
+    func station(id: String) async throws -> StationDTO {
+        try await get("/stations/\(id)")
     }
 
     func streamURL(stationID: String) async throws -> StreamDTO {

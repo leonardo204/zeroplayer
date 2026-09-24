@@ -165,3 +165,12 @@ npx wrangler d1 execute zeroplayer --remote --command "DELETE FROM hidden_now_ca
 `schedule_url` 은 파서에 넘기는 값이다: KBS 는 `ch_code`(21·22·24·25), MBC 는
 `TypeTitle`(`FM4U`·`표준FM`), SBS 는 `channelname`(`POWER FM`·`LOVE FM`), TBS 는
 `channelCode`(`CH_A`·`CH_B`). 편성표가 없는 채널은 `schedule_kind` 를 비운다.
+
+## 썸네일
+
+`stations`·`recommend` 응답의 `artworkURL` 은 radio-browser 의 favicon 을 그대로 쓰되,
+비어 있으면 `src/lib/logos.ts` 의 방송사 로고로 메운다(한국 방송국만). 평문 HTTP 주소는
+HTTPS 로 올려 보낸다 — 앱의 `AsyncImage` 가 ATS 에 막히기 때문이다.
+
+로고 주소가 끊기면 `BROADCASTER_LOGOS` 표만 고친다. 방송사를 가려내는 규칙은 같은 파일의
+`NAME_RULES` 다. 지상파 채널 로고는 `hidden_channels.logo_url` 에 있다.

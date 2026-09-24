@@ -48,31 +48,15 @@ struct PlayerView: View {
 
     // MARK: - 조각
 
-    @ViewBuilder
     private var artwork: some View {
-        if let url = player.current?.artworkURL {
-            AsyncImage(url: url) { phase in
-                if let image = phase.image {
-                    image.resizable().scaledToFill()
-                } else {
-                    placeholderArtwork
-                }
-            }
-            .frame(width: 240, height: 240)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-        } else {
-            placeholderArtwork.frame(width: 240, height: 240)
-        }
-    }
-
-    private var placeholderArtwork: some View {
-        RoundedRectangle(cornerRadius: 16)
-            .fill(.quaternary)
-            .overlay {
-                Image(systemName: isEpisode ? "mic" : "waveform")
-                    .font(.system(size: 56))
-                    .foregroundStyle(.secondary)
-            }
+        ArtworkView(
+            url: player.artworkURL,
+            title: player.current?.title ?? "",
+            size: 240,
+            cornerRadius: 16,
+            symbolName: isEpisode ? "mic" : "waveform"
+        )
+        .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
     }
 
     private var secondLine: String? {

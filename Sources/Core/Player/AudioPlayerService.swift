@@ -10,6 +10,8 @@ protocol AudioPlaying: AnyObject {
     var elapsed: TimeInterval { get }
     /// ICY 메타데이터로 들어온 곡명. 안 주는 방송국이 많아서 없을 수 있다.
     var streamTitle: String? { get }
+    /// 지금 보여 줄 썸네일. 목록에서 온 것으로 시작해 곡·프로그램 그림이 오면 바뀐다.
+    var artworkURL: URL? { get }
     /// 에피소드 길이. 라디오는 0 이다.
     var duration: TimeInterval { get }
 
@@ -31,6 +33,11 @@ final class AudioPlayerService: AudioPlaying {
     private(set) var current: PlayableItem?
     private(set) var elapsed: TimeInterval = 0
     private(set) var streamTitle: String?
+    /// 화면이 보는 단 하나의 썸네일 값.
+    ///
+    /// 목록에서 받은 주소로 시작한다. 재생이 붙은 뒤 ICY 가 곡 이미지를 주거나
+    /// 지상파 편성표가 프로그램 이미지를 주면 그쪽으로 바꾼다.
+    private(set) var artworkURL: URL?
     /// 에피소드 길이. 라디오는 0 으로 둔다.
     private(set) var duration: TimeInterval = 0
     /// 재생 속도. 에피소드에만 쓴다. 고른 값은 다음 재생에도 이어진다.
@@ -44,8 +51,13 @@ final class AudioPlayerService: AudioPlaying {
     /// 자동 종료 타이머. 앱에 하나뿐이라 여기 둔다.
     let sleepTimer = SleepTimer()
 
+    /// 썸네일을 채우고 편성표를 새로 받는 일. 항목이 바뀌면 취소한다.
+    @ObservationIgnored private var artworkTask: Task<Void, Never>?
+
     @ObservationIgnored private let resolver: StreamResolving
     @ObservationIgnored private let reporter: StreamReporting
+    /// 썸네일과 편성표를 뒤에서 채울 때만 쓴다. 재생 경로는 `resolver` 를 지난다.
+    @ObservationIgnored private let client: ProxyClienting
     @ObservationIgnored private weak var recorder: (any ListeningRecording)?
     @ObservationIgnored private let session = AudioSessionManager()
     @ObservationIgnored private let nowPlaying = NowPlayingCenter()
@@ -84,10 +96,12 @@ final class AudioPlayerService: AudioPlaying {
 
     init(
         resolver: StreamResolving = ProxyStreamResolver(),
-        reporter: StreamReporting = ProxyClient()
+        reporter: StreamReporting = ProxyClient(),
+        client: ProxyClienting = ProxyClient()
     ) {
         self.resolver = resolver
         self.reporter = reporter
+        self.client = client
         wireSession()
         wireRemoteCommands()
         wireSleepTimer()
@@ -117,6 +131,7 @@ final class AudioPlayerService: AudioPlaying {
         self.origin = origin
         current = item
         streamTitle = nil
+        artworkURL = item.artworkURL
         duration = item.durationSeconds ?? 0
         // 에피소드는 듣던 자리에서 잇는다. 준비되면 이 값으로 옮긴다.
         pendingSeek = item.kind == .podcast ? positions?.position(for: item.id) : nil
@@ -166,6 +181,7 @@ final class AudioPlayerService: AudioPlaying {
         observeTime(of: player)
         self.player = player
 
+        startArtworkWork(for: item)
         startWatchdog(for: item.id)
         player.play()
     }
@@ -203,6 +219,7 @@ final class AudioPlayerService: AudioPlaying {
         session.deactivate()
         current = nil
         streamTitle = nil
+        artworkURL = nil
         state = .idle
         elapsed = 0
         duration = 0
@@ -221,8 +238,10 @@ final class AudioPlayerService: AudioPlaying {
             id: "debug.fake",
             kind: .station,
             title: "확인용 방송",
-            subtitle: "미니 플레이어 자리 확인"
+            subtitle: "미니 플레이어 자리 확인",
+            artworkURL: UserDefaults.standard.string(forKey: "ZPFakeArtwork").flatMap(URL.init(string:))
         )
+        artworkURL = current?.artworkURL
         state = .paused
         elapsed = 0
     }
@@ -458,6 +477,64 @@ final class AudioPlayerService: AudioPlaying {
         metadataForwarder = forwarder
     }
 
+    // MARK: - 썸네일 채우기
+
+    /// 재생을 걸어 둔 뒤 뒤에서 썸네일을 채운다. 재생 시작을 늦추지 않는다.
+    ///
+    /// - 지상파는 편성표에서 지금 방송 중인 프로그램의 이름과 그림을 받아 온다.
+    ///   프로그램이 바뀔 때가 되면 서버가 알려 준 주기에 맞춰 다시 받는다.
+    /// - 방송국은 목록을 거치지 않고 튼 경우(프리셋·알람)에만 낱개로 물어본다.
+    private func startArtworkWork(for item: PlayableItem) {
+        artworkTask?.cancel()
+        guard item.kind == .hidden || (item.kind == .station && item.artworkURL == nil) else {
+            artworkTask = nil
+            return
+        }
+
+        artworkTask = Task { [weak self] in
+            guard let self else { return }
+
+            if item.kind == .station {
+                if let dto = try? await self.client.station(id: item.id),
+                   let url = dto.artworkURL.flatMap(URL.init(string:)),
+                   !Task.isCancelled, self.current?.id == item.id {
+                    self.artworkURL = url
+                    self.pushNowPlaying()
+                }
+                return
+            }
+
+            guard let token = self.hidden?.token else { return }
+            while !Task.isCancelled, self.current?.id == item.id {
+                var wait = 300
+                if let now = try? await self.client.hiddenNow(channelID: item.id, token: token) {
+                    guard !Task.isCancelled, self.current?.id == item.id else { return }
+                    if let name = now.programName, !name.isEmpty {
+                        self.streamTitle = name
+                    }
+                    if let url = now.artworkURL.flatMap(URL.init(string:)) {
+                        self.artworkURL = url
+                    }
+                    self.pushNowPlaying()
+                    wait = max(60, min(now.refreshAfter, 1800))
+                }
+                try? await Task.sleep(for: .seconds(wait))
+            }
+        }
+    }
+
+    /// ICY 가 곡 이미지를 함께 줄 때가 있다(Radio Paradise 등).
+    ///
+    /// 평문 HTTP 로 오는 주소가 많은데 `AsyncImage` 는 ATS 에 막히므로 올려서 쓴다.
+    fileprivate func updateStreamArtwork(_ raw: String) {
+        let secure = raw.hasPrefix("http://")
+            ? "https://" + raw.dropFirst("http://".count)
+            : raw
+        guard let url = URL(string: secure), url != artworkURL else { return }
+        artworkURL = url
+        pushNowPlaying()
+    }
+
     /// `MetadataForwarder` 가 문자열만 뽑아 넘겨준다.
     fileprivate func updateStreamTitle(_ title: String) {
         guard title != streamTitle else { return }
@@ -513,6 +590,7 @@ final class AudioPlayerService: AudioPlaying {
         nowPlaying.update(
             item: current,
             streamTitle: streamTitle,
+            artworkURL: artworkURL,
             elapsed: elapsed,
             duration: duration,
             rate: current?.kind == .podcast ? playbackRate : 1.0,
@@ -550,6 +628,8 @@ final class AudioPlayerService: AudioPlaying {
     }
 
     private func teardownCurrentItem() {
+        artworkTask?.cancel()
+        artworkTask = nil
         watchdog?.cancel()
         watchdog = nil
 
@@ -610,15 +690,26 @@ private final class MetadataForwarder: NSObject, AVPlayerItemMetadataOutputPushD
         // 밀어 넣어주는 타임드 메타데이터는 값이 이미 메모리에 있어서 비동기로 받을 것이 없고,
         // `load(.stringValue)` 를 쓰면 AVMetadataItem 배열이 액터를 넘어가
         // Swift 6 언어 모드에서 오류가 된다. 경고 하나를 남기는 쪽을 골랐다.
-        let title = groups
+        let values = groups
             .flatMap(\.items)
-            .lazy
             .compactMap { $0.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty }
+            .filter { !$0.isEmpty }
 
-        guard let title else { return }
+        // 한 묶음에 곡명과 앨범 이미지 주소가 함께 오는 방송국이 있다
+        // (Radio Paradise 가 그렇다). 주소로 보이는 것은 곡명으로 세우지 않는다.
+        let title = values.first { !Self.looksLikeImageURL($0) }
+        let artwork = values.first { Self.looksLikeImageURL($0) }
+
+        guard title != nil || artwork != nil else { return }
         MainActor.assumeIsolated {
-            owner?.updateStreamTitle(title)
+            if let title { owner?.updateStreamTitle(title) }
+            if let artwork { owner?.updateStreamArtwork(artwork) }
         }
+    }
+
+    private static func looksLikeImageURL(_ value: String) -> Bool {
+        guard value.hasPrefix("http://") || value.hasPrefix("https://") else { return false }
+        let path = URL(string: value)?.path.lowercased() ?? value.lowercased()
+        return [".jpg", ".jpeg", ".png", ".webp", ".gif"].contains { path.hasSuffix($0) }
     }
 }

@@ -1,5 +1,6 @@
 import type { Env } from '../types'
 import { clampLimit, decodeCursor, fail, json, nowISO } from '../lib/http'
+import { artworkFor } from '../lib/logos'
 
 /** 앱이 받는 방송국 한 건. 스트림 주소는 여기에 넣지 않는다. */
 interface StationDTO {
@@ -43,7 +44,7 @@ function toDTO(row: Row, tags: string[]): StationDTO {
     bitrate: row.bitrate ?? 0,
     votes: row.votes ?? 0,
     clicks: row.clicks ?? 0,
-    artworkURL: row.favicon && row.favicon.startsWith('http') ? row.favicon : null,
+    artworkURL: artworkFor(row.favicon, row.name, row.country_code),
     homepage: row.homepage,
     tags,
     isSecure: row.stream_url.startsWith('https://'),
@@ -51,17 +52,24 @@ function toDTO(row: Row, tags: string[]): StationDTO {
   }
 }
 
+/**
+ * D1 은 한 문장에 묶을 수 있는 값이 100개까지다. 목록을 200건까지 받을 수 있으니
+ * 90개씩 잘라 묻는다. 안 자르면 limit 을 크게 준 요청이 통째로 500 이 된다.
+ */
 async function tagsFor(env: Env, ids: string[]): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>()
   if (!ids.length) return map
-  const holes = ids.map(() => '?').join(',')
-  const { results } = await env.DB.prepare(
-    `SELECT station_id, tag FROM station_tags WHERE station_id IN (${holes}) ORDER BY tag`,
-  ).bind(...ids).all<{ station_id: string; tag: string }>()
-  for (const r of results) {
-    const list = map.get(r.station_id) ?? []
-    list.push(r.tag)
-    map.set(r.station_id, list)
+  for (let i = 0; i < ids.length; i += 90) {
+    const slice = ids.slice(i, i + 90)
+    const holes = slice.map(() => '?').join(',')
+    const { results } = await env.DB.prepare(
+      `SELECT station_id, tag FROM station_tags WHERE station_id IN (${holes}) ORDER BY tag`,
+    ).bind(...slice).all<{ station_id: string; tag: string }>()
+    for (const r of results) {
+      const list = map.get(r.station_id) ?? []
+      list.push(r.tag)
+      map.set(r.station_id, list)
+    }
   }
   return map
 }

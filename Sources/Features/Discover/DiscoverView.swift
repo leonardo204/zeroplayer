@@ -223,6 +223,13 @@ struct DiscoverView: View {
 
     private func favoriteRow(for favorite: Favorite) -> some View {
         HStack(spacing: 12) {
+            ArtworkView(
+                url: favorite.playable.artworkURL,
+                title: favorite.title,
+                size: 44,
+                cornerRadius: 8,
+                symbolName: favorite.playable.kind == .podcast ? "mic" : "waveform"
+            )
             VStack(alignment: .leading, spacing: 2) {
                 Text(favorite.title)
                     .font(.body.weight(.medium))
@@ -249,6 +256,12 @@ struct DiscoverView: View {
 
     private func row(for station: StationDTO) -> some View {
         HStack(spacing: 12) {
+            ArtworkView(
+                url: station.artworkURL.flatMap(URL.init(string:)),
+                title: station.name,
+                size: 44,
+                cornerRadius: 8
+            )
             VStack(alignment: .leading, spacing: 2) {
                 Text(station.name)
                     .font(.body.weight(.medium))

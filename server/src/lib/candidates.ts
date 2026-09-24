@@ -1,5 +1,6 @@
 import type { Env } from '../types'
 import { boostTags, type Daypart, type SituationRule } from './situations'
+import { artworkFor } from './logos'
 
 /** 후보 한 건. 스트림 주소는 생사 판단과 HTTPS 여부에만 쓰고 앱에는 내보내지 않는다. */
 export interface Candidate {
@@ -117,20 +118,24 @@ async function labelsFor(env: Env, ids: string[]): Promise<{
   const moods = new Map<string, string[]>()
   if (!ids.length) return { tags, moods }
 
-  const [tagRows, moodRows] = await env.DB.batch<{ station_id: string; value: string }>([
-    env.DB.prepare(`SELECT station_id, tag AS value FROM station_tags WHERE station_id IN (${holes(ids)}) ORDER BY tag`).bind(...ids),
-    env.DB.prepare(`SELECT station_id, mood AS value FROM station_moods WHERE station_id IN (${holes(ids)}) ORDER BY confidence DESC`).bind(...ids),
-  ])
+  // D1 은 한 문장에 값 100개까지라 90개씩 잘라 묻는다.
+  for (let i = 0; i < ids.length; i += 90) {
+    const slice = ids.slice(i, i + 90)
+    const [tagRows, moodRows] = await env.DB.batch<{ station_id: string; value: string }>([
+      env.DB.prepare(`SELECT station_id, tag AS value FROM station_tags WHERE station_id IN (${holes(slice)}) ORDER BY tag`).bind(...slice),
+      env.DB.prepare(`SELECT station_id, mood AS value FROM station_moods WHERE station_id IN (${holes(slice)}) ORDER BY confidence DESC`).bind(...slice),
+    ])
 
-  for (const row of tagRows.results) {
-    const list = tags.get(row.station_id) ?? []
-    list.push(row.value)
-    tags.set(row.station_id, list)
-  }
-  for (const row of moodRows.results) {
-    const list = moods.get(row.station_id) ?? []
-    list.push(row.value)
-    moods.set(row.station_id, list)
+    for (const row of tagRows.results) {
+      const list = tags.get(row.station_id) ?? []
+      list.push(row.value)
+      tags.set(row.station_id, list)
+    }
+    for (const row of moodRows.results) {
+      const list = moods.get(row.station_id) ?? []
+      list.push(row.value)
+      moods.set(row.station_id, list)
+    }
   }
   return { tags, moods }
 }
@@ -235,7 +240,7 @@ export function toItem(candidate: Candidate, reason: string): RecommendItem {
     subtitle: [candidate.country_code, candidate.bitrate ? candidate.bitrate + 'k' : null]
       .filter(Boolean).join(' · ') || null,
     reason,
-    artworkURL: candidate.favicon && candidate.favicon.startsWith('http') ? candidate.favicon : null,
+    artworkURL: artworkFor(candidate.favicon, candidate.name, candidate.country_code),
     tags: candidate.tags,
     moods: candidate.moods,
     isSecure: candidate.stream_url.startsWith('https://'),

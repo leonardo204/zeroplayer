@@ -38,13 +38,13 @@ struct MiniPlayerView: View {
     }
 
     private var artwork: some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(.quaternary)
-            .frame(width: 40, height: 40)
-            .overlay {
-                Image(systemName: "waveform")
-                    .foregroundStyle(.secondary)
-            }
+        ArtworkView(
+            url: player.artworkURL,
+            title: player.current?.title ?? "",
+            size: 40,
+            cornerRadius: 6,
+            symbolName: player.current?.kind == .podcast ? "mic" : "waveform"
+        )
     }
 
     @ViewBuilder

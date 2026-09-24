@@ -94,6 +94,14 @@ struct RecommendView: View {
                 .frame(width: 20, alignment: .trailing)
                 .padding(.top, 2)
 
+            ArtworkView(
+                url: entry.item.artworkURL.flatMap(URL.init(string:)),
+                title: entry.item.title,
+                size: 44,
+                cornerRadius: 8,
+                symbolName: entry.item.kind == "episode" ? "mic" : "waveform"
+            )
+
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(entry.item.title)
