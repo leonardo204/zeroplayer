@@ -3,11 +3,11 @@
 다른 세션에서 이 저장소를 처음 열었을 때 읽는 문서다. 지금까지 한 일과 다음에 할 일만 적는다.
 기획 배경과 근거는 `docs/` 에 번호순으로 있다. 처음이면 `docs/00-concept.md` 부터 읽는다.
 
-마지막 갱신: 2026-09-24 (M7 완료 + 첫 실기기 확인에서 나온 것 세 가지 수정)
+마지막 갱신: 2026-09-24 (M8 코드 완료, 실기기·AdMob 콘솔 작업 남음)
 
 ## 1. 현재 상태
 
-M7 까지 들어갔다. 추천 탭에서 상황을 고르면 서버가 밤에 만들어 둔 목록이 나오고, 그 목록이
+M8 까지 들어갔다. 추천 탭에서 상황을 고르면 서버가 밤에 만들어 둔 목록이 나오고, 그 목록이
 기기에 쌓인 청취 기록으로 다시 세워진다. 프리셋을 누르면 같은 경로로 고른 방송이 재생되고,
 타이머가 끝나면 페이드아웃으로 꺼지고, 그 재생이 기록 탭에 남는다.
 탐색 탭에서 팟캐스트를 찾아 에피소드를 재생할 수 있고, 듣던 자리에서 이어진다.
@@ -15,6 +15,8 @@ M7 까지 들어갔다. 추천 탭에서 상황을 고르면 서버가 밤에 �
 서버에 닿지 못할 때를 대비해 같은 시각에 로컬 알림도 함께 걸어 둔다.
 설정의 버전 줄을 12번 누르면 탐색 탭에 '지상파' 가 나타나고 한국 지상파 14채널을
 지금 방송 중인 프로그램과 함께 들을 수 있다.
+배너 광고가 추천·탐색·프리셋·기록 네 화면에 붙고 재생 화면·지상파·알람 직후에는 안 붙는다.
+1.7 에서 올라온 사용자는 알람과 히든 해제 상태를 그대로 물려받는다.
 실기기 확인(백그라운드 30분, 전화 인터럽트, 잠금화면 조작, 평문 HTTP, 알람 도착)은 아직 안 했다.
 
 ```sh
@@ -48,7 +50,13 @@ xcrun simctl launch booted com.zerolive.cloudRadioN \
 `ZPFakeNowPlaying 1` 은 재생 없이 미니 플레이어만 띄운다. 시뮬레이터는 실제 재생이
 죽어서(6-12 참고) 미니 플레이어가 걸린 화면을 볼 방법이 이것뿐이다.
 
+광고는 동의창 때문에 시뮬레이터에서 막힌다. `-ZPSkipConsentForm 1` 을 붙이면 동의창과
+추적 허가창을 건너뛰고 테스트 배너를 바로 그린다.
+
 `Logger.info` 는 기본 로그 스트림에 안 나온다. `--level info` 를 빼면 실패 줄만 보인다.
+이 맥에서는 로그가 통째로 비어 나올 때가 있다. 광고 상태는 파일로도 남으니
+`xcrun simctl get_app_container <기기> com.zerolive.cloudRadioN data` 의
+`Documents/zp-ads.log` 를 본다.
 
 ## 2. 저장소 두 곳
 
@@ -499,11 +507,68 @@ ATS 가 막는다(`NSAllowsArbitraryLoadsForMedia` 는 AVFoundation 이 여는 �
 - [ ] 지상파를 틀면 프로그램 이미지와 프로그램 이름이 재생 화면에 올라오는지
 - [ ] 잠금화면과 제어센터에 그림이 뜨는지
 
-## 6-14. 다음 할 일 — M8 (광고와 출시)
+## 6-14. M8 에서 알아낸 것
 
-`docs/07-roadmap.md` 의 M8 을 따른다. AdMob 앱 인증이 먼저다(6-13 참고).
-`Core/Ads/AdPlacement.swift` 에 어느 화면에 붙일지 판정이 이미 있으니 배너만 얹는다.
-알람 커스텀 사운드(30초 `.caf`)도 이 단계에서 넣는다.
+**시뮬레이터에서 앱이 조용히 죽던 원인은 오디오가 아니라 기기 안 모델이었다.**
+`OnDeviceReasoner` 가 `SystemLanguageModel.default.availability` 로 `.available` 을 받고도
+`session.respond(to:)` 안에서 EXC_BAD_ACCESS(SIGSEGV)로 프로세스째 죽는다. Swift 오류가 아니라
+시그널이라 do/catch 로 못 막는다. 크래시 리포트 세 건이 전부 `personalNote` 와 `warmUp` 이었다.
+시뮬레이터에서는 이제 프레임워크를 아예 건드리지 않는다(`#if targetEnvironment(simulator)`).
+전에 "맥 오디오 문제로 보인다" 고 적어 둔 것은 틀렸다. 실기기는 영향이 없다.
+
+**광고 SDK 는 v12 에서 이름이 전부 바뀌었다.** ObjC 헤더의 `NS_SWIFT_NAME` 으로 `GAD` 접두사가
+사라졌다 — `MobileAds.shared`, `BannerView`, `Request`, `AdSize`,
+`currentOrientationAnchoredAdaptiveBanner(width:)`. 인터넷 예제는 대부분 v11 이하라 그대로
+쓰면 컴파일이 안 된다. 헤더는 DerivedData 의 `SourcePackages/artifacts/.../Headers` 에 있다.
+
+**SPM 첫 해석이 한 번 실패한다.** `googlemobileadsios-spm-12.14.0.zip` 을 못 찾는다며 끊기는데
+같은 명령을 한 번 더 돌리면 받아진다. 바이너리 xcframework 를 내려받는 패키지라 그렇다.
+
+**배너는 받아 온 크기가 요청한 칸보다 작을 수 있다.** 그러면 남는 자리가 검게 보인다.
+`backgroundColor = .clear` 만으로는 안 되고 SwiftUI 쪽에 바탕색을 깔아야 한다.
+
+**동의(UMP)와 광고 요청은 순서가 있다.** UMP → ATT → `MobileAds.start()` 다. 거꾸로 하면
+EEA·영국에서 동의 없이 광고 요청이 나가 계정이 위험하다. `canRequestAds` 가 참이 되기 전에는
+SDK 를 시작하지 않는다.
+
+**구글 테스트 앱 ID 에는 모든 지역에 영어 동의창이 걸려 있다.** 그래서 지금 빌드는 앱을 열자마자
+영어 창이 뜨고 `consentStatus` 가 `required` 로 온다. 실제 AdMob 계정에서는 한국 사용자에게
+아무 창도 뜨지 않는다. 확인용으로는 `-ZPSkipConsentForm 1` 로 건너뛴다.
+
+**시뮬레이터 로그가 이 맥에서 비어 나온다.** `log show` 도 `simctl launch --console` 도 빈다.
+그래서 광고 쪽 상태는 파일로도 남긴다 — `Documents/zp-ads.log` 이고
+`xcrun simctl get_app_container <기기> com.zerolive.cloudRadioN data` 밑에서 읽는다.
+
+## 6-15. M8 에서 새로 생긴 것
+
+| 경로 | 하는 일 |
+| --- | --- |
+| `Core/Ads/AdUnits.swift` | 광고 단위 ID 를 Info.plist 에서 읽는다. 기본값은 구글 테스트 ID |
+| `Core/Ads/AdConsent.swift` | UMP 동의 → ATT → SDK 시작. 배너를 켜도 되는지 판정 |
+| `Core/Ads/AdBanner.swift` | 배너 하나(`AdBanner`)와 자리 판정까지 하는 껍데기(`AdBannerSlot`) |
+| `Core/Migration/LegacyMigration.swift` | 1.7 의 `CRSettings.json`·`CRChannels.json` 이관 |
+| `Features/Settings/YouTubeRemovedView.swift` | 유튜브 기능이 없어진 이유. 1.7 사용자에게 한 번 |
+| `docs/08-release.md` | App Privacy 표기와 심사 메모. 콘솔에서 할 일 |
+
+광고 ID 는 `Configs/Base.xcconfig` → Info.plist 로 들어간다. 실제 값은
+저장소 루트 `Secrets.xcconfig` 에서 덮어쓴다(커밋하지 않는다).
+
+**마이그레이션은 한 번만 돈다.** `UserDefaults` 의 `zp.migration.v1.done` 이 표시다.
+원본 JSON 은 지우지 않는다. 다시 돌려 보려면 앱을 지웠다 깔고 파일을 다시 심는다.
+
+## 6-16. 다음 할 일 — 출시
+
+`docs/08-release.md` 를 따른다. 코드는 다 들어갔고 남은 것은 콘솔 작업과 실기기 확인이다.
+
+**콘솔에서 할 일**
+
+- [ ] App Store Connect 2.0 버전 정보에 마케팅 URL·지원 URL·개인정보처리방침 URL 을 넣는다
+- [ ] AdMob 에 앱을 등록하고 배너 광고 단위 4개를 받아 `Secrets.xcconfig` 에 넣는다
+- [ ] AdMob 동의 메시지를 한국어로 만든다
+- [ ] 스토어에 2.0 이 반영된 뒤 AdMob 앱 인증을 다시 누른다
+- [ ] 심사 메모에 히든 라디오 여는 방법을 적는다 (지침 2.3.1 — 숨긴 기능 금지)
+- [ ] 알람 커스텀 사운드(30초 `.caf`)를 넣는다. 지금은 시스템 기본음이다
+- [ ] Time Sensitive 승인이 나면 `Sources/App/zeroPlayer*.entitlements` 에 한 줄 더한다
 
 **실기기에서 확인할 것** — M1 부터 밀린 것이다.
 
@@ -516,6 +581,7 @@ ATS 가 막는다(`NSAllowsArbitraryLoadsForMedia` 는 AVFoundation 이 여는 �
 - [ ] 앱을 완전히 종료한 상태에서 알람 시각에 알림이 오고, 탭하면 재생되는지
 - [ ] 비행기 모드에서 로컬 백업 알림이 울리는지
 - [ ] 잠금화면 알림의 '재생'·'5분 뒤 다시' 단추
+- [ ] ATT 허가창이 한 번만 뜨고, 거부해도 배너가 계속 나오는지
 
 **손으로 눌러 봐야 하는 것** — 시뮬레이터에서 자동으로 확인하지 못했다.
 
@@ -527,8 +593,9 @@ ATS 가 막는다(`NSAllowsArbitraryLoadsForMedia` 는 AVFoundation 이 여는 �
 - [ ] 재생 화면의 진행 바를 끌어 옮기기와 재생 속도 바꾸기
 - [ ] 알람 만들기·고치기·요일 고르기·켜고 끄기
 - [ ] 설정의 버전 줄을 실제로 12번 눌러 지상파가 열리는지, '목록에서 숨기기' 로 되돌아가는지
+- [ ] 글자 크기를 가장 크게 했을 때와 VoiceOver 로 주요 동작
 
-## 6-15. 랜딩 페이지와 광고 준비
+## 6-17. 랜딩 페이지와 광고 준비
 
 앱 소개와 광고 게시자 선언을 맡는 Worker 가 `worker/` 에 따로 있다. 앱이 부르는 API
 (`server/`, `ai.zerolive.co.kr/zp/v1`)와 다른 Worker 다. 둘을 섞지 않는다.
@@ -586,7 +653,8 @@ golf·wander·hamzzi-diet)의 바닥글과 live-translate 의 `llms.txt` 에도 
   번들 ID `com.zerolive.cloudRadioN` 에 Push Notifications 를 켰고 Time Sensitive 는 신청했다
 - 방송국을 받아오는 나라는 지금 15개다. 사용자가 실제로 듣는 나라를 보고 넓힌다
   (`server/wrangler.toml` 의 `SYNC_TOP_COUNTRIES`)
-- AdMob 앱 등록이 앱 인증에서 막혀 있다. 원인과 푸는 법은 6-15 절. 광고 단위 ID 는 M8
+- AdMob 앱 등록이 앱 인증에서 막혀 있다. 원인과 푸는 법은 6-17 절. 실제 광고 단위 ID 는
+  아직 없고 구글 테스트 ID 로 돈다
 
 ## 8. 아직 안 끝난 숙제
 

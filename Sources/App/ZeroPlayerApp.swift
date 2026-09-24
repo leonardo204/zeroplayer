@@ -32,6 +32,10 @@ struct ZeroPlayerApp: App {
     @State private var push = PushRegistrar()
     /// 히든 해제 상태. 토큰은 키체인에 있고 해제 전에는 화면 어디에도 안 나온다.
     @State private var hiddenAccess: HiddenAccess
+    /// 광고 동의와 추적 허가. 이 값이 서지 않으면 배너를 한 장도 요청하지 않는다.
+    @State private var adConsent = AdConsent()
+    /// 1.7 에서 올라온 사용자에게 유튜브 기능이 없어진 이유를 한 번 보여 준다.
+    @State private var showYouTubeNotice = false
 
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
@@ -53,10 +57,14 @@ struct ZeroPlayerApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .sheet(isPresented: $showYouTubeNotice) { YouTubeRemovedView() }
                 .environment(player)
                 .environment(reasoner)
                 .environment(push)
                 .environment(hiddenAccess)
+                .environment(adConsent)
+                .task { await migrateLegacyIfNeeded() }
+                .task { await adConsent.start() }
                 .task { await startNotifications() }
                 .task { await seedAlarmIfRequested() }
                 .task { await alarmPushIfRequested() }
@@ -65,6 +73,17 @@ struct ZeroPlayerApp: App {
                 .task { await autoPresetIfRequested() }
         }
         .modelContainer(container)
+    }
+
+    /// 1.7 이 Documents 에 남긴 JSON 을 한 번만 옮긴다.
+    ///
+    /// 광고 동의(`adConsent.start()`)보다 먼저 돌려야 한다. 마이그레이션이 히든을
+    /// 열면 탐색 탭 갈래가 하나 늘어나는데, 동의창이 떠 있는 동안 화면이 바뀌면 어지럽다.
+    private func migrateLegacyIfNeeded() async {
+        let context = container.mainContext
+        let alarms = AlarmStore(context: context)
+        let result = await LegacyMigration(context: context).run(hidden: hiddenAccess, alarms: alarms)
+        if result.hadYouTubePlaylists { showYouTubeNotice = true }
     }
 
     /// 목록 캐시·프리셋·즐겨찾기·청취 기록·이어듣기·알람이 한 저장소에 들어간다.

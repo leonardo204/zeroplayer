@@ -131,7 +131,15 @@ final class OnDeviceReasoner: OnDeviceReasoning {
     /// 쓸 수 없는 사유 셋(기기 미지원·꺼짐·내려받는 중)은 전부 조용히 넘긴다.
     /// 사용자에게 알리지 않는다. 설정 화면에서만 상태를 보여 준다.
     private static func probe() -> OnDeviceAvailability {
-        #if canImport(FoundationModels)
+        #if targetEnvironment(simulator)
+        // 시뮬레이터에서는 프레임워크를 건드리지 않는다.
+        //
+        // `availability` 가 `.available` 이라고 답해 놓고 `respond(to:)` 안에서
+        // EXC_BAD_ACCESS(SIGSEGV)로 프로세스가 통째로 죽는다. Swift 오류가 아니라
+        // 시그널이라 do/catch 로 못 막는다. 모델 자산이 맥에 없을 때 나는 것으로 보인다.
+        // 시뮬레이터에서 앱이 조용히 사라지면 이 자리를 먼저 의심한다.
+        return .unsupportedDevice
+        #elseif canImport(FoundationModels)
         guard #available(iOS 26.0, *) else { return .unsupportedDevice }
         switch SystemLanguageModel.default.availability {
         case .available:

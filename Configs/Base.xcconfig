@@ -3,6 +3,15 @@
 
 ZP_PROXY_BASE_URL = https:/$()/ai.zerolive.co.kr
 
+// AdMob. 기본값은 구글이 공개한 테스트 ID 다 — 계정 없이도 배너가 뜨고,
+// 실제 수익과 섞이지 않는다. 실제 ID 는 저장소 루트 Secrets.xcconfig 에서 덮어쓴다.
+// 앱 ID 는 비밀이 아니라 Info.plist 에 그대로 박히는 값이다.
+ZP_ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511
+ZP_ADMOB_BANNER_RECOMMEND = ca-app-pub-3940256099942544/2934735716
+ZP_ADMOB_BANNER_DISCOVER = ca-app-pub-3940256099942544/2934735716
+ZP_ADMOB_BANNER_PRESETS = ca-app-pub-3940256099942544/2934735716
+ZP_ADMOB_BANNER_STATS = ca-app-pub-3940256099942544/2934735716
+
 // 비밀 값과 재정의는 저장소 루트의 Secrets.xcconfig 에 둔다.
 // 파일이 없어도 빌드되도록 선택적 include 를 쓰고, 기본값보다 뒤에 둬서
 // 같은 키가 있으면 Secrets 쪽이 이긴다.

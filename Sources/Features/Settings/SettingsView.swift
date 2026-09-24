@@ -1,3 +1,4 @@
+import AppTrackingTransparency
 import SwiftData
 import SwiftUI
 
@@ -6,6 +7,7 @@ struct SettingsView: View {
     @Environment(PushRegistrar.self) private var push
     @Query private var alarms: [AlarmSetting]
     @Environment(OnDeviceReasoner.self) private var reasoner
+    @Environment(AdConsent.self) private var adConsent
     @Environment(HiddenAccess.self) private var hidden
     @Query private var favorites: [Favorite]
     @Query private var sessions: [ListeningSession]
@@ -132,6 +134,22 @@ struct SettingsView: View {
                     .disabled(sessions.isEmpty)
                 }
 
+                Section {
+                    HStack {
+                        Text("광고")
+                        Spacer()
+                        Text(adStateText).foregroundStyle(.secondary)
+                    }
+                    if adConsent.privacyOptionsRequired {
+                        Button("광고 설정 바꾸기") {
+                            Task { await adConsent.presentPrivacyOptions() }
+                        }
+                    }
+                } footer: {
+                    Text("재생 화면과 알람이 울려 열린 화면에는 광고를 붙이지 않습니다. "
+                         + "청취 기록은 기기에만 있고 광고에 쓰이지 않습니다.")
+                }
+
                 if hidden.isUnlocked {
                     Section("지상파 라디오") {
                         Label("탐색 탭에서 들을 수 있습니다", systemImage: "antenna.radiowaves.left.and.right")
@@ -186,6 +204,20 @@ struct SettingsView: View {
                 Text("탐색 탭에서 사라집니다. 같은 방법으로 다시 열 수 있습니다.")
             }
         }
+    }
+
+    /// 설정 화면의 광고 한 줄. 무엇이 막고 있는지 그대로 보여 준다.
+    private var adStateText: String {
+        var parts: [String] = []
+        parts.append(adConsent.canShowAds ? "표시" : "표시 안 함")
+        if AdUnits.isUsingTestUnits { parts.append("테스트 단위") }
+        switch adConsent.trackingStatus {
+        case .authorized: parts.append("추적 허용")
+        case .denied, .restricted: parts.append("추적 거부")
+        case .notDetermined: parts.append("추적 미응답")
+        @unknown default: break
+        }
+        return parts.joined(separator: " · ")
     }
 
     // MARK: - 지상파 해제

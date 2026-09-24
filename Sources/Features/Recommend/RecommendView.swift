@@ -8,6 +8,9 @@ struct RecommendView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var favorites: [Favorite]
 
+    /// 배너가 들어가는 자리. 맨 위 세 줄 다음이다.
+    private static let adRowIndex = 3
+
     @State private var model = RecommendModel()
     @State private var listening: ListeningStore?
 
@@ -30,6 +33,13 @@ struct RecommendView: View {
                     )
                 } else {
                     ForEach(Array(model.entries.enumerated()), id: \.element.id) { index, entry in
+                        // 추천은 순서와 이유가 부가가치라 목록 중간에 넣는다
+                        // (`docs/05-ads-policy.md` 5번). 맨 위 세 줄은 가리지 않는다.
+                        if index == Self.adRowIndex {
+                            AdBannerSlot(slot: .recommendList)
+                                .listRowInsets(EdgeInsets())
+                                .listRowSeparator(.hidden)
+                        }
                         Button {
                             Task { await play(entry) }
                         } label: {

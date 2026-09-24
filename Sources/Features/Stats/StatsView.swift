@@ -37,6 +37,7 @@ struct StatsView: View {
                 recentSection
             }
             .navigationTitle("기록")
+            .safeAreaInset(edge: .bottom, spacing: 0) { AdBannerSlot(slot: .statsList) }
         }
     }
 

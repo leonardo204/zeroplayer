@@ -93,7 +93,9 @@ struct AlarmsView: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(alarm.timeText)
-                    .font(.system(size: 34, weight: .light).monospacedDigit())
+                    // 고정 크기를 쓰면 글자 크기 설정을 키워도 시각만 그대로다.
+                    // largeTitle 이 기본 34pt 이고 설정에 따라 함께 커진다.
+                    .font(.system(.largeTitle, design: .default, weight: .light).monospacedDigit())
                     .foregroundStyle(alarm.isEnabled ? .primary : .secondary)
                 Text("\(alarm.repeatText) · \(alarm.label)")
                     .font(.footnote)

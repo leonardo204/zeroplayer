@@ -8,6 +8,7 @@ struct RootView: View {
 
     @Environment(AudioPlayerService.self) private var player
     @Environment(PushRegistrar.self) private var push
+    @Environment(AdConsent.self) private var adConsent
     @Environment(\.modelContext) private var modelContext
     @State private var selection: Tab = RootView.initialTab
     /// 알람으로 열렸을 때 화면에 띄우는 문구. 무엇을 트는지 알려 준다.
@@ -93,6 +94,9 @@ struct RootView: View {
     ///
     /// 알람 직후 화면에는 광고를 붙이지 않는다(`docs/05-ads-policy.md`).
     private func startAlarm(_ info: AlarmPushInfo) async {
+        // 기상 직후 화면에는 광고를 붙이지 않는다(`docs/05-ads-policy.md` 5번).
+        adConsent.enterAlarmQuietPeriod()
+
         let origin = PlaybackOrigin(
             presetName: "알람",
             fromRecommendation: info.item == nil,

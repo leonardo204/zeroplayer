@@ -59,6 +59,10 @@ struct DiscoverView: View {
             .navigationTitle("탐색")
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .top, spacing: 0) { modePicker }
+            // 지상파를 보는 동안에는 내린다. 히든은 수익화 대상이 아니다.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                AdBannerSlot(slot: mode == .hidden ? .hiddenRadio : .discoverList)
+            }
             .onChange(of: hidden.isUnlocked) { _, unlocked in
                 if !unlocked, mode == .hidden { mode = .stations }
             }

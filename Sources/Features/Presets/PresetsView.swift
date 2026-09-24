@@ -35,6 +35,7 @@ struct PresetsView: View {
                 }
             }
             .navigationTitle("프리셋")
+            .safeAreaInset(edge: .bottom, spacing: 0) { AdBannerSlot(slot: .presetList) }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { EditButton() }
                 ToolbarItem(placement: .topBarTrailing) {
