@@ -209,7 +209,17 @@ APNs 는 HTTP/2 만 받는다. 배포된 Worker 의 `fetch()` 는 APNs 와 통�
 }
 ```
 
-`interruption-level: time-sensitive` 를 쓰면 집중 모드에서도 표시된다. 앱에 Time Sensitive Notifications 권한(entitlement)이 필요하다.
+`interruption-level: time-sensitive` 를 쓰면 집중 모드에서도 표시된다. 앱에 Time Sensitive Notifications 권한(entitlement)이 필요하다. 권한 승인 전에도 payload 에 담아 보내는 것은 문제가 없다 — iOS 가 조용히 보통 알림으로 내린다.
+
+**M6 실측 메모.** 세 가지가 계획과 달랐다.
+
+발송 본문의 편성표 조회는 한국 지상파가 대상이라 M7 로 넘겼다. 지금은 자동 선택 알람이 그 시각의 추천 세트에서 한 곳을 골라 `"<채널 이름> · <추천 문구>"` 로 적는다.
+
+알람 사운드는 시스템 기본음(`"sound": "default"`)을 쓴다. 30초짜리 커스텀 사운드는 M8 에 넣는다.
+
+발급받은 APNs 키가 sandbox 전용이다. 같은 JWT 로 sandbox 는 `400 BadDeviceToken`(인증 통과), 배포 환경은 `403 BadEnvironmentKeyInToken` 이 온다. 출시 전에 배포 환경도 되는 키로 다시 만들어야 한다.
+
+같은 분에 두 번 보내지 않도록 `alarm_sends(alarm_id, fired_at)` 에 먼저 줄을 잡고 발송한다. 10분 넘게 지난 알람은 보내지 않고 다음 시각으로 민다 — 아침 7시 알람이 9시에 오면 놀라기만 한다.
 
 ### 3.6 상태
 

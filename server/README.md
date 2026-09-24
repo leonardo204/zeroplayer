@@ -24,6 +24,7 @@ npx wrangler d1 migrations apply zeroplayer --remote
 | 라우트 | `ai.zerolive.co.kr/zp/v1/*` (zone `zerolive.co.kr`) |
 | D1 | `zeroplayer` · `04fa254c-e308-45cc-b258-349fc37d0b8b` |
 | Workers AI | 태그 정규화·분위기 분류·추천 문구에 `@cf/meta/llama-3.3-70b-instruct-fp8-fast` |
+| APNs | 인증 키 `APNS_KEY`(.p8 본문)·`APNS_KEY_ID`·`APNS_TEAM_ID` 시크릿, 번들 ID 는 `APNS_TOPIC` 변수 |
 | 팟캐스트 | 애플 나라별 인기 순위 + RSS. Podcast Index 는 시크릿 `PI_KEY`·`PI_SECRET` 을 넣으면 켜진다 |
 
 ## 앱이 쓰는 경로
@@ -36,6 +37,13 @@ GET  /zp/v1/stations/facets
 GET  /zp/v1/stations/{id}
 GET  /zp/v1/stations/{id}/stream
 POST /zp/v1/stations/{id}/report   { "reason": "no_audio" | "error" | "wrong_content" }
+
+POST   /zp/v1/push/token   { "token": "<APNs 기기 토큰>", "env": "sandbox" | "prod" }
+DELETE /zp/v1/push/token
+GET    /zp/v1/alarms
+POST   /zp/v1/alarms       { hour, minute, weekdays[], timezone, label, source:{kind,id,title,situation} }
+PATCH  /zp/v1/alarms/{id}
+DELETE /zp/v1/alarms/{id}
 
 GET  /zp/v1/podcasts/trending?country=KR&limit=30
 GET  /zp/v1/podcasts/search?q=&country=KR&limit=30
@@ -90,6 +98,14 @@ curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/podc
 
 # 워커에서 특정 주소가 열리는지 본다
 curl -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/probe?url=<주소>"
+
+# 울릴 때가 된 알람을 지금 한 번 보낸다(Cron 은 분마다 같은 일을 한다)
+curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/alarms/dispatch"
+
+# APNs 발송 경로 확인. 가짜 토큰에 400 BadDeviceToken 이 오면 인증이 통한 것이다
+curl -X POST -H "x-zp-admin: $TOKEN" -H "content-type: application/json" \
+  -d '{"token":"<64자 16진수>","env":"sandbox"}' \
+  "https://ai.zerolive.co.kr/zp/v1/admin/push/test"
 
 # 스트림 생사 점검 한 묶음
 curl -X POST -H "x-zp-admin: $TOKEN" "https://ai.zerolive.co.kr/zp/v1/admin/streams/check?size=150"

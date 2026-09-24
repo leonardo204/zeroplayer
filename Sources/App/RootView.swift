@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 struct RootView: View {
@@ -6,7 +7,11 @@ struct RootView: View {
     }
 
     @Environment(AudioPlayerService.self) private var player
+    @Environment(PushRegistrar.self) private var push
+    @Environment(\.modelContext) private var modelContext
     @State private var selection: Tab = RootView.initialTab
+    /// 알람으로 열렸을 때 화면에 띄우는 문구. 무엇을 트는지 알려 준다.
+    @State private var alarmBanner: String?
 
     /// 시뮬레이터에서 특정 탭을 바로 열어 확인하려고 둔 통로다.
     /// `-ZPStartTab discover` 로 켠다. 릴리스 빌드에서는 항상 추천 탭이다.
@@ -17,6 +22,7 @@ struct RootView: View {
         case "presets": return .presets
         case "stats": return .stats
         case "settings": return .settings
+        case "alarm": return .settings
         default: return .recommend
         }
         #else
@@ -62,6 +68,55 @@ struct RootView: View {
         .sheet(isPresented: $isPlayerPresented) {
             PlayerView()
         }
+        // 알림을 눌러 들어오면 여기서 받아 튼다.
+        .onChange(of: push.pendingPlay?.alarmID) { _, _ in
+            guard let info = push.pendingPlay else { return }
+            push.pendingPlay = nil
+            Task { await startAlarm(info) }
+        }
+        .overlay(alignment: .top) {
+            if let alarmBanner {
+                Label(alarmBanner, systemImage: "alarm.fill")
+                    .font(.footnote.weight(.medium))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(.bar, in: Capsule())
+                    .shadow(radius: 6, y: 2)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut, value: alarmBanner)
+    }
+
+    /// 알람으로 깨어났다. 서버가 고른 것이 있으면 그대로 틀고, 없으면 지금 고른다.
+    ///
+    /// 알람 직후 화면에는 광고를 붙이지 않는다(`docs/05-ads-policy.md`).
+    private func startAlarm(_ info: AlarmPushInfo) async {
+        let origin = PlaybackOrigin(
+            presetName: "알람",
+            fromRecommendation: info.item == nil,
+            situation: info.situation
+        )
+
+        if let item = info.item {
+            alarmBanner = "알람 · \(item.title)"
+            await player.play(item, origin: origin)
+        } else if let situation = info.situation {
+            // 로컬 백업 알림이다. 무엇을 틀지 기기가 지금 고른다.
+            alarmBanner = "알람 · 틀 방송을 고르는 중입니다"
+            let launcher = PresetLauncher(player: player, fallback: {
+                FavoriteStore(context: modelContext).all().map(\.playable)
+            })
+            if let played = try? await launcher.startSituation(situation, presetName: "알람") {
+                alarmBanner = "알람 · \(played.title)"
+            } else {
+                alarmBanner = "알람 · 틀 방송을 찾지 못했습니다"
+            }
+        }
+
+        try? await Task.sleep(for: .seconds(4))
+        alarmBanner = nil
     }
 }
 

@@ -1,5 +1,26 @@
 import SwiftData
 import SwiftUI
+import UIKit
+
+/// APNs 토큰은 `UIApplicationDelegate` 로만 온다. SwiftUI 앱에도 대리자를 붙일 수 있다.
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    /// 앱이 뜬 뒤 `ZeroPlayerApp` 이 자기 것을 꽂아 준다.
+    static weak var push: PushRegistrar?
+
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        MainActor.assumeIsolated { Self.push?.didRegister(deviceToken: deviceToken) }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        MainActor.assumeIsolated { Self.push?.didFailToRegister(error) }
+    }
+}
 
 @main
 struct ZeroPlayerApp: App {
@@ -8,6 +29,9 @@ struct ZeroPlayerApp: App {
     @State private var player: AudioPlayerService
     /// 기기 안 모델. 쓸 수 없는 기기에서는 가용성만 알려 주고 아무 일도 하지 않는다.
     @State private var reasoner = OnDeviceReasoner()
+    @State private var push = PushRegistrar()
+
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
         let container = Self.makeContainer()
@@ -26,18 +50,21 @@ struct ZeroPlayerApp: App {
             RootView()
                 .environment(player)
                 .environment(reasoner)
+                .environment(push)
+                .task { await startNotifications() }
+                .task { await seedAlarmIfRequested() }
+                .task { await alarmPushIfRequested() }
                 .task { await autoPlayIfRequested() }
                 .task { await autoPresetIfRequested() }
         }
         .modelContainer(container)
     }
 
-    /// 목록 캐시·프리셋·즐겨찾기·청취 기록이 한 저장소에 들어간다.
-    /// 알람(M6)은 여기에 `AlarmSetting` 을 더한다.
+    /// 목록 캐시·프리셋·즐겨찾기·청취 기록·이어듣기·알람이 한 저장소에 들어간다.
     private static func makeContainer() -> ModelContainer {
         let models: [any PersistentModel.Type] = [
             CachedStation.self, Preset.self, Favorite.self, ListeningSession.self,
-            PlaybackPosition.self,
+            PlaybackPosition.self, AlarmSetting.self,
         ]
         let schema = Schema(models)
         do {
@@ -49,6 +76,49 @@ struct ZeroPlayerApp: App {
                 configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
             )
         }
+    }
+
+    /// 알림 권한과 APNs 등록, 그리고 서버에 남아 있는 알람을 맞춘다.
+    private func startNotifications() async {
+        AppDelegate.push = push
+        await push.start()
+        // 앱을 열었다는 것은 이미 일어났다는 뜻이다. 밀린 스누즈를 치운다.
+        LocalAlarmScheduler.cancelSnoozes()
+        await AlarmStore(context: container.mainContext).syncAll()
+    }
+
+    /// 알람을 손으로 만들지 않고 확인하려고 둔 통로다.
+    /// `-ZPSeedAlarm 07:00` 으로 켠다. 릴리스 빌드에는 들어가지 않는다.
+    private func seedAlarmIfRequested() async {
+        #if DEBUG
+        guard let raw = UserDefaults.standard.string(forKey: "ZPSeedAlarm"), raw.contains(":") else { return }
+        let parts = raw.split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2 else { return }
+        let store = AlarmStore(context: container.mainContext)
+        guard store.all().isEmpty else { return }
+        await store.add(AlarmSetting(
+            hour: parts[0], minute: parts[1],
+            weekdays: [2, 3, 4, 5, 6],
+            sourceKind: .auto, situation: .wake, label: "아침"))
+        #endif
+    }
+
+    /// 알림을 누른 상황을 손으로 만들지 않고 확인하려고 둔 통로다.
+    /// `-ZPAlarmPush rb:<uuid>` 또는 `-ZPAlarmPush situation:wake` 로 켠다.
+    /// 릴리스 빌드에는 들어가지 않는다.
+    private func alarmPushIfRequested() async {
+        #if DEBUG
+        guard let raw = UserDefaults.standard.string(forKey: "ZPAlarmPush"), !raw.isEmpty else { return }
+        var zp: [String: Any] = ["alarmID": "alm_debug"]
+        if raw.hasPrefix("situation:") {
+            zp["situation"] = String(raw.dropFirst("situation:".count))
+        } else {
+            zp["kind"] = "station"
+            zp["id"] = raw
+            zp["title"] = "알람이 고른 방송"
+        }
+        push.pendingPlay = AlarmPushInfo(userInfo: ["zp": zp])
+        #endif
     }
 
     /// 프리셋을 손으로 누르지 않고 확인하려고 둔 통로다.

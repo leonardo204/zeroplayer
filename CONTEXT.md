@@ -3,15 +3,17 @@
 다른 세션에서 이 저장소를 처음 열었을 때 읽는 문서다. 지금까지 한 일과 다음에 할 일만 적는다.
 기획 배경과 근거는 `docs/` 에 번호순으로 있다. 처음이면 `docs/00-concept.md` 부터 읽는다.
 
-마지막 갱신: 2026-09-24 (M5 완료, 실기기 확인 전)
+마지막 갱신: 2026-09-24 (M6 완료, 실기기 확인 전)
 
 ## 1. 현재 상태
 
-M5 까지 들어갔다. 추천 탭에서 상황을 고르면 서버가 밤에 만들어 둔 목록이 나오고, 그 목록이
+M6 까지 들어갔다. 추천 탭에서 상황을 고르면 서버가 밤에 만들어 둔 목록이 나오고, 그 목록이
 기기에 쌓인 청취 기록으로 다시 세워진다. 프리셋을 누르면 같은 경로로 고른 방송이 재생되고,
 타이머가 끝나면 페이드아웃으로 꺼지고, 그 재생이 기록 탭에 남는다.
 탐색 탭에서 팟캐스트를 찾아 에피소드를 재생할 수 있고, 듣던 자리에서 이어진다.
-실기기 확인(백그라운드 30분, 전화 인터럽트, 잠금화면 조작, 평문 HTTP)은 아직 안 했다.
+알람을 걸면 서버가 분마다 돌며 그 시각에 푸시를 보내고, 알림을 누르면 그 소스가 재생된다.
+서버에 닿지 못할 때를 대비해 같은 시각에 로컬 알림도 함께 걸어 둔다.
+실기기 확인(백그라운드 30분, 전화 인터럽트, 잠금화면 조작, 평문 HTTP, 알람 도착)은 아직 안 했다.
 
 ```sh
 cd /Users/zerolive/work/zeroplayer
@@ -273,19 +275,84 @@ MBC 계열은 HTTPS 다. 방송국과 같은 문제라 에피소드 응답에도
 **M5 완료 기준은 채웠다.** 취침 프리셋(타이머 45분)을 누르니 45분짜리 에피소드가 골라져
 재생됐고, 앱을 끄고 다시 여니 620초 자리에서 이어졌다.
 
-## 6-8. 다음 할 일 — M6 (알람)
+## 6-8. M6 에서 알아낸 것
 
-`docs/07-roadmap.md` 의 M6 을 따른다. APNs 인증 키(.p8) 발급이 먼저다.
-App Store Connect API 키와 다른 것이라 개발자 포털 Keys 에서 APNs 용으로 새로 만든다.
+**APNs 인증 키가 sandbox 전용으로 발급돼 있다.** 같은 JWT 로 가짜 기기 토큰을 보내 보면
+sandbox 는 `400 BadDeviceToken`(인증은 통했고 토큰만 가짜라는 뜻), 배포 환경은
+`403 BadEnvironmentKeyInToken` 이 온다. 개발자 포털에서 APNs 키를 만들 때 환경을
+제한하는 선택이 있는데 그쪽으로 만들어진 것으로 보인다. 개발·TestFlight 확인에는
+지장이 없지만 **App Store 에 올리기 전에 배포 환경도 되는 키로 다시 만들어야 한다**
+(Key ID 가 바뀌므로 `APNS_KEY`·`APNS_KEY_ID` 시크릿을 함께 갈아 끼운다).
 
-**Podcast Index 키가 들어오면** 시크릿 두 개를 넣고 배포하면 검색과 인기 목록이 그쪽으로
-바뀐다. 코드는 이미 그 길로 갈라져 있다.
+**푸시가 와도 앱이 저절로 소리를 내지 못한다.** iOS 제약이라 설계로 받아들였다
+(`docs/01-features.md` 5.1). 알림을 눌러야 앱이 열리고 재생이 시작된다. 그래서 본문에
+무엇을 틀지 적어 탭할 이유를 만든다.
+
+**권한을 받기 전에 로컬 알림을 걸면 iOS 가 그 자리에서 권한 창을 띄운다.** 앱이 뜨자마자
+백업 알림을 걸다가 사용자가 아무것도 안 했는데 창이 떴다. `LocalAlarmScheduler.reschedule`
+은 이제 권한 상태를 먼저 보고, 아직 묻지 않았으면 걸지 않는다. 묻는 자리는 두 곳뿐이다 —
+알람을 저장할 때와 '알림 허용하기' 를 눌렀을 때.
+
+**같은 알람이 서버에 두 줄 생겼다.** 알람을 만들면 `AlarmStore.add()` 가 서버에 올리는데,
+그 사이에 `syncAll()` 이 `needsSync` 인 같은 알람을 한 번 더 올렸다. `AlarmStore` 는 화면마다
+새로 만들어 쓰므로 타입 차원의 `inFlight` 집합으로 막았다. 올라가는 중인 알람이 있으면
+서버 목록을 내려받지도 않는다 — 기기 쪽에 서버 ID 가 아직 안 적혀 있어 같은 알람을
+새로 만들어 버린다.
+
+**시간대 계산은 발송할 때마다 다시 한다.** 사용자는 '평일 아침 7시' 를 자기 시계로 말하고,
+서버는 그것을 UTC 한 시점(`alarms.next_fire_at`)으로 바꿔 둔다. 서머타임이 있는 나라에서는
+같은 아침 7시가 계절마다 다른 UTC 시각이라, 보낸 뒤에 다음 시각을 새로 계산한다.
+실측으로 확인했다 — 한국 평일 07:00 → 다음 금요일 22:00Z, 뉴욕 07:00 → 같은 날 11:00Z(EDT).
+
+**분마다 도는 Cron 이 실제로 돈다.** `* * * * *` 를 걸어 두고 1분 뒤 울릴 알람을 만들어 두니
+`06:01:13` 에 깨어나 `06:01:00` 짜리를 집었다. 조용한 분에는 `sync_state` 를 건드리지 않는다 —
+매분 쓰면 기록이 의미를 잃는다.
+
+**시뮬레이터는 탭을 못 보낸다.** 권한 창이 한번 뜨면 재부팅해도, `simctl privacy reset` 을
+해도 안 사라진다. 알람 화면 자체는 그 뒤로 정상으로 그려진다. 권한을 허용한 뒤의 흐름은
+실기기에서 확인해야 한다.
+
+## 6-9. M6 에서 새로 생긴 것
+
+| 경로 | 하는 일 |
+| --- | --- |
+| `server/src/lib/apns.ts` | ES256 JWT 서명과 APNs 발송. 토큰은 50분마다 갈아 낀다 |
+| `server/src/lib/schedule.ts` | 시간대·요일로 다음 발송 시각을 계산한다 |
+| `server/src/lib/alarmDispatch.ts` | 분마다 울릴 알람을 찾아 보내고 다음 시각을 다시 적는다 |
+| `server/src/routes/alarms.ts` | 기기 등록과 알람 CRUD |
+| `Core/Persistence/Models/AlarmSetting.swift` | 알람 한 건(SwiftData) |
+| `Core/Notifications/PushRegistrar.swift` | 알림 권한·APNs 토큰·알림이 눌렸을 때 |
+| `Core/Notifications/LocalAlarmScheduler.swift` | 로컬 백업 알림과 스누즈 |
+| `Core/Notifications/AlarmStore.swift` | 기기와 서버를 맞춘다 |
+| `Features/Alarm/AlarmsView.swift` · `AlarmEditorView.swift` | 알람 목록과 편집 |
+| `Sources/App/zeroPlayer.entitlements` | `aps-environment`. Time Sensitive 는 승인 뒤에 넣는다 |
+
+`AppDelegate` 가 처음 생겼다. APNs 토큰은 `UIApplicationDelegate` 로만 오기 때문이고,
+`@UIApplicationDelegateAdaptor` 로 SwiftUI 앱에 붙였다. 받은 토큰은 `PushRegistrar` 로 넘긴다.
+
+확인용 디버그 통로가 셋 늘었다(전부 DEBUG 빌드에만 있다).
 
 ```sh
-cd server
-npx wrangler secret put PI_KEY
-npx wrangler secret put PI_SECRET
+xcrun simctl launch booted com.zerolive.cloudRadioN \
+  -ZPStartTab settings -ZPOpenAlarms 1 -ZPSeedAlarm "07:00"
+# 알림을 누른 상황을 그대로 만든다
+xcrun simctl launch booted com.zerolive.cloudRadioN -ZPAlarmPush "rb:<uuid>"
+xcrun simctl launch booted com.zerolive.cloudRadioN -ZPAlarmPush "situation:wake"
 ```
+
+서버 쪽은 관리 경로 둘로 확인한다.
+
+```sh
+curl -X POST -H "x-zp-admin: $TOKEN" ".../zp/v1/admin/alarms/dispatch"
+curl -X POST -H "x-zp-admin: $TOKEN" -d '{"token":"<64자 16진수>","env":"sandbox"}' \
+  ".../zp/v1/admin/push/test"
+```
+
+## 6-10. 다음 할 일 — M7 (히든 라디오)
+
+`docs/07-roadmap.md` 의 M7 을 따른다. 한국 지상파 채널 표와 편성표 파싱을 서버가 맡고,
+버전 라벨 12회 탭으로 탐색 탭 맨 위에 '라디오' 섹션이 나타난다. radio-browser 에 올라온
+지상파 주소는 서명 토큰이 만료돼 대부분 죽어 있으니(6-2 참고) 서버가 주소를 직접 만들어야 한다.
 
 **실기기에서 확인할 것** — M1 부터 밀린 것이다.
 
@@ -294,6 +361,10 @@ npx wrangler secret put PI_SECRET
 - [ ] 잠금화면에서 일시정지·재생이 되는지
 - [ ] 평문 HTTP 스트림이 실기기에서도 막히는지
 - [ ] 기기 안 모델이 실기기(A17 Pro 이상)에서는 실제로 문구를 만드는지
+- [ ] 알림 권한을 허용하면 APNs 토큰이 잡히고 서버에 등록되는지
+- [ ] 앱을 완전히 종료한 상태에서 알람 시각에 알림이 오고, 탭하면 재생되는지
+- [ ] 비행기 모드에서 로컬 백업 알림이 울리는지
+- [ ] 잠금화면 알림의 '재생'·'5분 뒤 다시' 단추
 
 **손으로 눌러 봐야 하는 것** — 시뮬레이터에서 자동으로 확인하지 못했다.
 
@@ -303,8 +374,9 @@ npx wrangler secret put PI_SECRET
 - [ ] 추천 탭에서 상황을 바꿔 가며 목록이 바뀌는지
 - [ ] 팟캐스트 검색·에피소드 목록·이어듣기 줄을 눌러 여는 동작
 - [ ] 재생 화면의 진행 바를 끌어 옮기기와 재생 속도 바꾸기
+- [ ] 알람 만들기·고치기·요일 고르기·켜고 끄기
 
-## 6-9. 랜딩 페이지와 광고 준비
+## 6-11. 랜딩 페이지와 광고 준비
 
 앱 소개와 광고 게시자 선언을 맡는 Worker 가 `worker/` 에 따로 있다. 앱이 부르는 API
 (`server/`, `ai.zerolive.co.kr/zp/v1`)와 다른 Worker 다. 둘을 섞지 않는다.
@@ -326,9 +398,11 @@ App Store Connect 의 **마케팅 URL** 이다. 지금 zeroPlayer(id1610259595)�
 `https://zeroplayer.zerolive.co.kr` 를 마케팅 URL 로 넣은 뒤 AdMob 에서 다시 확인해야 한다.
 스토어 페이지에 반영되기까지 하루 정도 걸리고, AdMob 크롤도 하루 안팎 기다려야 한다.
 
-바닥글 상호 링크는 `worker/src/render.ts` 의 `SIBLINGS` 에 있다. zerolive-root 의
-`robots.txt` 사이트맵 줄에는 zeroplayer 를 넣어 뒀다. 다만 **다른 랜딩 6곳의 `SIBLINGS` 에는
-아직 zeroplayer 를 안 넣었다** — 각 저장소를 열어 한 줄씩 더하고 배포해야 한다.
+바닥글 상호 링크는 `worker/src/render.ts` 의 `SIBLINGS` 에 있다. 다른 랜딩(lnhud·md-editor·
+golf·wander·hamzzi-diet)의 바닥글과 live-translate 의 `llms.txt` 에도 zeroplayer 를 넣어
+배포했고, zerolive-root 의 `robots.txt` 사이트맵 줄에도 있다. 포트폴리오(me.zerolive.co.kr)
+쪽은 코드가 아니라 데이터다 — 홈 서버 PostgreSQL 의 `portfolio_projects.live_url` 에
+랜딩 주소를 넣으면 앱 카드에 '소개 페이지' 단추가 생긴다(id=29 에 넣어 뒀다).
 
 ## 7. 정해둔 것과 아직 안 정한 것
 

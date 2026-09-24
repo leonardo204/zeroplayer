@@ -17,6 +17,16 @@ import { hasKeys } from './lib/podcastIndex'
 import { classifyPendingMoods, resetMoodsForRetagged } from './lib/moods'
 import { buildSets } from './lib/recommendSets'
 import { getRecommendations } from './routes/recommend'
+import {
+  createAlarm,
+  deleteAlarm,
+  deletePushToken,
+  listAlarms,
+  registerPushToken,
+  updateAlarm,
+} from './routes/alarms'
+import { dispatchDueAlarms, pruneAlarmSends } from './lib/alarmDispatch'
+import { hasAPNsKeys } from './lib/apns'
 
 const PREFIX = '/zp/v1'
 
@@ -28,7 +38,7 @@ function requireAdmin(env: Env, request: Request): Response | null {
 }
 
 async function health(env: Env): Promise<Response> {
-  const [stations, excluded, tagged, pending, moodPending, sets, podcasts, episodes, jobs] = await env.DB.batch<Record<string, unknown>>([
+  const [stations, excluded, tagged, pending, moodPending, sets, podcasts, episodes, alarms, pushable, jobs] = await env.DB.batch<Record<string, unknown>>([
     env.DB.prepare('SELECT COUNT(*) AS n FROM stations'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM station_health WHERE excluded = 1'),
     env.DB.prepare('SELECT COUNT(DISTINCT station_id) AS n FROM station_tags'),
@@ -37,6 +47,8 @@ async function health(env: Env): Promise<Response> {
     env.DB.prepare('SELECT COUNT(*) AS n FROM recommendation_sets'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM podcasts'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM episodes'),
+    env.DB.prepare('SELECT COUNT(*) AS n FROM alarms WHERE enabled = 1'),
+    env.DB.prepare('SELECT COUNT(*) AS n FROM devices WHERE push_token IS NOT NULL'),
     env.DB.prepare('SELECT job, last_run_at, last_ok_at, ok, detail FROM sync_state ORDER BY job'),
   ])
 
@@ -51,6 +63,9 @@ async function health(env: Env): Promise<Response> {
     podcasts: (podcasts.results[0]?.n as number) ?? 0,
     episodes: (episodes.results[0]?.n as number) ?? 0,
     podcastIndexKeys: hasKeys(env),
+    enabledAlarms: (alarms.results[0]?.n as number) ?? 0,
+    pushableDevices: (pushable.results[0]?.n as number) ?? 0,
+    apnsKeys: hasAPNsKeys(env),
     jobs: jobs.results,
   })
 }
@@ -97,6 +112,19 @@ export default {
 
       const episodeMatch = path.match(/^\/episodes\/([^/]+)$/)
       if (method === 'GET' && episodeMatch) return await getEpisode(env, decodeURIComponent(episodeMatch[1]))
+
+      if (method === 'POST' && path === '/push/token') return await registerPushToken(env, request)
+      if (method === 'DELETE' && path === '/push/token') return await deletePushToken(env, request)
+
+      if (method === 'GET' && path === '/alarms') return await listAlarms(env, request)
+      if (method === 'POST' && path === '/alarms') return await createAlarm(env, request)
+
+      const alarmMatch = path.match(/^\/alarms\/([^/]+)$/)
+      if (alarmMatch) {
+        const id = decodeURIComponent(alarmMatch[1])
+        if (method === 'PATCH') return await updateAlarm(env, id, request)
+        if (method === 'DELETE') return await deleteAlarm(env, id, request)
+      }
 
       if (path.startsWith('/admin/')) {
         const denied = requireAdmin(env, request)
@@ -165,6 +193,30 @@ export default {
           for (const country of countries) results.push(await syncPodcasts(env, country, feeds))
           return json({ results })
         }
+        if (method === 'POST' && path === '/admin/alarms/dispatch') {
+          return json(await dispatchDueAlarms(env))
+        }
+        if (method === 'POST' && path === '/admin/push/test') {
+          const body = (await request.json().catch(() => ({}))) as {
+            token?: string; env?: string; title?: string; body?: string
+          }
+          if (!body.token) return fail(400, 'no_token', 'token 이 필요하다.')
+          const { sendPush } = await import('./lib/apns')
+          const result = await sendPush(env, {
+            deviceToken: body.token,
+            pushEnv: body.env === 'prod' ? 'prod' : 'sandbox',
+            payload: {
+              aps: {
+                alert: { title: body.title ?? '알람 확인', body: body.body ?? '발송 경로를 확인하는 알림입니다.' },
+                sound: 'default',
+                category: 'ZP_ALARM',
+                'interruption-level': 'time-sensitive',
+              },
+              zp: { alarmID: 'test', kind: 'station', id: '', title: '확인' },
+            },
+          })
+          return json(result)
+        }
         if (method === 'POST' && path === '/admin/streams/check') {
           const size = Number.parseInt(url.searchParams.get('size') ?? env.STREAM_CHECK_BATCH, 10) || 150
           return json(await checkStreamBatch(env, size))
@@ -181,7 +233,14 @@ export default {
   async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const run = async () => {
       try {
-        if (event.cron === '0 */6 * * *') {
+        if (event.cron === '* * * * *') {
+          const result = await dispatchDueAlarms(env)
+          // 조용한 분에는 sync_state 를 건드리지 않는다. 매분 쓰면 기록이 의미를 잃는다.
+          if (result.due > 0) {
+            await markSync(env, 'alarm_dispatch', result.failed === 0,
+              `대상 ${result.due} · 발송 ${result.sent} · 건너뜀 ${result.skipped} · 실패 ${result.failed}`)
+          }
+        } else if (event.cron === '0 */6 * * *') {
           await syncAll(env)
         } else if (event.cron === '17 * * * *') {
           const size = Number.parseInt(env.STREAM_CHECK_BATCH, 10) || 150
@@ -204,6 +263,7 @@ export default {
           const result = await buildSets(env, { maxSets: 24 })
           await markSync(env, 'recommend_build', true,
             `세트 ${result.built.length}건 생성 · 남음 ${result.remaining}`)
+          await pruneAlarmSends(env)
         }
       } catch (error) {
         console.error('배치 실패', event.cron, error)

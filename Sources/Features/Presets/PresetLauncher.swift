@@ -73,7 +73,8 @@ struct PresetLauncher {
             played = item
 
         case .auto:
-            played = try await playFirstWorking(candidates(for: preset), origin: origin)
+            let list = try await candidates(situation: preset.situation, timerMinutes: preset.timerMinutes)
+            played = try await playFirstWorking(list, origin: origin)
         }
 
         if preset.timerMinutes > 0 {
@@ -85,10 +86,22 @@ struct PresetLauncher {
         return played
     }
 
+    /// 알람으로 깨어났을 때. 프리셋 없이 상황 하나만 받아 고른다.
+    ///
+    /// 서버 푸시가 못 와서 로컬 백업 알림이 울린 경우에 이 길로 들어온다.
+    /// 타이머는 걸지 않는다 — 기상 알람을 스스로 끄면 곤란하다.
+    @discardableResult
+    func startSituation(_ situation: Situation, presetName: String) async throws -> PlayableItem {
+        let origin = PlaybackOrigin(presetName: presetName, fromRecommendation: true, situation: situation)
+        let list = try await candidates(situation: situation, timerMinutes: 0)
+        player.cancelSleepTimer()
+        return try await playFirstWorking(list, origin: origin)
+    }
+
     /// 서버 규칙 추천의 후보 목록. 서버에 못 닿으면 즐겨찾기를 쓴다.
-    private func candidates(for preset: Preset) async throws -> [PlayableItem] {
+    private func candidates(situation: Situation, timerMinutes: Int) async throws -> [PlayableItem] {
         let query = RecommendQuery(
-            situation: preset.situation,
+            situation: situation,
             country: Locale.current.region?.identifier,
             at: .now,
             limit: 20,
@@ -96,14 +109,14 @@ struct PresetLauncher {
             // 사람이 고른 것이 아니라 앱이 고르는 자리라서, 열리는 것만 받는다.
             secureOnly: true,
             // 타이머를 켠 프리셋이면 그 길이에 맞는 에피소드도 후보에 들어온다.
-            timerMinutes: preset.timerMinutes
+            timerMinutes: timerMinutes
         )
 
         do {
             let set = try await client.recommendations(query)
             guard !set.items.isEmpty else { throw LaunchError.emptyRecommendation }
             // 3단. 서버 순서를 시작점으로 두고 내 기록으로 다시 세운다.
-            let ranked = Personalizer().rank(set.items, profiles: profiles(preset.situation))
+            let ranked = Personalizer().rank(set.items, profiles: profiles(situation))
             log.info("자동 선택 후보 \(set.items.count)개 (\(set.source, privacy: .public)/\(set.daypart, privacy: .public))")
             return ranked.map(\.item.playable)
         } catch let error as ProxyError {

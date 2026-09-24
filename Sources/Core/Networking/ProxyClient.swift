@@ -8,6 +8,12 @@ protocol ProxyClienting: StreamReporting, Sendable {
     func streamURL(stationID: String) async throws -> StreamDTO
     func facets() async throws -> FacetsDTO
     func recommendations(_ query: RecommendQuery) async throws -> RecommendationSetDTO
+    func registerPushToken(_ token: String, sandbox: Bool) async throws
+    func deletePushToken() async throws
+    func alarms() async throws -> [AlarmDTO]
+    func createAlarm(_ payload: AlarmPayload) async throws -> AlarmCreatedDTO
+    func updateAlarm(id: String, payload: AlarmPayload) async throws -> AlarmCreatedDTO
+    func deleteAlarm(id: String) async throws
     func trendingPodcasts(country: String?, limit: Int) async throws -> PodcastListDTO
     func searchPodcasts(term: String, country: String?, limit: Int) async throws -> PodcastListDTO
     func episodes(feedID: String, cursor: String?, limit: Int) async throws -> EpisodePageDTO
@@ -123,6 +129,37 @@ struct ProxyClient: ProxyClienting {
         try await get("/episodes/\(episodeID)/stream")
     }
 
+    // MARK: - 알람
+
+    func registerPushToken(_ token: String, sandbox: Bool) async throws {
+        try await send("/push/token", method: "POST", body: [
+            "token": token,
+            "env": sandbox ? "sandbox" : "prod",
+            "appVersion": AppConfig.appVersion,
+        ])
+    }
+
+    func deletePushToken() async throws {
+        try await send("/push/token", method: "DELETE", body: nil)
+    }
+
+    func alarms() async throws -> [AlarmDTO] {
+        let list: AlarmListDTO = try await get("/alarms")
+        return list.items
+    }
+
+    func createAlarm(_ payload: AlarmPayload) async throws -> AlarmCreatedDTO {
+        try await sendJSON("/alarms", method: "POST", payload: payload)
+    }
+
+    func updateAlarm(id: String, payload: AlarmPayload) async throws -> AlarmCreatedDTO {
+        try await sendJSON("/alarms/\(id)", method: "PATCH", payload: payload)
+    }
+
+    func deleteAlarm(id: String) async throws {
+        try await send("/alarms/\(id)", method: "DELETE", body: nil)
+    }
+
     /// 신고는 실패해도 사용자에게 알리지 않는다. 재생 복구가 먼저다.
     func reportDeadStream(stationID: String, reason: String) async {
         var request = makeRequest(path: "/stations/\(stationID)/report", query: [])
@@ -137,6 +174,49 @@ struct ProxyClient: ProxyClienting {
     }
 
     // MARK: - 공통
+
+    /// 응답 본문을 읽지 않는 요청. 실패는 그대로 던진다.
+    private func send(_ path: String, method: String, body: [String: Any]?) async throws {
+        var request = makeRequest(path: path, query: [])
+        request.httpMethod = method
+        if let body {
+            request.setValue("application/json", forHTTPHeaderField: "content-type")
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        }
+        do {
+            let (_, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ProxyError.decoding }
+            guard (200..<300).contains(http.statusCode) else { throw ProxyError.badStatus(http.statusCode) }
+        } catch let error as ProxyError {
+            throw error
+        } catch {
+            throw ProxyError.offline
+        }
+    }
+
+    /// 구조체를 보내고 구조체를 받는 요청.
+    private func sendJSON<Body: Encodable, T: Decodable>(
+        _ path: String, method: String, payload: Body
+    ) async throws -> T {
+        var request = makeRequest(path: path, query: [])
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.httpBody = try JSONEncoder().encode(payload)
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ProxyError.decoding }
+            guard (200..<300).contains(http.statusCode) else { throw ProxyError.badStatus(http.statusCode) }
+            do {
+                return try JSONDecoder().decode(T.self, from: data)
+            } catch {
+                throw ProxyError.decoding
+            }
+        } catch let error as ProxyError {
+            throw error
+        } catch {
+            throw ProxyError.offline
+        }
+    }
 
     private func get<T: Decodable>(_ path: String, query: [URLQueryItem] = []) async throws -> T {
         let request = makeRequest(path: path, query: query)

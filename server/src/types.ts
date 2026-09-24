@@ -9,6 +9,12 @@ export interface Env {
   SYNC_TOP_COUNTRIES: string
   SYNC_TOP_PER_COUNTRY: string
   STREAM_CHECK_BATCH: string
+  /** APNs 인증 키(.p8) 본문. 시크릿으로 넣는다 */
+  APNS_KEY?: string
+  APNS_KEY_ID?: string
+  APNS_TEAM_ID?: string
+  /** 푸시를 받을 앱의 번들 ID */
+  APNS_TOPIC?: string
   PODCAST_COUNTRIES: string
   PODCAST_FEEDS_PER_COUNTRY: string
   /** 추천 세트를 미리 만들어 둘 나라. 쉼표로 나눈다. 전 세계 세트는 항상 함께 만든다 */
