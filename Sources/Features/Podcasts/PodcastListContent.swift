@@ -32,8 +32,8 @@ struct PodcastListContent: View {
                     "팟캐스트가 없습니다",
                     systemImage: "mic",
                     description: Text(model.search.isEmpty
-                                      ? "서버가 인기 목록을 받아 두면 여기에 나옵니다."
-                                      : "다른 말로 찾아 보세요.")
+                                      ? String(localized: "서버가 인기 목록을 받아 두면 여기에 나옵니다.")
+                                      : String(localized: "다른 말로 찾아 보세요."))
                 )
             } else {
                 Section(model.search.isEmpty ? "인기" : "검색 결과") {

@@ -70,7 +70,7 @@ final class RecommendModel {
         } catch {
             entries = []
             source = nil
-            errorText = (error as? ProxyError)?.errorDescription ?? "추천을 가져오지 못했습니다."
+            errorText = (error as? ProxyError)?.errorDescription ?? String(localized: "추천을 가져오지 못했습니다.")
             return
         }
 

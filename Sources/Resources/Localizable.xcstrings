@@ -1,0 +1,2602 @@
+{
+  "sourceLanguage": "ko",
+  "strings": {
+    "%.1f배": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.1f×"
+          }
+        }
+      }
+    },
+    "%@ · 눌러서 재생하세요.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · Tap to play."
+          }
+        }
+      }
+    },
+    "%@ 알람": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ alarm"
+          }
+        }
+      }
+    },
+    "%@ 외 %lld개": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ and %lld more"
+          }
+        }
+      }
+    },
+    "%@ 편집": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit %@"
+          }
+        }
+      }
+    },
+    "%@ 프리셋을 %lld번 썼습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You used the %@ preset %lld times."
+          }
+        }
+      }
+    },
+    "%@에 %@를 들었습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You listened for %2$@ in %1$@."
+          }
+        }
+      }
+    },
+    "%@요일": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        }
+      }
+    },
+    "%d:%02d 재생 중": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d:%02d playing"
+          }
+        }
+      }
+    },
+    "%lld개": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
+    "%lld건": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
+    "%lld번": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld×"
+          }
+        }
+      }
+    },
+    "%lld분": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        }
+      }
+    },
+    "%lld분 남음": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min left"
+          }
+        }
+      }
+    },
+    "%lld분 뒤 종료": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stops in %lld min"
+          }
+        }
+      }
+    },
+    "%lld분으로 시작": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start with %lld min"
+          }
+        }
+      }
+    },
+    "%lld시간 %lld분": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldh %lldm"
+          }
+        }
+      }
+    },
+    "%lld초": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sec"
+          }
+        }
+      }
+    },
+    "%lld편": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld episodes"
+          }
+        }
+      }
+    },
+    "10분 늘리기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add 10 min"
+          }
+        }
+      }
+    },
+    "15초 되감기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back 15 seconds"
+          }
+        }
+      }
+    },
+    "1배": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1×"
+          }
+        }
+      }
+    },
+    "1분 미만 남음": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Less than a minute left"
+          }
+        }
+      }
+    },
+    "30초 건너뛰기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip 30 seconds"
+          }
+        }
+      }
+    },
+    "30초 안에 넘긴 비율": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped within 30s"
+          }
+        }
+      }
+    },
+    "5분 뒤 다시": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snooze 5 min"
+          }
+        }
+      }
+    },
+    "APNs 에 등록하지 못했습니다. 실기기에서 다시 확인하세요.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not register with APNs. Try again on a real device."
+          }
+        }
+      }
+    },
+    "Apple Intelligence 가 꺼져 있습니다. 추천은 그대로 나옵니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence is off. Recommendations still work."
+          }
+        }
+      }
+    },
+    "· 30초 안에 넘김": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· skipped within 30s"
+          }
+        }
+      }
+    },
+    "가장 많이 들은 것은 %@ 입니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your top listen was %@."
+          }
+        }
+      }
+    },
+    "걸어 둔 알람이 없습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No alarms yet"
+          }
+        }
+      }
+    },
+    "검색 결과": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search results"
+          }
+        }
+      }
+    },
+    "고르기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose"
+          }
+        }
+      }
+    },
+    "고르는 방식": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How to choose"
+          }
+        }
+      }
+    },
+    "고른 방송이 모두 응답하지 않습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None of the stations we tried responded."
+          }
+        }
+      }
+    },
+    "고른 소스가 없습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No source chosen"
+          }
+        }
+      }
+    },
+    "공부": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study"
+          }
+        }
+      }
+    },
+    "광고": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ads"
+          }
+        }
+      }
+    },
+    "광고 설정 바꾸기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change ad settings"
+          }
+        }
+      }
+    },
+    "금": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fri"
+          }
+        }
+      }
+    },
+    "기기 안 모델": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-device model"
+          }
+        }
+      }
+    },
+    "기기 안 모델을 쓸 수 없습니다. 추천은 그대로 나옵니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The on-device model is unavailable. Recommendations still work."
+          }
+        }
+      }
+    },
+    "기기 안 모델이 답하지 못해 쓰지 않습니다. 추천은 그대로 나옵니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The on-device model did not respond, so it is not used. Recommendations still work."
+          }
+        }
+      }
+    },
+    "기기 안의 모델로 추천 문구를 다듬습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The on-device model polishes recommendation notes."
+          }
+        }
+      }
+    },
+    "기기에 쌓인 것": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stored on this device"
+          }
+        }
+      }
+    },
+    "기록": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stats"
+          }
+        }
+      }
+    },
+    "기록 없음": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No data"
+          }
+        }
+      }
+    },
+    "기록 탭의 월간 리포트도 함께 비워집니다. 되돌릴 수 없습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The monthly report in Stats is emptied too. This cannot be undone."
+          }
+        }
+      }
+    },
+    "기상": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wake up"
+          }
+        }
+      }
+    },
+    "꺼져 있습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        }
+      }
+    },
+    "끝나기 전 이 시간 동안 볼륨을 0 으로 내립니다. 뚝 끊기지 않습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The volume fades to zero over this time, so the sound does not cut off abruptly."
+          }
+        }
+      }
+    },
+    "내 기록 때문에 위로 올라온 항목": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moved up because of your listening history"
+          }
+        }
+      }
+    },
+    "네트워크에 닿지 못해 저장해 둔 목록을 보여줍니다. 재생은 연결된 뒤에 됩니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Showing a saved list because the network is unreachable. Playback works once you are back online."
+          }
+        }
+      }
+    },
+    "네트워크에 닿지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not reach the network."
+          }
+        }
+      }
+    },
+    "누를 때마다 지금 시각과 요일에 맞는 방송을 서버에서 골라 옵니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each tap asks the server for a station that fits the current time and day."
+          }
+        }
+      }
+    },
+    "눌러서 재생하세요.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to play."
+          }
+        }
+      }
+    },
+    "다른 말로 찾아 보세요.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try a different word."
+          }
+        }
+      }
+    },
+    "다른 상황을 골라 보세요.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try another situation."
+          }
+        }
+      }
+    },
+    "다시 시도": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
+          }
+        }
+      }
+    },
+    "다시 알림": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snooze"
+          }
+        }
+      }
+    },
+    "다음": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        }
+      }
+    },
+    "다음달": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next month"
+          }
+        }
+      }
+    },
+    "닫기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        }
+      }
+    },
+    "달라진 점": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What changed"
+          }
+        }
+      }
+    },
+    "대신 이런 것이 생겼습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Here is what you get instead"
+          }
+        }
+      }
+    },
+    "두 값은 기기 안에만 남습니다. 서버로 보내지 않습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both numbers stay on this device. They are never sent to a server."
+          }
+        }
+      }
+    },
+    "라디오": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Radio"
+          }
+        }
+      }
+    },
+    "많이 들은 것": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Most played"
+          }
+        }
+      }
+    },
+    "매일": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every day"
+          }
+        }
+      }
+    },
+    "멈춤": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
+          }
+        }
+      }
+    },
+    "모델을 내려받는 중입니다. 준비되면 문구가 조금 더 자연스러워집니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The model is downloading. Notes read a little better once it is ready."
+          }
+        }
+      }
+    },
+    "목": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thu"
+          }
+        }
+      }
+    },
+    "목록에서 숨기기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide from the list"
+          }
+        }
+      }
+    },
+    "목록을 가져오지 못했습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load the list"
+          }
+        }
+      }
+    },
+    "목록을 가져오지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load the list."
+          }
+        }
+      }
+    },
+    "목록을 왼쪽으로 밀거나 재생 화면의 하트를 눌러 담습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe a row left, or tap the heart on the player screen."
+          }
+        }
+      }
+    },
+    "무엇을 찾을지": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What to browse"
+          }
+        }
+      }
+    },
+    "무엇을 틀지": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What to play"
+          }
+        }
+      }
+    },
+    "반복": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repeat"
+          }
+        }
+      }
+    },
+    "방송국": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Station"
+          }
+        }
+      }
+    },
+    "방송국 고르기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a station"
+          }
+        }
+      }
+    },
+    "방송국 수천 곳과 팟캐스트를 찾아 들을 수 있습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search and play thousands of stations and podcasts."
+          }
+        }
+      }
+    },
+    "방송국 이름": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Station name"
+          }
+        }
+      }
+    },
+    "방송국 지정": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick a station"
+          }
+        }
+      }
+    },
+    "방송국을 고르지 않았습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No station chosen"
+          }
+        }
+      }
+    },
+    "방송이 응답하지 않습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This station is not responding"
+          }
+        }
+      }
+    },
+    "버전": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        }
+      }
+    },
+    "빼기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "사용 중": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In use"
+          }
+        }
+      }
+    },
+    "상황": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situation"
+          }
+        }
+      }
+    },
+    "상황에 맞는 추천": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommendations that fit the moment"
+          }
+        }
+      }
+    },
+    "새 프리셋": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New preset"
+          }
+        }
+      }
+    },
+    "서버 응답을 읽지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not read the server response."
+          }
+        }
+      }
+    },
+    "서버가 %lld 로 답했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server replied with %lld."
+          }
+        }
+      }
+    },
+    "서버가 인기 목록을 받아 두면 여기에 나옵니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They appear here once the server has fetched the popular list."
+          }
+        }
+      }
+    },
+    "설정": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
+      }
+    },
+    "설정 앱에서 zeroPlayer 의 알림을 켜야 알람이 울립니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on notifications for zeroPlayer in Settings so alarms can ring."
+          }
+        }
+      }
+    },
+    "설정 열기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "소스": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        }
+      }
+    },
+    "수": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wed"
+          }
+        }
+      }
+    },
+    "숨기기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide"
+          }
+        }
+      }
+    },
+    "시각": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time"
+          }
+        }
+      }
+    },
+    "시간 고르기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a time"
+          }
+        }
+      }
+    },
+    "쓰지 않음": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not used"
+          }
+        }
+      }
+    },
+    "아직 묻지 않았습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not asked yet"
+          }
+        }
+      }
+    },
+    "아직 없습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing yet."
+          }
+        }
+      }
+    },
+    "알람": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alarm"
+          }
+        }
+      }
+    },
+    "알람 · %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alarm · %@"
+          }
+        }
+      }
+    },
+    "알람 · 틀 방송을 고르는 중입니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alarm · choosing what to play"
+          }
+        }
+      }
+    },
+    "알람 · 틀 방송을 찾지 못했습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alarm · could not find anything to play"
+          }
+        }
+      }
+    },
+    "알람 고치기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit alarm"
+          }
+        }
+      }
+    },
+    "알람 추가": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add alarm"
+          }
+        }
+      }
+    },
+    "알람을 처음 만들 때 알림 권한을 묻습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are asked for notification permission when you create your first alarm."
+          }
+        }
+      }
+    },
+    "알람이 울리려면 알림을 허용해야 합니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alarms need notification permission to ring."
+          }
+        }
+      }
+    },
+    "알림 권한을 묻지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not ask for notification permission."
+          }
+        }
+      }
+    },
+    "알림 허용하기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow notifications"
+          }
+        }
+      }
+    },
+    "알림은 켜져 있지만 아직 기기가 APNs 에 등록되지 않았습니다. 시뮬레이터에서는 등록돼도 푸시가 도착하지 않습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are on, but this device is not registered with APNs yet. Push does not arrive on the Simulator even after registering."
+          }
+        }
+      }
+    },
+    "알림이 꺼져 있습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off"
+          }
+        }
+      }
+    },
+    "알림이 꺼져 있어 알람이 울리지 않습니다. 설정 앱에서 켜 주세요.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off, so alarms will not ring. Turn them on in Settings."
+          }
+        }
+      }
+    },
+    "알림이 꺼져 있어 지금은 울리지 않습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off, so this will not ring."
+          }
+        }
+      }
+    },
+    "알림이 켜져 있습니다. 알람은 서버에서 보내고, 서버에 닿지 못하면 기기에 걸어 둔 백업 알림이 울립니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are on. Alarms come from the server, and a backup notification on this device rings if the server cannot be reached."
+          }
+        }
+      }
+    },
+    "없음": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        }
+      }
+    },
+    "에피소드": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Episodes"
+          }
+        }
+      }
+    },
+    "에피소드 지정": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick an episode"
+          }
+        }
+      }
+    },
+    "에피소드를 가져오지 못했습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load episodes"
+          }
+        }
+      }
+    },
+    "에피소드를 가져오지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load episodes."
+          }
+        }
+      }
+    },
+    "연결 중…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecting…"
+          }
+        }
+      }
+    },
+    "연결하지 못했습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not connect"
+          }
+        }
+      }
+    },
+    "오른쪽 위 더하기로 알람을 만듭니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap plus at the top right to create one."
+          }
+        }
+      }
+    },
+    "운전": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Driving"
+          }
+        }
+      }
+    },
+    "울릴 때 그 시각에 맞는 방송을 서버가 골라 알려 줍니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When it rings, the server picks a station that fits that hour."
+          }
+        }
+      }
+    },
+    "월": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mon"
+          }
+        }
+      }
+    },
+    "유튜브 재생목록은 더 쓸 수 없습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YouTube playlists are no longer available"
+          }
+        }
+      }
+    },
+    "이 기기는 기기 안 모델을 지원하지 않습니다. 추천은 그대로 나옵니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device does not support the on-device model. Recommendations still work."
+          }
+        }
+      }
+    },
+    "이 달에는 기록이 없습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was played this month."
+          }
+        }
+      }
+    },
+    "이 달에는 들은 기록이 없습니다. 프리셋이나 탐색 탭에서 방송을 켜면 여기에 쌓입니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was played this month. Start a station from Presets or Browse and it shows up here."
+          }
+        }
+      }
+    },
+    "이 방송이 응답하지 않습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This station is not responding."
+          }
+        }
+      }
+    },
+    "이 프리셋 삭제": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this preset"
+          }
+        }
+      }
+    },
+    "이 프리셋에 방송국이 지정돼 있지 않습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This preset has no station set."
+          }
+        }
+      }
+    },
+    "이름": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "이름과 아이콘": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name and icon"
+          }
+        }
+      }
+    },
+    "이어듣기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue listening"
+          }
+        }
+      }
+    },
+    "이전": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous"
+          }
+        }
+      }
+    },
+    "인기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popular"
+          }
+        }
+      }
+    },
+    "일": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sun"
+          }
+        }
+      }
+    },
+    "일시정지": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        }
+      }
+    },
+    "자동 선택": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto pick"
+          }
+        }
+      }
+    },
+    "자동 선택 · %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto pick · %@"
+          }
+        }
+      }
+    },
+    "자동 종료": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sleep timer"
+          }
+        }
+      }
+    },
+    "자동 종료 기본값": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sleep timer defaults"
+          }
+        }
+      }
+    },
+    "자동 종료 타이머": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sleep timer"
+          }
+        }
+      }
+    },
+    "자동 종료까지 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ until the sleep timer"
+          }
+        }
+      }
+    },
+    "작업": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work"
+          }
+        }
+      }
+    },
+    "재생": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play"
+          }
+        }
+      }
+    },
+    "재생 속도": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback speed"
+          }
+        }
+      }
+    },
+    "재생 중": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing"
+          }
+        }
+      }
+    },
+    "재생 중인 항목이 없습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is playing"
+          }
+        }
+      }
+    },
+    "재생 화면과 알람이 울려 열린 화면에는 광고를 붙이지 않습니다. ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No ads appear on the player screen or on a screen opened by an alarm. "
+          }
+        }
+      }
+    },
+    "재생하지 못했습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not play"
+          }
+        }
+      }
+    },
+    "재생하지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not play."
+          }
+        }
+      }
+    },
+    "재생할 수 없습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot play this"
+          }
+        }
+      }
+    },
+    "저장": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "전 세계 인터넷 라디오와 팟캐스트": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Internet radio and podcasts worldwide"
+          }
+        }
+      }
+    },
+    "전부 꺼짐": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All off"
+          }
+        }
+      }
+    },
+    "전에 쓰시던 알람과 채널 목록은 그대로 옮겨 뒀습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your old alarms and channel list have been carried over."
+          }
+        }
+      }
+    },
+    "전체": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All"
+          }
+        }
+      }
+    },
+    "전체 나라": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All countries"
+          }
+        }
+      }
+    },
+    "전체 목록 보기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the full list"
+          }
+        }
+      }
+    },
+    "정지": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        }
+      }
+    },
+    "정한 시각에 알림이 오고, 누르면 그 방송이 바로 재생됩니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A notification arrives at the time you set, and tapping it starts that station."
+          }
+        }
+      }
+    },
+    "정한 시간이 되면 소리가 서서히 줄며 꺼집니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When the time is up the sound fades out and stops."
+          }
+        }
+      }
+    },
+    "주말": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekends"
+          }
+        }
+      }
+    },
+    "즐겨찾기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favorites"
+          }
+        }
+      }
+    },
+    "즐겨찾기 추가": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to favorites"
+          }
+        }
+      }
+    },
+    "즐겨찾기 해제": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from favorites"
+          }
+        }
+      }
+    },
+    "즐겨찾기가 없습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No favorites yet"
+          }
+        }
+      }
+    },
+    "즐겨찾기만 보기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show favorites only"
+          }
+        }
+      }
+    },
+    "지금 걸린 타이머": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer running"
+          }
+        }
+      }
+    },
+    "지금 조건에 맞는 방송을 찾지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not find a station that fits right now."
+          }
+        }
+      }
+    },
+    "지금 조건에 맞는 방송이 없습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing fits right now"
+          }
+        }
+      }
+    },
+    "지금은 열 수 없습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot open this right now."
+          }
+        }
+      }
+    },
+    "지난달": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last month"
+          }
+        }
+      }
+    },
+    "지상파": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Korean Radio"
+          }
+        }
+      }
+    },
+    "지상파 라디오": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Korean Radio"
+          }
+        }
+      }
+    },
+    "지상파 라디오를 숨깁니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide Korean Radio"
+          }
+        }
+      }
+    },
+    "지우기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase"
+          }
+        }
+      }
+    },
+    "지정한 방송국이 그대로 재생됩니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The station you picked plays as is."
+          }
+        }
+      }
+    },
+    "직접 입력 %lld분": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom %lld min"
+          }
+        }
+      }
+    },
+    "채널 목록을 가져오지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load the channel list."
+          }
+        }
+      }
+    },
+    "채널을 가져오지 못했습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load channels"
+          }
+        }
+      }
+    },
+    "청취 기록": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening history"
+          }
+        }
+      }
+    },
+    "청취 기록 지우기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase listening history"
+          }
+        }
+      }
+    },
+    "청취 기록은 기기에만 있고 광고에 쓰이지 않습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your listening history stays on this device and is never used for ads."
+          }
+        }
+      }
+    },
+    "청취 기록을 모두 지웁니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase all listening history"
+          }
+        }
+      }
+    },
+    "최근 30일": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 30 days"
+          }
+        }
+      }
+    },
+    "최근 재생": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recently played"
+          }
+        }
+      }
+    },
+    "추적 거부": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tracking denied"
+          }
+        }
+      }
+    },
+    "추적 미응답": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tracking not answered"
+          }
+        }
+      }
+    },
+    "추적 허용": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tracking allowed"
+          }
+        }
+      }
+    },
+    "추천": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For You"
+          }
+        }
+      }
+    },
+    "추천 품질": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommendation quality"
+          }
+        }
+      }
+    },
+    "추천·프리셋에서 시작한 비율": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Started from For You or a preset"
+          }
+        }
+      }
+    },
+    "추천으로 시작한 재생": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plays started from For You"
+          }
+        }
+      }
+    },
+    "추천을 가져오지 못했습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load recommendations"
+          }
+        }
+      }
+    },
+    "추천을 가져오지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load recommendations."
+          }
+        }
+      }
+    },
+    "추천이 실제로 일하고 있는지 보는 값입니다. 기기 안에만 있고 서버로 보내지 않습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These numbers show whether recommendations are doing their job. They stay on this device and are never sent to a server."
+          }
+        }
+      }
+    },
+    "취소": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "취침": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sleep"
+          }
+        }
+      }
+    },
+    "취침·운전·공부·작업·기상 중 하나를 고르면 지금 시각에 맞는 방송을 골라 줍니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick Sleep, Driving, Study, Work or Wake up and it finds a station for the current hour."
+          }
+        }
+      }
+    },
+    "카드를 누르면 바로 재생되고, 타이머가 걸려 있으면 그 시간이 지날 때 페이드아웃으로 꺼집니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a card to start playing. If a timer is set, it fades out and stops when the time is up."
+          }
+        }
+      }
+    },
+    "타이머": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer"
+          }
+        }
+      }
+    },
+    "타이머 끄기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn the timer off"
+          }
+        }
+      }
+    },
+    "탐색": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browse"
+          }
+        }
+      }
+    },
+    "탐색 탭에서 들을 수 있습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Available in the Browse tab"
+          }
+        }
+      }
+    },
+    "탐색 탭에서 사라집니다. 같은 방법으로 다시 열 수 있습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It disappears from Browse. You can open it again the same way."
+          }
+        }
+      }
+    },
+    "테스트 단위": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test unit"
+          }
+        }
+      }
+    },
+    "토": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sat"
+          }
+        }
+      }
+    },
+    "토큰을 서버에 넘기지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not send the token to the server."
+          }
+        }
+      }
+    },
+    "팟캐스트": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podcasts"
+          }
+        }
+      }
+    },
+    "팟캐스트 이름": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podcast name"
+          }
+        }
+      }
+    },
+    "팟캐스트가 없습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No podcasts"
+          }
+        }
+      }
+    },
+    "팟캐스트를 가져오지 못했습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load podcasts"
+          }
+        }
+      }
+    },
+    "팟캐스트를 가져오지 못했습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not load podcasts."
+          }
+        }
+      }
+    },
+    "페이드아웃": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fade out"
+          }
+        }
+      }
+    },
+    "페이드아웃 중": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fading out"
+          }
+        }
+      }
+    },
+    "평문 HTTP": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plain HTTP"
+          }
+        }
+      }
+    },
+    "평일": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekdays"
+          }
+        }
+      }
+    },
+    "표시": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shown"
+          }
+        }
+      }
+    },
+    "표시 안 함": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hidden"
+          }
+        }
+      }
+    },
+    "프리셋": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presets"
+          }
+        }
+      }
+    },
+    "프리셋 추가": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add preset"
+          }
+        }
+      }
+    },
+    "프리셋 편집": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit preset"
+          }
+        }
+      }
+    },
+    "한 번만": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once"
+          }
+        }
+      }
+    },
+    "허용됨": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allowed"
+          }
+        }
+      }
+    },
+    "화": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tue"
+          }
+        }
+      }
+    },
+    "확인": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

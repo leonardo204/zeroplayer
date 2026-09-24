@@ -12,7 +12,7 @@ struct AlarmEditorView: View {
 
     @State private var time = Date()
     @State private var weekdays: Set<Int> = [2, 3, 4, 5, 6]
-    @State private var label = "알람"
+    @State private var label = String(localized: "알람")
     @State private var sourceKind: AlarmSourceKind = .auto
     @State private var situation: Situation = .wake
     @State private var sourceID: String?
@@ -20,7 +20,9 @@ struct AlarmEditorView: View {
     @State private var isPickerPresented = false
     @State private var isLoaded = false
 
-    private static let weekdayNames = ["", "일", "월", "화", "수", "목", "금", "토"]
+    private static let weekdayNames = ["", String(localized: "일"), String(localized: "월"),
+                                       String(localized: "화"), String(localized: "수"), String(localized: "목"),
+                                       String(localized: "금"), String(localized: "토")]
 
     var body: some View {
         NavigationStack {
@@ -35,10 +37,10 @@ struct AlarmEditorView: View {
                 Section("반복") {
                     weekdayPicker
                     HStack(spacing: 8) {
-                        quickButton("평일", [2, 3, 4, 5, 6])
-                        quickButton("주말", [1, 7])
-                        quickButton("매일", [1, 2, 3, 4, 5, 6, 7])
-                        quickButton("한 번만", [])
+                        quickButton(String(localized: "평일"), [2, 3, 4, 5, 6])
+                        quickButton(String(localized: "주말"), [1, 7])
+                        quickButton(String(localized: "매일"), [1, 2, 3, 4, 5, 6, 7])
+                        quickButton(String(localized: "한 번만"), [])
                     }
                 }
 
@@ -72,8 +74,8 @@ struct AlarmEditorView: View {
                     Text("무엇을 틀지")
                 } footer: {
                     Text(sourceKind == .auto
-                         ? "울릴 때 그 시각에 맞는 방송을 서버가 골라 알려 줍니다."
-                         : "지정한 방송국이 그대로 재생됩니다.")
+                         ? String(localized: "울릴 때 그 시각에 맞는 방송을 서버가 골라 알려 줍니다.")
+                         : String(localized: "지정한 방송국이 그대로 재생됩니다."))
                 }
 
                 Section("이름") {
@@ -171,7 +173,7 @@ struct AlarmEditorView: View {
             alarm.minute = parts.minute ?? 0
             alarm.weekdays = weekdays
             alarm.timezoneID = TimeZone.current.identifier
-            alarm.label = label.isEmpty ? "알람" : label
+            alarm.label = label.isEmpty ? String(localized: "알람") : label
             alarm.sourceKind = sourceKind
             alarm.sourceID = sourceKind == .auto ? nil : sourceID
             alarm.sourceTitle = sourceKind == .auto ? nil : sourceTitle
@@ -186,7 +188,7 @@ struct AlarmEditorView: View {
                 sourceID: sourceKind == .auto ? nil : sourceID,
                 sourceTitle: sourceKind == .auto ? nil : sourceTitle,
                 situation: sourceKind == .auto ? situation : nil,
-                label: label.isEmpty ? "알람" : label
+                label: label.isEmpty ? String(localized: "알람") : label
             )
             await store.add(created)
         }

@@ -2,27 +2,24 @@ import type { Env } from '../types'
 import { nowISO } from './http'
 import { collectCandidates, ruleReason, toItem, type Candidate, type RecommendItem } from './candidates'
 import { SITUATIONS, type Daypart, type Situation } from './situations'
+import { DAYPART_LABEL, DAY_TYPE_LABEL, SITUATION_TEXT, type Lang } from './i18n'
 
 export const SET_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
 
 const DAYPARTS: Daypart[] = ['06-09', '09-12', '12-18', '18-22', '22-02', '02-06']
 const DAY_TYPES = ['weekday', 'weekend'] as const
+/** 만들어 두는 언어. 앱이 `lang` 으로 골라 간다. */
+export const SET_LANGS: Lang[] = ['ko', 'en']
 
 /** 전 세계 세트의 나라 자리. 나라를 안 고른 사용자가 받는 목록이다. */
 export const GLOBAL_COUNTRY = 'ZZ'
 
-export function setID(situation: string, dayType: string, daypart: string, country: string): string {
-  return `${situation}|${dayType}|${daypart}|${country}`
+export function setID(
+  situation: string, dayType: string, daypart: string, country: string, lang: Lang,
+): string {
+  return `${situation}|${dayType}|${daypart}|${country}|${lang}`
 }
 
-const DAYPART_LABEL: Record<Daypart, string> = {
-  '06-09': '이른 아침',
-  '09-12': '오전',
-  '12-18': '낮',
-  '18-22': '저녁',
-  '22-02': '밤',
-  '02-06': '새벽',
-}
 
 const SET_RESPONSE_FORMAT = {
   type: 'json_schema',
@@ -45,7 +42,28 @@ const SET_RESPONSE_FORMAT = {
   },
 } as const
 
-function systemPrompt(situationLabel: string, daypartLabel: string, dayTypeLabel: string): string {
+function systemPrompt(lang: Lang, situation: Situation, daypart: Daypart, dayType: string): string {
+  const situationLabel = SITUATION_TEXT[lang][situation].label
+  const daypartLabel = DAYPART_LABEL[lang][daypart]
+  const dayTypeLabel = DAY_TYPE_LABEL[lang][dayType]
+
+  if (lang === 'en') {
+    return [
+      'You are an editor who picks internet radio channels to fit a moment.',
+      `The moment is "${situationLabel}" and the time is ${daypartLabel} on ${dayTypeLabel}.`,
+      'The input is an array of candidate channels. Each has id, name, tags, moods and country.',
+      'Reorder them to fit the moment and attach one English sentence to each channel.',
+      '',
+      'Sentence rules:',
+      '- One sentence, 90 characters or fewer.',
+      '- Say only why it fits the moment. Do not repeat the channel name.',
+      '- Plain words. Avoid "perfect", "ultimate", "a variety of", "seamless".',
+      '- Invent nothing that is not in the tags. If unsure, use only the tags and moods.',
+      '',
+      'Copy each id exactly from the input. Never invent a channel that is not in the input.',
+    ].join('\n')
+  }
+
   return [
     '너는 인터넷 라디오 채널을 상황에 맞게 골라 주는 편집자다.',
     `지금 상황은 "${situationLabel}"이고 시간대는 ${dayTypeLabel} ${daypartLabel}이다.`,
@@ -79,8 +97,8 @@ function merge(
   answers: Array<{ id: string; reason: string }>,
   situation: Situation,
   limit: number,
+  lang: Lang,
 ): RecommendItem[] {
-  const rule = SITUATIONS[situation]
   const byID = new Map(candidates.map((c) => [c.id, c]))
   const used = new Set<string>()
   const items: RecommendItem[] = []
@@ -92,14 +110,14 @@ function merge(
     const reason = answer.reason.trim()
     // 문장이 비었거나 지나치게 길면 규칙 문구를 쓴다. 화면에서 두 줄을 넘기지 않게.
     const usable = reason.length >= 6 && reason.length <= 80
-    items.push(toItem(candidate, usable ? reason : ruleReason(candidate, rule)))
+    items.push(toItem(candidate, usable ? reason : ruleReason(candidate, situation, lang)))
     if (items.length >= limit) break
   }
 
   for (const candidate of candidates) {
     if (items.length >= limit) break
     if (used.has(candidate.id)) continue
-    items.push(toItem(candidate, ruleReason(candidate, rule)))
+    items.push(toItem(candidate, ruleReason(candidate, situation, lang)))
   }
 
   return items
@@ -114,6 +132,7 @@ async function buildOne(
   daypart: Daypart,
   country: string,
   limit: number,
+  lang: Lang,
 ): Promise<BuildOneResult | null> {
   const rule = SITUATIONS[situation]
   const candidates = await collectCandidates(env, {
@@ -135,11 +154,7 @@ async function buildOne(
       messages: [
         {
           role: 'system',
-          content: systemPrompt(
-            rule.label,
-            DAYPART_LABEL[daypart],
-            dayType === 'weekend' ? '주말' : '평일',
-          ),
+          content: systemPrompt(lang, situation, daypart, dayType),
         },
         { role: 'user', content: JSON.stringify(candidates.slice(0, limit * 2).map(toPromptRow)) },
       ],
@@ -155,17 +170,18 @@ async function buildOne(
         rows.map((r) => ({ id: String(r.id ?? ''), reason: String(r.reason ?? '') })),
         situation,
         limit,
+        lang,
       )
       model = SET_MODEL
     }
   } catch (error) {
-    console.error('추천 세트 생성 실패', situation, daypart, country, error)
+    console.error('추천 세트 생성 실패', situation, daypart, country, lang, error)
   }
 
   // LLM 이 실패하면 1단 결과를 그대로 저장한다. 목록이 비는 것보다 낫다.
-  if (!items) items = merge(candidates, [], situation, limit)
+  if (!items) items = merge(candidates, [], situation, limit, lang)
 
-  const id = setID(situation, dayType, daypart, country)
+  const id = setID(situation, dayType, daypart, country, lang)
   await env.DB.prepare(`
     INSERT INTO recommendation_sets (id, situation, daypart, day_type, country, payload, model, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -207,21 +223,23 @@ export async function buildSets(
     for (const row of results) fresh.add(row.id)
   }
 
-  const todo: Array<[Situation, string, Daypart, string]> = []
+  const todo: Array<[Situation, string, Daypart, string, Lang]> = []
   for (const country of countries) {
     for (const situation of situations) {
       for (const dayType of DAY_TYPES) {
         for (const daypart of DAYPARTS) {
-          if (fresh.has(setID(situation, dayType, daypart, country))) continue
-          todo.push([situation, dayType, daypart, country])
+          for (const lang of SET_LANGS) {
+            if (fresh.has(setID(situation, dayType, daypart, country, lang))) continue
+            todo.push([situation, dayType, daypart, country, lang])
+          }
         }
       }
     }
   }
 
   const built: BuildOneResult[] = []
-  for (const [situation, dayType, daypart, country] of todo.slice(0, maxSets)) {
-    const result = await buildOne(env, situation, dayType, daypart, country, limit)
+  for (const [situation, dayType, daypart, country, lang] of todo.slice(0, maxSets)) {
+    const result = await buildOne(env, situation, dayType, daypart, country, limit, lang)
     if (result) built.push(result)
   }
 
@@ -249,10 +267,11 @@ export async function loadSet(
   dayType: string,
   daypart: Daypart,
   country: string,
+  lang: Lang,
 ): Promise<StoredSet | null> {
   const row = await env.DB.prepare(
     'SELECT payload, model, created_at FROM recommendation_sets WHERE id = ?',
-  ).bind(setID(situation, dayType, daypart, country)).first<{
+  ).bind(setID(situation, dayType, daypart, country, lang)).first<{
     payload: string
     model: string | null
     created_at: string

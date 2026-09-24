@@ -8,8 +8,8 @@ enum PresetSourceKind: String, Codable, CaseIterable, Sendable {
 
     var label: String {
         switch self {
-        case .station: return "방송국 지정"
-        case .auto: return "자동 선택"
+        case .station: return String(localized: "방송국 지정")
+        case .auto: return String(localized: "자동 선택")
         }
     }
 }
@@ -20,11 +20,11 @@ enum Situation: String, Codable, CaseIterable, Sendable {
 
     var label: String {
         switch self {
-        case .sleep: return "취침"
-        case .commute: return "운전"
-        case .study: return "공부"
-        case .work: return "작업"
-        case .wake: return "기상"
+        case .sleep: return String(localized: "취침")
+        case .commute: return String(localized: "운전")
+        case .study: return String(localized: "공부")
+        case .work: return String(localized: "작업")
+        case .wake: return String(localized: "기상")
         }
     }
 
@@ -94,14 +94,14 @@ final class Preset {
     /// 프리셋 카드 두 번째 줄.
     var sourceDescription: String {
         switch sourceKind {
-        case .auto: return "자동 선택 · \(situation.label)"
-        case .station: return sourceTitle ?? "방송국을 고르지 않았습니다"
+        case .auto: return String(localized: "자동 선택 · \(situation.label)")
+        case .station: return sourceTitle ?? String(localized: "방송국을 고르지 않았습니다")
         }
     }
 
     var timerDescription: String? {
         guard timerMinutes > 0 else { return nil }
-        return "\(timerMinutes)분"
+        return String(localized: "\(timerMinutes)분")
     }
 }
 
@@ -109,15 +109,15 @@ extension Preset {
     /// 처음 실행될 때 만들어 두는 다섯 개. 사용자가 이름과 내용을 바꿀 수 있다.
     static func defaults() -> [Preset] {
         [
-            Preset(name: "취침", symbolName: "moon.zzz.fill", sourceKind: .auto,
+            Preset(name: String(localized: "취침"), symbolName: "moon.zzz.fill", sourceKind: .auto,
                    situation: .sleep, timerMinutes: 45, fadeOutSeconds: 30, order: 0),
-            Preset(name: "운전", symbolName: "car.fill", sourceKind: .auto,
+            Preset(name: String(localized: "운전"), symbolName: "car.fill", sourceKind: .auto,
                    situation: .commute, timerMinutes: 0, fadeOutSeconds: 10, order: 1),
-            Preset(name: "공부", symbolName: "book.fill", sourceKind: .auto,
+            Preset(name: String(localized: "공부"), symbolName: "book.fill", sourceKind: .auto,
                    situation: .study, timerMinutes: 90, fadeOutSeconds: 30, order: 2),
-            Preset(name: "작업", symbolName: "laptopcomputer", sourceKind: .auto,
+            Preset(name: String(localized: "작업"), symbolName: "laptopcomputer", sourceKind: .auto,
                    situation: .work, timerMinutes: 0, fadeOutSeconds: 10, order: 3),
-            Preset(name: "기상", symbolName: "sunrise.fill", sourceKind: .auto,
+            Preset(name: String(localized: "기상"), symbolName: "sunrise.fill", sourceKind: .auto,
                    situation: .wake, timerMinutes: 30, fadeOutSeconds: 10, order: 4),
         ]
     }

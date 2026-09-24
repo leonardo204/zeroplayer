@@ -2,6 +2,7 @@ name: zeroPlayer
 
 options:
   bundleIdPrefix: com.zerolive
+  developmentLanguage: ko
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -62,6 +63,9 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
+        CFBundleLocalizations:
+          - ko
+          - en
         UILaunchScreen: {}
         UIBackgroundModes:
           - audio
@@ -124,3 +128,11 @@ targets:
           - SKAdNetworkIdentifier: 8c4e2ghe7u.skadnetwork
           - SKAdNetworkIdentifier: 3rd42ekr43.skadnetwork
           - SKAdNetworkIdentifier: 3qcr597p9d.skadnetwork
+          - SKAdNetworkIdentifier: wg4vff78zm.skadnetwork
+          - SKAdNetworkIdentifier: su67r6k2v3.skadnetwork
+          - SKAdNetworkIdentifier: 44jx6755aq.skadnetwork
+          - SKAdNetworkIdentifier: k674qkevps.skadnetwork
+          - SKAdNetworkIdentifier: kbmxgpxpgc.skadnetwork
+          - SKAdNetworkIdentifier: tl55sbb4fm.skadnetwork
+          - SKAdNetworkIdentifier: c3frkrj4fj.skadnetwork
+          - SKAdNetworkIdentifier: 97r2b46745.skadnetwork

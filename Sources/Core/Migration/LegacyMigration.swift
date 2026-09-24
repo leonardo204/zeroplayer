@@ -95,7 +95,7 @@ struct LegacyMigration {
             weekdays: legacy.alarmDay?.weekdays ?? [],
             sourceKind: .auto,
             situation: .wake,
-            label: "알람"
+            label: String(localized: "알람")
         )
         await alarms.add(alarm)
     }
@@ -108,7 +108,7 @@ struct LegacyMigration {
             let descriptor = FetchDescriptor<Favorite>(predicate: #Predicate { $0.itemID == id })
             if let existing = try? context.fetch(descriptor), !existing.isEmpty { continue }
             context.insert(Favorite(item: PlayableItem(
-                id: id, kind: .hidden, title: radio.title, subtitle: "지상파"
+                id: id, kind: .hidden, title: radio.title, subtitle: String(localized: "지상파")
             )))
             moved += 1
         }

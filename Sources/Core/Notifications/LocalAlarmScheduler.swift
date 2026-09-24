@@ -62,8 +62,8 @@ enum LocalAlarmScheduler {
 
     private static func requests(for alarm: AlarmSetting) -> [UNNotificationRequest] {
         let content = UNMutableNotificationContent()
-        content.title = alarm.label.isEmpty ? "알람" : alarm.label
-        content.body = "\(alarm.sourceText) · 눌러서 재생하세요."
+        content.title = alarm.label.isEmpty ? String(localized: "알람") : alarm.label
+        content.body = String(localized: "\(alarm.sourceText) · 눌러서 재생하세요.")
         content.sound = .default
         content.categoryIdentifier = PushRegistrar.categoryID
         if #available(iOS 15.0, *) {
@@ -128,8 +128,8 @@ enum LocalAlarmScheduler {
     /// '5분 뒤 다시'. 한 번만 울리는 알림을 새로 건다.
     static func scheduleSnooze(after seconds: TimeInterval, userInfo: [AnyHashable: Any]) {
         let content = UNMutableNotificationContent()
-        content.title = "다시 알림"
-        content.body = "눌러서 재생하세요."
+        content.title = String(localized: "다시 알림")
+        content.body = String(localized: "눌러서 재생하세요.")
         content.sound = .default
         content.categoryIdentifier = PushRegistrar.categoryID
         content.userInfo = userInfo

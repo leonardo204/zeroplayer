@@ -19,7 +19,7 @@ struct PodcastDTO: Codable, Hashable, Sendable, Identifiable {
         var parts: [String] = []
         if let author, !author.isEmpty { parts.append(author) }
         if let first = categories.first { parts.append(first) }
-        if episodeCount > 0 { parts.append("\(episodeCount)편") }
+        if episodeCount > 0 { parts.append(String(localized: "\(episodeCount)편")) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
@@ -51,7 +51,7 @@ struct EpisodeDTO: Codable, Hashable, Sendable, Identifiable {
     var runtimeText: String? {
         guard durationSeconds > 0 else { return nil }
         let minutes = durationSeconds / 60
-        return minutes >= 60 ? "\(minutes / 60)시간 \(minutes % 60)분" : "\(minutes)분"
+        return minutes >= 60 ? String(localized: "\(minutes / 60)시간 \(minutes % 60)분") : String(localized: "\(minutes)분")
     }
 
     var publishedText: String? {

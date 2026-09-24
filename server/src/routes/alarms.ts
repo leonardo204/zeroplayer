@@ -1,4 +1,5 @@
 import type { Env } from '../types'
+import { readLang } from '../lib/i18n'
 import { fail, json, nowISO } from '../lib/http'
 import { isValidTimezone, nextFireISO, parseWeekdays } from '../lib/schedule'
 
@@ -72,7 +73,7 @@ export async function registerPushToken(env: Env, request: Request): Promise<Res
   const install = installID(request)
   if (!install) return fail(400, 'no_install', 'X-ZP-Install 헤더가 필요하다.')
 
-  let body: { token?: string; env?: string; appVersion?: string }
+  let body: { token?: string; env?: string; appVersion?: string; lang?: string }
   try {
     body = (await request.json()) as typeof body
   } catch {
@@ -84,18 +85,21 @@ export async function registerPushToken(env: Env, request: Request): Promise<Res
     return fail(400, 'bad_token', '기기 토큰 모양이 아니다.')
   }
   const pushEnv = body.env === 'sandbox' ? 'sandbox' : 'prod'
+  // 알람 알림 본문을 어느 말로 보낼지. 기기 언어를 그대로 받는다.
+  const lang = readLang(body.lang)
 
   await env.DB.prepare(`
-    INSERT INTO devices (install_id, push_token, push_env, app_version, last_seen_at)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO devices (install_id, push_token, push_env, app_version, lang, last_seen_at)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(install_id) DO UPDATE SET
       push_token = excluded.push_token,
       push_env = excluded.push_env,
       app_version = COALESCE(excluded.app_version, devices.app_version),
+      lang = excluded.lang,
       last_seen_at = excluded.last_seen_at
-  `).bind(install, token, pushEnv, body.appVersion ?? null, nowISO()).run()
+  `).bind(install, token, pushEnv, body.appVersion ?? null, lang, nowISO()).run()
 
-  return json({ ok: true, env: pushEnv })
+  return json({ ok: true, env: pushEnv, lang })
 }
 
 /** DELETE /push/token — 알림 권한을 끈 경우. 토큰만 지우고 알람은 남긴다(로컬 백업은 계속 울린다). */

@@ -21,9 +21,9 @@ struct DiscoverView: View {
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .stations: return "라디오"
-            case .podcasts: return "팟캐스트"
-            case .hidden: return "지상파"
+            case .stations: return String(localized: "라디오")
+            case .podcasts: return String(localized: "팟캐스트")
+            case .hidden: return String(localized: "지상파")
             }
         }
     }
@@ -165,7 +165,7 @@ struct DiscoverView: View {
     private var filterBar: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
-                chip(title: "전체", isOn: model.tag == nil) {
+                chip(title: String(localized: "전체"), isOn: model.tag == nil) {
                     model.tag = nil
                     Task { await refresh() }
                 }

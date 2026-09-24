@@ -24,12 +24,12 @@ enum OnDeviceAvailability: Equatable, Sendable {
     /// 설정 화면에 그대로 띄우는 문구다.
     var message: String {
         switch self {
-        case .ready: "기기 안의 모델로 추천 문구를 다듬습니다."
-        case .unsupportedDevice: "이 기기는 기기 안 모델을 지원하지 않습니다. 추천은 그대로 나옵니다."
-        case .notEnabled: "Apple Intelligence 가 꺼져 있습니다. 추천은 그대로 나옵니다."
-        case .notReady: "모델을 내려받는 중입니다. 준비되면 문구가 조금 더 자연스러워집니다."
-        case .failing: "기기 안 모델이 답하지 못해 쓰지 않습니다. 추천은 그대로 나옵니다."
-        case .unknown: "기기 안 모델을 쓸 수 없습니다. 추천은 그대로 나옵니다."
+        case .ready: String(localized: "기기 안의 모델로 추천 문구를 다듬습니다.")
+        case .unsupportedDevice: String(localized: "이 기기는 기기 안 모델을 지원하지 않습니다. 추천은 그대로 나옵니다.")
+        case .notEnabled: String(localized: "Apple Intelligence 가 꺼져 있습니다. 추천은 그대로 나옵니다.")
+        case .notReady: String(localized: "모델을 내려받는 중입니다. 준비되면 문구가 조금 더 자연스러워집니다.")
+        case .failing: String(localized: "기기 안 모델이 답하지 못해 쓰지 않습니다. 추천은 그대로 나옵니다.")
+        case .unknown: String(localized: "기기 안 모델을 쓸 수 없습니다. 추천은 그대로 나옵니다.")
         }
     }
 }

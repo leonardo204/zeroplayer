@@ -111,7 +111,7 @@ final class AlarmStore {
                 sourceID: dto.source.id,
                 sourceTitle: dto.source.title,
                 situation: dto.source.situation.flatMap(Situation.init(rawValue:)),
-                label: dto.label ?? "알람",
+                label: dto.label ?? String(localized: "알람"),
                 isEnabled: dto.enabled
             )
             alarm.serverAlarmID = dto.alarmID

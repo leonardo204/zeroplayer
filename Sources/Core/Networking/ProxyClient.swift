@@ -62,9 +62,9 @@ enum ProxyError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .offline: "네트워크에 닿지 못했습니다."
-        case .badStatus(let code): "서버가 \(code) 로 답했습니다."
-        case .decoding: "서버 응답을 읽지 못했습니다."
+        case .offline: String(localized: "네트워크에 닿지 못했습니다.")
+        case .badStatus(let code): String(localized: "서버가 \(code) 로 답했습니다.")
+        case .decoding: String(localized: "서버 응답을 읽지 못했습니다.")
         }
     }
 }
@@ -113,6 +113,7 @@ struct ProxyClient: ProxyClienting {
         if let country = query.country { items.append(.init(name: "country", value: country)) }
         if query.secureOnly { items.append(.init(name: "secure", value: "1")) }
         if query.timerMinutes > 0 { items.append(.init(name: "timer", value: String(query.timerMinutes))) }
+        items.append(.init(name: "lang", value: AppConfig.serverLanguage))
         return try await get("/recommend", query: items)
     }
 
@@ -150,6 +151,7 @@ struct ProxyClient: ProxyClienting {
             "token": token,
             "env": sandbox ? "sandbox" : "prod",
             "appVersion": AppConfig.appVersion,
+            "lang": AppConfig.serverLanguage,
         ])
     }
 

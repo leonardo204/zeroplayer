@@ -1,5 +1,6 @@
 import type { Env } from '../types'
-import { boostTags, type Daypart, type SituationRule } from './situations'
+import { boostTags, SITUATIONS, type Daypart, type Situation, type SituationRule } from './situations'
+import { ruleReasonText, type Lang } from './i18n'
 import { artworkFor } from './logos'
 
 /** 후보 한 건. 스트림 주소는 생사 판단과 HTTPS 여부에만 쓰고 앱에는 내보내지 않는다. */
@@ -24,22 +25,6 @@ export interface Candidate {
   scope: 'country' | 'global'
 }
 
-export const TAG_LABEL: Record<string, string> = {
-  ambient: '앰비언트', chillout: '칠아웃', lounge: '라운지', newage: '뉴에이지',
-  classical: '클래식', jazz: '재즈', instrumental: '연주곡', soundtrack: '사운드트랙',
-  blues: '블루스', soul: '소울', news: '뉴스', talk: '토크', pop: '팝', rock: '록',
-  top40: '최신 인기곡', dance: '댄스', kpop: '케이팝', jpop: '제이팝', cpop: '중국 음악',
-  hiphop: '힙합', culture: '교양', oldies: '옛 노래', electronic: '일렉트로닉',
-  house: '하우스', techno: '테크노', funk: '펑크', indie: '인디', latin: '라틴',
-  world: '월드뮤직', country: '컨트리', metal: '메탈', reggae: '레게', folk: '포크',
-  rnb: '알앤비', ballad: '발라드', gospel: '가스펠', christian: '기독교', religion: '종교',
-  comedy: '코미디', anime: '애니메이션', sports: '스포츠', punk: '펑크록',
-  traditional: '전통음악', education: '교육', live: '라이브', trot: '트로트',
-}
-
-export function tagLabel(tag: string): string {
-  return TAG_LABEL[tag] ?? tag
-}
 
 function holes(values: string[]): string {
   return values.map(() => '?').join(',')
@@ -208,15 +193,9 @@ export async function collectCandidates(
 }
 
 /** 규칙 단계의 reason. 무엇으로 걸렀는지 그대로 적는다. LLM 이 실패해도 이 문구가 남는다. */
-export function ruleReason(candidate: Candidate, rule: SituationRule): string {
-  const matched = candidate.tags.filter((tag) => rule.prefer.includes(tag)).slice(0, 2).map(tagLabel)
-  const head = matched.length
-    ? matched.join('·') + ' 채널이다.'
-    : rule.label + '에서 뺄 이유가 없는 채널이다.'
-  const tail = candidate.scope === 'global'
-    ? ' ' + rule.note + '. 국내 후보가 적어 다른 나라까지 넓혔다.'
-    : ' ' + rule.note + '.'
-  return head + tail
+export function ruleReason(candidate: Candidate, situation: Situation, lang: Lang): string {
+  const matched = candidate.tags.filter((tag) => SITUATIONS[situation].prefer.includes(tag)).slice(0, 2)
+  return ruleReasonText(lang, situation, matched, candidate.scope === 'global')
 }
 
 /** 앱이 받는 한 건. 세트에 저장하는 모양과 즉석 응답이 같다. */

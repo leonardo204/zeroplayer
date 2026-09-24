@@ -5,6 +5,7 @@ import { fallbackArtwork } from '../lib/logos'
 import { collectCandidates, ruleReason, toItem, type RecommendItem } from '../lib/candidates'
 import { daypartOf, isSituation, readLocalTime, SITUATIONS } from '../lib/situations'
 import { GLOBAL_COUNTRY, loadSet, recommendCountries } from '../lib/recommendSets'
+import { readLang, timerEpisodeReason, type Lang } from '../lib/i18n'
 
 /**
  * GET /zp/v1/recommend
@@ -23,6 +24,7 @@ async function timerEpisodes(
   country: string | null,
   secureOnly: boolean,
   max: number,
+  lang: Lang,
 ): Promise<unknown[]> {
   if (minutes <= 0 || max <= 0) return []
   try {
@@ -33,8 +35,8 @@ async function timerEpisodes(
         kind: 'episode' as const,
         id: row.id,
         title: row.title,
-        subtitle: row.podcast_title + ' · ' + runtime + '분',
-        reason: '자동 종료 ' + minutes + '분에 맞는 ' + runtime + '분 에피소드다.',
+        subtitle: row.podcast_title + ' · ' + (lang === 'en' ? runtime + ' min' : runtime + '분'),
+        reason: timerEpisodeReason(lang, minutes, runtime),
         artworkURL: row.artwork ?? row.podcast_artwork,
         tags: [] as string[],
         moods: [] as string[],
@@ -68,6 +70,8 @@ export async function getRecommendations(env: Env, url: URL): Promise<Response> 
   const limit = clampLimit(url.searchParams.get('limit'), 20, 50)
   const country = url.searchParams.get('country')?.toUpperCase().trim() || null
   const secureOnly = url.searchParams.get('secure') === '1'
+  // 앱이 기기 언어를 보낸다. 없으면 한국어다.
+  const lang = readLang(url.searchParams.get('lang'))
   const timerMinutes = Number.parseInt(url.searchParams.get('timer') ?? '0', 10) || 0
   const { hour, isWeekend, at } = readLocalTime(url.searchParams.get('at'))
   const daypart = daypartOf(hour)
@@ -78,15 +82,16 @@ export async function getRecommendations(env: Env, url: URL): Promise<Response> 
     daypart,
     dayType,
     country,
+    lang,
     generatedAt: at.toISOString(),
   }
 
   // 세트는 HTTPS 스트림만 담는다. 평문 HTTP 까지 달라는 요청이면 규칙으로 직접 뽑는다.
   const setCountry = country && recommendCountries(env).includes(country) ? country : GLOBAL_COUNTRY
   if (secureOnly || country === null) {
-    const stored = await loadSet(env, situation, dayType, daypart, setCountry)
+    const stored = await loadSet(env, situation, dayType, daypart, setCountry, lang)
     if (stored) {
-      const episodes = await timerEpisodes(env, timerMinutes, country, secureOnly, 3)
+      const episodes = await timerEpisodes(env, timerMinutes, country, secureOnly, 3, lang)
       return json({
         ...head,
         source: stored.model && stored.model !== 'rule' ? 'llm' : 'rule',
@@ -101,7 +106,7 @@ export async function getRecommendations(env: Env, url: URL): Promise<Response> 
   }
 
   const candidates = await collectCandidates(env, { rule, daypart, country, limit, secureOnly })
-  const episodes = await timerEpisodes(env, timerMinutes, country, secureOnly, 3)
+  const episodes = await timerEpisodes(env, timerMinutes, country, secureOnly, 3, lang)
   return json({
     ...head,
     source: 'rule',
@@ -109,7 +114,7 @@ export async function getRecommendations(env: Env, url: URL): Promise<Response> 
     builtAt: null,
     items: [
       ...episodes,
-      ...candidates.map((candidate) => toItem(candidate, ruleReason(candidate, rule))),
+      ...candidates.map((candidate) => toItem(candidate, ruleReason(candidate, situation, lang))),
     ].slice(0, limit),
   }, { headers: { 'cache-control': 'public, max-age=300' } })
 }

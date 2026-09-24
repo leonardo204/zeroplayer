@@ -97,7 +97,7 @@ struct PlayerView: View {
         let total = Int(player.elapsed)
         let minutes = total / 60
         let seconds = total % 60
-        return String(format: "%d:%02d 재생 중", minutes, seconds)
+        return String(format: String(localized: "%d:%02d 재생 중"), minutes, seconds)
     }
 
     private var progressBar: some View {
@@ -241,7 +241,7 @@ struct PlayerView: View {
     }
 
     private func rateText(_ rate: Double) -> String {
-        rate == 1.0 ? "1배" : String(format: "%.1f배", rate)
+        rate == 1.0 ? String(localized: "1배") : String(format: String(localized: "%.1f배"), rate)
     }
 
     // MARK: - 즐겨찾기

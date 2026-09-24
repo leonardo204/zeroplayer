@@ -31,7 +31,7 @@ npx wrangler d1 migrations apply zeroplayer --remote
 
 ```
 GET  /zp/v1/health
-GET  /zp/v1/recommend?situation=sleep&at=2026-09-24T23:10:00&country=KR&secure=1&limit=20
+GET  /zp/v1/recommend?situation=sleep&at=2026-09-24T23:10:00&country=KR&secure=1&limit=20&lang=ko
 GET  /zp/v1/stations?country=KR&tag=jazz&lang=ko&q=&sort=popular&secure=1&limit=50&cursor=
 GET  /zp/v1/stations/facets
 GET  /zp/v1/stations/{id}
@@ -43,7 +43,7 @@ GET  /zp/v1/hidden/channels/{id}/now
 POST /zp/v1/hidden/unlock                   → { "token": "hid_…", "alreadyUnlocked": false }
 POST /zp/v1/hidden/lock
 
-POST   /zp/v1/push/token   { "token": "<APNs 기기 토큰>", "env": "sandbox" | "prod" }
+POST   /zp/v1/push/token   { "token": "<APNs 기기 토큰>", "env": "sandbox" | "prod", "lang": "ko" | "en" }
 DELETE /zp/v1/push/token
 GET    /zp/v1/alarms
 POST   /zp/v1/alarms       { hour, minute, weekdays[], timezone, label, source:{kind,id,title,situation} }
@@ -174,3 +174,17 @@ HTTPS 로 올려 보낸다 — 앱의 `AsyncImage` 가 ATS 에 막히기 때문�
 
 로고 주소가 끊기면 `BROADCASTER_LOGOS` 표만 고친다. 방송사를 가려내는 규칙은 같은 파일의
 `NAME_RULES` 다. 지상파 채널 로고는 `hidden_channels.logo_url` 에 있다.
+
+## 다국어
+
+서버가 만드는 문구는 `src/lib/i18n.ts` 한 곳에 모여 있다 — 태그 이름, 상황 이름과 규칙 설명,
+시간대 이름, 알람 알림 본문이다. 지금은 한국어와 영어 둘이고, `lang` 이 없거나 모르는 값이면
+한국어다.
+
+방송국 이름과 한국 지상파 편성표는 **옮기지 않는다.** 고유명사라 바꾸면 스토어·검색에서
+쓰는 이름과 갈라진다.
+
+추천 세트 id 에 언어가 들어간다 — `상황|평일주말|시간대|나라|언어`. 그래서 조합이 240개이고,
+매일 새벽 배치가 24개씩 채운다. 세트가 없는 조합은 규칙으로 즉석에서 만들어 준다.
+
+알람 알림은 `devices.lang` 을 본다. 앱이 `POST /push/token` 에 실어 보내는 값이다.

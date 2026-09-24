@@ -75,7 +75,7 @@ struct MiniPlayerView: View {
     private func secondLine(for item: PlayableItem) -> String {
         switch player.state {
         case .loading:
-            return "연결 중…"
+            return String(localized: "연결 중…")
         case .failed(let reason):
             return reason.message
         case .playing, .paused, .idle:

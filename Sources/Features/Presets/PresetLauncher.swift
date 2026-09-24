@@ -16,10 +16,10 @@ struct PresetLauncher {
 
         var errorDescription: String? {
             switch self {
-            case .noSource: "이 프리셋에 방송국이 지정돼 있지 않습니다."
-            case .emptyRecommendation: "지금 조건에 맞는 방송을 찾지 못했습니다."
-            case .allCandidatesFailed: "고른 방송이 모두 응답하지 않습니다."
-            case .playbackFailed: "이 방송이 응답하지 않습니다."
+            case .noSource: String(localized: "이 프리셋에 방송국이 지정돼 있지 않습니다.")
+            case .emptyRecommendation: String(localized: "지금 조건에 맞는 방송을 찾지 못했습니다.")
+            case .allCandidatesFailed: String(localized: "고른 방송이 모두 응답하지 않습니다.")
+            case .playbackFailed: String(localized: "이 방송이 응답하지 않습니다.")
             case .proxy(let error): error.errorDescription
             }
         }

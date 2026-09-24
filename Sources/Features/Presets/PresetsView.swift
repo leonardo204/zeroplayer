@@ -121,7 +121,7 @@ struct PresetsView: View {
             let item = try await launcher.start(preset)
             startedTitle = "\(preset.name) · \(item.title)"
         } catch {
-            errorText = (error as? LocalizedError)?.errorDescription ?? "재생하지 못했습니다."
+            errorText = (error as? LocalizedError)?.errorDescription ?? String(localized: "재생하지 못했습니다.")
         }
     }
 

@@ -88,7 +88,7 @@ struct AlarmPushInfo: Sendable {
                 id: id,
                 kind: (zp["kind"] as? String) == "episode" ? .podcast : .station,
                 title: title,
-                subtitle: "알람"
+                subtitle: String(localized: "알람")
             )
         } else {
             self.item = nil

@@ -39,26 +39,26 @@ struct SettingsView: View {
     }
 
     private func percent(_ value: Double) -> String {
-        quality.total == 0 ? "기록 없음" : "\(Int((value * 100).rounded()))%"
+        quality.total == 0 ? String(localized: "기록 없음") : "\(Int((value * 100).rounded()))%"
     }
 
     private var alarmSummary: String {
         let on = alarms.filter(\.isEnabled)
-        if on.isEmpty { return alarms.isEmpty ? "없음" : "전부 꺼짐" }
-        guard let next = on.min(by: { ($0.hour, $0.minute) < ($1.hour, $1.minute) }) else { return "없음" }
-        return on.count == 1 ? next.timeText : "\(next.timeText) 외 \(on.count - 1)개"
+        if on.isEmpty { return alarms.isEmpty ? String(localized: "없음") : String(localized: "전부 꺼짐") }
+        guard let next = on.min(by: { ($0.hour, $0.minute) < ($1.hour, $1.minute) }) else { return String(localized: "없음") }
+        return on.count == 1 ? next.timeText : String(localized: "\(next.timeText) 외 \(on.count - 1)개")
     }
 
     private var pushNote: String {
         switch push.permission {
         case .granted:
             return push.hasToken
-                ? "알림이 켜져 있습니다. 알람은 서버에서 보내고, 서버에 닿지 못하면 기기에 걸어 둔 백업 알림이 울립니다."
-                : "알림은 켜져 있지만 아직 기기가 APNs 에 등록되지 않았습니다. 시뮬레이터에서는 등록돼도 푸시가 도착하지 않습니다."
+                ? String(localized: "알림이 켜져 있습니다. 알람은 서버에서 보내고, 서버에 닿지 못하면 기기에 걸어 둔 백업 알림이 울립니다.")
+                : String(localized: "알림은 켜져 있지만 아직 기기가 APNs 에 등록되지 않았습니다. 시뮬레이터에서는 등록돼도 푸시가 도착하지 않습니다.")
         case .denied:
-            return "알림이 꺼져 있어 알람이 울리지 않습니다. 설정 앱에서 켜 주세요."
+            return String(localized: "알림이 꺼져 있어 알람이 울리지 않습니다. 설정 앱에서 켜 주세요.")
         case .notAsked:
-            return "알람을 처음 만들 때 알림 권한을 묻습니다."
+            return String(localized: "알람을 처음 만들 때 알림 권한을 묻습니다.")
         }
     }
 
@@ -146,8 +146,8 @@ struct SettingsView: View {
                         }
                     }
                 } footer: {
-                    Text("재생 화면과 알람이 울려 열린 화면에는 광고를 붙이지 않습니다. "
-                         + "청취 기록은 기기에만 있고 광고에 쓰이지 않습니다.")
+                    Text(String(localized: "재생 화면과 알람이 울려 열린 화면에는 광고를 붙이지 않습니다. ")
+                         + String(localized: "청취 기록은 기기에만 있고 광고에 쓰이지 않습니다."))
                 }
 
                 if hidden.isUnlocked {
@@ -209,12 +209,12 @@ struct SettingsView: View {
     /// 설정 화면의 광고 한 줄. 무엇이 막고 있는지 그대로 보여 준다.
     private var adStateText: String {
         var parts: [String] = []
-        parts.append(adConsent.canShowAds ? "표시" : "표시 안 함")
-        if AdUnits.isUsingTestUnits { parts.append("테스트 단위") }
+        parts.append(adConsent.canShowAds ? String(localized: "표시") : String(localized: "표시 안 함"))
+        if AdUnits.isUsingTestUnits { parts.append(String(localized: "테스트 단위")) }
         switch adConsent.trackingStatus {
-        case .authorized: parts.append("추적 허용")
-        case .denied, .restricted: parts.append("추적 거부")
-        case .notDetermined: parts.append("추적 미응답")
+        case .authorized: parts.append(String(localized: "추적 허용"))
+        case .denied, .restricted: parts.append(String(localized: "추적 거부"))
+        case .notDetermined: parts.append(String(localized: "추적 미응답"))
         @unknown default: break
         }
         return parts.joined(separator: " · ")
@@ -240,7 +240,7 @@ struct SettingsView: View {
             let result = try await ProxyClient().unlockHidden()
             hidden.store(token: result.token)
         } catch {
-            unlockError = (error as? ProxyError)?.errorDescription ?? "지금은 열 수 없습니다."
+            unlockError = (error as? ProxyError)?.errorDescription ?? String(localized: "지금은 열 수 없습니다.")
         }
     }
 

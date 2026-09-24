@@ -98,24 +98,24 @@ struct RootView: View {
         adConsent.enterAlarmQuietPeriod()
 
         let origin = PlaybackOrigin(
-            presetName: "알람",
+            presetName: String(localized: "알람"),
             fromRecommendation: info.item == nil,
             situation: info.situation
         )
 
         if let item = info.item {
-            alarmBanner = "알람 · \(item.title)"
+            alarmBanner = String(localized: "알람 · \(item.title)")
             await player.play(item, origin: origin)
         } else if let situation = info.situation {
             // 로컬 백업 알림이다. 무엇을 틀지 기기가 지금 고른다.
-            alarmBanner = "알람 · 틀 방송을 고르는 중입니다"
+            alarmBanner = String(localized: "알람 · 틀 방송을 고르는 중입니다")
             let launcher = PresetLauncher(player: player, fallback: {
                 FavoriteStore(context: modelContext).all().map(\.playable)
             })
-            if let played = try? await launcher.startSituation(situation, presetName: "알람") {
-                alarmBanner = "알람 · \(played.title)"
+            if let played = try? await launcher.startSituation(situation, presetName: String(localized: "알람")) {
+                alarmBanner = String(localized: "알람 · \(played.title)")
             } else {
-                alarmBanner = "알람 · 틀 방송을 찾지 못했습니다"
+                alarmBanner = String(localized: "알람 · 틀 방송을 찾지 못했습니다")
             }
         }
 

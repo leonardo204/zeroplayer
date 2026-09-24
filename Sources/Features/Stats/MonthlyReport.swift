@@ -25,8 +25,8 @@ struct MonthlyReport: Equatable {
     var totalText: String {
         let hours = Int(totalSeconds) / 3600
         let minutes = (Int(totalSeconds) % 3600) / 60
-        if hours > 0 { return "\(hours)시간 \(minutes)분" }
-        return "\(minutes)분"
+        if hours > 0 { return String(localized: "\(hours)시간 \(minutes)분") }
+        return String(localized: "\(minutes)분")
     }
 
     static func make(from sessions: [ListeningSession], month: Date) -> MonthlyReport {
@@ -72,13 +72,14 @@ struct MonthlyReport: Equatable {
 
     /// "9월에 152시간. 가장 많이 들은 것은 Jazz24. 취침 프리셋을 24일 썼다." 형태의 한 줄.
     func summaryLine(calendar: Calendar = .current) -> String {
-        guard !isEmpty else { return "이 달에는 기록이 없습니다." }
-        var parts = ["\(calendar.component(.month, from: month))월에 \(totalText)를 들었습니다."]
+        guard !isEmpty else { return String(localized: "이 달에는 기록이 없습니다.") }
+        let monthName = month.formatted(.dateTime.month(.wide))
+        var parts = [String(localized: "\(monthName)에 \(totalText)를 들었습니다.")]
         if let top = items.first {
-            parts.append("가장 많이 들은 것은 \(top.title) 입니다.")
+            parts.append(String(localized: "가장 많이 들은 것은 \(top.title) 입니다."))
         }
         if let preset = presets.first {
-            parts.append("\(preset.title) 프리셋을 \(preset.count)번 썼습니다.")
+            parts.append(String(localized: "\(preset.title) 프리셋을 \(preset.count)번 썼습니다."))
         }
         return parts.joined(separator: " ")
     }

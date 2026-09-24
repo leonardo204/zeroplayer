@@ -31,6 +31,6 @@ final class PlaybackPosition {
     var remainingText: String? {
         guard duration > seconds else { return nil }
         let minutes = Int((duration - seconds) / 60)
-        return minutes <= 0 ? "1분 미만 남음" : "\(minutes)분 남음"
+        return minutes <= 0 ? String(localized: "1분 미만 남음") : String(localized: "\(minutes)분 남음")
     }
 }

@@ -68,8 +68,8 @@ struct AlarmsView: View {
             Label("알림이 꺼져 있습니다", systemImage: "bell.slash")
                 .font(.subheadline.weight(.semibold))
             Text(push.permission == .denied
-                 ? "설정 앱에서 zeroPlayer 의 알림을 켜야 알람이 울립니다."
-                 : "알람이 울리려면 알림을 허용해야 합니다.")
+                 ? String(localized: "설정 앱에서 zeroPlayer 의 알림을 켜야 알람이 울립니다.")
+                 : String(localized: "알람이 울리려면 알림을 허용해야 합니다."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             if push.permission == .denied {

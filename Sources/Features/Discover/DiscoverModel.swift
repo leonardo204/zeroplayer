@@ -46,7 +46,7 @@ final class DiscoverModel {
         } catch {
             items = []
             nextCursor = nil
-            errorText = (error as? ProxyError)?.errorDescription ?? "목록을 가져오지 못했습니다."
+            errorText = (error as? ProxyError)?.errorDescription ?? String(localized: "목록을 가져오지 못했습니다.")
         }
     }
 

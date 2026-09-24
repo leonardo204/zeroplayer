@@ -37,7 +37,7 @@ final class AlarmSetting {
         sourceID: String? = nil,
         sourceTitle: String? = nil,
         situation: Situation? = .wake,
-        label: String = "알람",
+        label: String = String(localized: "알람"),
         isEnabled: Bool = true,
         createdAt: Date = .now
     ) {
@@ -64,9 +64,9 @@ enum AlarmSourceKind: String, Codable, CaseIterable, Sendable {
 
     var label: String {
         switch self {
-        case .station: return "방송국 지정"
-        case .episode: return "에피소드 지정"
-        case .auto: return "자동 선택"
+        case .station: return String(localized: "방송국 지정")
+        case .episode: return String(localized: "에피소드 지정")
+        case .auto: return String(localized: "자동 선택")
         }
     }
 }
@@ -96,18 +96,19 @@ extension AlarmSetting {
     /// '평일', '주말', '매일', 또는 '월·수·금'.
     var repeatText: String {
         let days = weekdays
-        if days.isEmpty { return "한 번만" }
-        if days == [2, 3, 4, 5, 6] { return "평일" }
-        if days == [1, 7] { return "주말" }
-        if days.count == 7 { return "매일" }
-        let names = ["", "일", "월", "화", "수", "목", "금", "토"]
+        if days.isEmpty { return String(localized: "한 번만") }
+        if days == [2, 3, 4, 5, 6] { return String(localized: "평일") }
+        if days == [1, 7] { return String(localized: "주말") }
+        if days.count == 7 { return String(localized: "매일") }
+        let names = ["", String(localized: "일"), String(localized: "월"), String(localized: "화"),
+                     String(localized: "수"), String(localized: "목"), String(localized: "금"), String(localized: "토")]
         return days.sorted().map { names[$0] }.joined(separator: "·")
     }
 
     var sourceText: String {
         switch sourceKind {
-        case .auto: return "자동 선택 · \(situation?.label ?? "기상")"
-        case .station, .episode: return sourceTitle ?? "고른 소스가 없습니다"
+        case .auto: return String(localized: "자동 선택 · \(situation?.label ?? Situation.wake.label)")
+        case .station, .episode: return sourceTitle ?? String(localized: "고른 소스가 없습니다")
         }
     }
 

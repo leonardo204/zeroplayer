@@ -20,9 +20,9 @@ final class PushRegistrar: NSObject {
 
         var text: String {
             switch self {
-            case .notAsked: return "아직 묻지 않았습니다"
-            case .granted: return "허용됨"
-            case .denied: return "꺼져 있습니다"
+            case .notAsked: return String(localized: "아직 묻지 않았습니다")
+            case .granted: return String(localized: "허용됨")
+            case .denied: return String(localized: "꺼져 있습니다")
             }
         }
     }
@@ -78,16 +78,16 @@ final class PushRegistrar: NSObject {
             return granted
         } catch {
             log.error("알림 권한을 묻지 못했다: \(String(describing: error), privacy: .private)")
-            lastError = "알림 권한을 묻지 못했습니다."
+            lastError = String(localized: "알림 권한을 묻지 못했습니다.")
             return false
         }
     }
 
     private func registerCategories() {
         let play = UNNotificationAction(
-            identifier: Self.playActionID, title: "재생", options: [.foreground])
+            identifier: Self.playActionID, title: String(localized: "재생"), options: [.foreground])
         let snooze = UNNotificationAction(
-            identifier: Self.snoozeActionID, title: "5분 뒤 다시", options: [])
+            identifier: Self.snoozeActionID, title: String(localized: "5분 뒤 다시"), options: [])
         let category = UNNotificationCategory(
             identifier: Self.categoryID,
             actions: [play, snooze],
@@ -117,7 +117,7 @@ final class PushRegistrar: NSObject {
             do {
                 try await client.registerPushToken(hex, sandbox: sandbox)
             } catch {
-                await MainActor.run { self.lastError = "토큰을 서버에 넘기지 못했습니다." }
+                await MainActor.run { self.lastError = String(localized: "토큰을 서버에 넘기지 못했습니다.") }
             }
         }
     }
@@ -125,7 +125,7 @@ final class PushRegistrar: NSObject {
     func didFailToRegister(_ error: Error) {
         hasToken = false
         log.error("APNs 등록 실패: \(String(describing: error), privacy: .public)")
-        lastError = "APNs 에 등록하지 못했습니다. 실기기에서 다시 확인하세요."
+        lastError = String(localized: "APNs 에 등록하지 못했습니다. 실기기에서 다시 확인하세요.")
     }
 
     /// 개발 빌드인지. APNs 는 개발·배포 환경이 갈려 있어 서버가 어디로 보낼지 알아야 한다.

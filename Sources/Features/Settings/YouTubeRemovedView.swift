@@ -38,14 +38,14 @@ struct YouTubeRemovedView: View {
                         .font(.headline)
 
                     VStack(alignment: .leading, spacing: 14) {
-                        point("sparkles", "상황에 맞는 추천",
-                              "취침·운전·공부·작업·기상 중 하나를 고르면 지금 시각에 맞는 방송을 골라 줍니다.")
-                        point("magnifyingglass", "전 세계 인터넷 라디오와 팟캐스트",
-                              "방송국 수천 곳과 팟캐스트를 찾아 들을 수 있습니다.")
-                        point("timer", "자동 종료 타이머",
-                              "정한 시간이 되면 소리가 서서히 줄며 꺼집니다.")
-                        point("alarm", "알람",
-                              "정한 시각에 알림이 오고, 누르면 그 방송이 바로 재생됩니다.")
+                        point("sparkles", String(localized: "상황에 맞는 추천"),
+                              String(localized: "취침·운전·공부·작업·기상 중 하나를 고르면 지금 시각에 맞는 방송을 골라 줍니다."))
+                        point("magnifyingglass", String(localized: "전 세계 인터넷 라디오와 팟캐스트"),
+                              String(localized: "방송국 수천 곳과 팟캐스트를 찾아 들을 수 있습니다."))
+                        point("timer", String(localized: "자동 종료 타이머"),
+                              String(localized: "정한 시간이 되면 소리가 서서히 줄며 꺼집니다."))
+                        point("alarm", String(localized: "알람"),
+                              String(localized: "정한 시각에 알림이 오고, 누르면 그 방송이 바로 재생됩니다."))
                     }
 
                     Text("전에 쓰시던 알람과 채널 목록은 그대로 옮겨 뒀습니다.")

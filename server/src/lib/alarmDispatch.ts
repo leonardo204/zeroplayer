@@ -1,4 +1,5 @@
 import type { Env } from '../types'
+import { ALARM_TEXT, readLang, type Lang } from './i18n'
 import { nowISO } from './http'
 import { nextFireISO } from './schedule'
 import { hasAPNsKeys, isDeadToken, sendPush, type PushEnv } from './apns'
@@ -29,6 +30,7 @@ interface DueRow {
   next_fire_at: string
   push_token: string | null
   push_env: string | null
+  lang: string | null
 }
 
 export interface DispatchResult {
@@ -46,7 +48,7 @@ interface Chosen {
   reason: string | null
 }
 
-async function resolveSource(env: Env, row: DueRow, at: Date): Promise<Chosen | null> {
+async function resolveSource(env: Env, row: DueRow, at: Date, lang: Lang): Promise<Chosen | null> {
   if (row.source_kind !== 'auto') {
     if (!row.source_id) return null
     if (row.source_title) {
@@ -63,7 +65,7 @@ async function resolveSource(env: Env, row: DueRow, at: Date): Promise<Chosen | 
     return {
       kind: row.source_kind === 'episode' ? 'episode' : 'station',
       id: row.source_id,
-      title: found?.name ?? '저장해 둔 방송',
+      title: found?.name ?? ALARM_TEXT[lang].savedStation,
       reason: null,
     }
   }
@@ -83,7 +85,7 @@ async function resolveSource(env: Env, row: DueRow, at: Date): Promise<Chosen | 
   const weekday = new Date(at).getUTCDay()
   const dayType = [0, 6].includes(weekday) ? 'weekend' : 'weekday'
 
-  const stored = await loadSet(env, situation, dayType, daypart, GLOBAL_COUNTRY)
+  const stored = await loadSet(env, situation, dayType, daypart, GLOBAL_COUNTRY, lang)
   const first = stored?.items?.[0] as { id?: string; title?: string; reason?: string } | undefined
   if (first?.id && first.title) {
     return { kind: 'station', id: first.id, title: first.title, reason: first.reason ?? null }
@@ -97,12 +99,12 @@ async function resolveSource(env: Env, row: DueRow, at: Date): Promise<Chosen | 
   return { kind: 'station', id: pick.id, title: pick.name, reason: null }
 }
 
-function buildPayload(row: DueRow, chosen: Chosen): unknown {
-  const title = row.label?.trim() || '알람'
+function buildPayload(row: DueRow, chosen: Chosen, lang: Lang): unknown {
+  const title = row.label?.trim() || ALARM_TEXT[lang].title
   // 무엇을 틀지 한 줄로 적는다. 이유가 있으면 붙여 탭할 까닭을 만든다.
   const body = chosen.reason
     ? `${chosen.title} · ${chosen.reason}`
-    : `${chosen.title} 을(를) 재생할 준비가 됐습니다. 눌러서 시작하세요.`
+    : ALARM_TEXT[lang].body(chosen.title)
 
   return {
     aps: {
@@ -146,7 +148,7 @@ export async function dispatchDueAlarms(env: Env, limit = 50): Promise<DispatchR
   const { results } = await env.DB.prepare(`
     SELECT a.id, a.install_id, a.hour, a.minute, a.weekdays, a.timezone,
            a.source_kind, a.source_id, a.source_title, a.situation, a.label, a.next_fire_at,
-           d.push_token, d.push_env
+           d.push_token, d.push_env, d.lang
     FROM alarms a
     LEFT JOIN devices d ON d.install_id = a.install_id
     WHERE a.enabled = 1 AND a.next_fire_at IS NOT NULL AND a.next_fire_at <= ?
@@ -179,14 +181,15 @@ export async function dispatchDueAlarms(env: Env, limit = 50): Promise<DispatchR
     let detail = ''
     let ok = false
     try {
-      const chosen = await resolveSource(env, row, new Date(firedAt))
+      const lang = readLang(row.lang)
+      const chosen = await resolveSource(env, row, new Date(firedAt), lang)
       if (!chosen) {
         detail = '재생할 소스를 고르지 못했다'
       } else {
         const result = await sendPush(env, {
           deviceToken: row.push_token,
           pushEnv: (row.push_env === 'sandbox' ? 'sandbox' : 'prod') as PushEnv,
-          payload: buildPayload(row, chosen),
+          payload: buildPayload(row, chosen, lang),
           // 30분이 지나면 배달을 그만둔다. 알람은 지나면 뜻이 없다.
           expiration: Math.floor(firedAt / 1000) + 1800,
           collapseID: row.id,

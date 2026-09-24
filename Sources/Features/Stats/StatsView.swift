@@ -174,9 +174,9 @@ struct StatsView: View {
         let total = Int(seconds)
         let hours = total / 3600
         let minutes = (total % 3600) / 60
-        if hours > 0 { return "\(hours)시간 \(minutes)분" }
-        if minutes > 0 { return "\(minutes)분" }
-        return "\(total)초"
+        if hours > 0 { return String(localized: "\(hours)시간 \(minutes)분") }
+        if minutes > 0 { return String(localized: "\(minutes)분") }
+        return String(localized: "\(total)초")
     }
 
     private func percentText(_ ratio: Double) -> String {
