@@ -664,7 +664,7 @@ app version`(QA1623) 으로 떨어졌다. **애플은 업데이트에서 지원 
 **릴리스 바이너리에 디버그 통로는 없다.** `ZPStartTab`·`ZPAutoPlay`·`ZPFakeNowPlaying`
 ·`ZPSkipConsentForm` 등을 `strings` 로 찾아 0건을 확인했다. `#if DEBUG` 가 제대로 걸려 있다.
 
-## 6-16-3-1. 업로드 검증에서 막힌 것 두 가지
+## 6-16-3-1. 업로드·심사 검증에서 막힌 것 셋
 
 둘 다 아카이브는 되는데 App Store Connect 업로드 검증에서 떨어진다. Xcode 빌드로는
 알 수 없고, 실제로 올려 봐야 나온다.
@@ -694,6 +694,40 @@ app version`(QA1623) 으로 떨어졌다. **애플은 업데이트에서 지원 
 앨범 그림 240pt 와 44pt 단추뿐이라 아이패드 가로 높이(834~1032pt)에 넉넉히 들어간다.
 다만 **시뮬레이터를 헤드리스로 돌리면 회전을 못 시켜** 눈으로 확인하지 못했다.
 실기기 확인 목록에 넣어 뒀다.
+
+**개인정보 매니페스트의 추적 선언은 true 와 빈 배열을 함께 둘 수 없다.**
+
+이건 업로드는 통과하고 **제출한 뒤에** 메일로 온다. 버전 상태가 `INVALID_BINARY`
+로 바뀌고 다시 제출할 수 없다.
+
+> ITMS-91064: Invalid tracking information — NSPrivacyTracking must be true if
+> NSPrivacyTrackingDomains isn't empty.
+
+문구는 한쪽만 말하지만 검사는 양쪽이다. **`NSPrivacyTracking` 이 true 면
+`NSPrivacyTrackingDomains` 에 도메인이 하나 이상 있어야 한다.** 빈 배열은 무효다.
+
+`false` 로 바꾸고 도메인 키를 지웠다. 앱 코드 자체는 추적 도메인에 연결하지 않는다 —
+부르는 서버가 `ai.zerolive.co.kr` 하나뿐이고 거기 보내는 값(설치 UUID·APNs 토큰·
+재생 실패 신고)은 광고에 쓰지 않는다. AdMob 이 광고 식별자로 하는 일은
+`GoogleMobileAds.framework` 가 자기 매니페스트로 신고한다. 매니페스트는 바이너리마다
+자기 동작만 적는 것이다.
+
+**도메인을 채워 true 를 유지하는 길은 택하지 않았다.** 거기 적은 도메인은 추적 허가를
+거부한 사용자에게 iOS 가 연결을 끊는다. AdMob 도메인을 적으면 허가를 거부한 사용자에게
+광고가 아예 안 나간다. 구글이 앱 개발자에게 도메인을 적으라고 안내하지 않는 이유다.
+
+App Store Connect 의 '앱 개인정보' 설문과 헷갈리지 않는다. 그쪽은 SDK 가 가져가는
+것까지 합쳐 사람이 신고하는 자리라 추적 '예' 가 맞고, 매니페스트와 교차검증하지 않는다.
+
+**`altool --validate-app` 으로는 못 잡는다.** 거부된 빌드 1 도 검증은 통과했다.
+매니페스트는 눈으로 확인한다.
+
+```sh
+APP=<아카이브>/Products/Applications/zeroPlayer.app
+find "$APP" -name "*.xcprivacy" | while read -r p; do
+  echo "$p $(plutil -extract NSPrivacyTracking raw "$p" 2>/dev/null)"
+done
+```
 
 ## 6-16-4. 제출 자료 — 문구와 화면 캡처
 
