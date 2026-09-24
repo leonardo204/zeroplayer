@@ -12,6 +12,7 @@ struct SettingsView: View {
     @Query private var favorites: [Favorite]
     @Query private var sessions: [ListeningSession]
 
+    @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("zp.timer.defaultMinutes") private var defaultMinutes = 45
     @AppStorage("zp.timer.fadeSeconds") private var fadeSeconds = 30
 
@@ -80,6 +81,33 @@ struct SettingsView: View {
                     Text(pushNote)
                 }
 
+                Section {
+                    Picker("화면 밝기", selection: $themeRaw) {
+                        ForEach(AppTheme.allCases) { theme in
+                            Text(theme.label).tag(theme.rawValue)
+                        }
+                    }
+                    Button {
+                        AppLanguage.openSystemSettings()
+                    } label: {
+                        HStack {
+                            Text("언어")
+                            Spacer()
+                            Text(AppLanguage.label).foregroundStyle(.secondary)
+                            Image(systemName: "arrow.up.forward.square")
+                                .font(.footnote)
+                                .foregroundStyle(.tint)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("iOS 설정 앱의 언어 화면을 엽니다")
+                } header: {
+                    Text("화면")
+                } footer: {
+                    Text("언어는 iOS 설정 앱에서 바꿉니다. 누르면 그 화면이 열리고, 고르면 앱이 다시 열리며 바뀝니다.")
+                }
+
                 Section("자동 종료 기본값") {
                     Picker("타이머", selection: $defaultMinutes) {
                         ForEach([15, 30, 45, 60, 90], id: \.self) { minutes in
@@ -94,7 +122,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    LabeledContent("기기 안 모델") {
+                    LabeledContent("Apple Intelligence") {
                         Text(reasoner.availability.isReady ? "사용 중" : "쓰지 않음")
                             .foregroundStyle(.secondary)
                     }

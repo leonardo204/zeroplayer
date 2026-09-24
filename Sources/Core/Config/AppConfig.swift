@@ -23,9 +23,6 @@ enum AppConfig {
     /// 서버가 만드는 문구를 어느 말로 받을지. 추천 이유와 알람 알림 본문에 쓴다.
     ///
     /// 앱 화면 문구는 문자열 카탈로그가 맡고, 이 값은 **서버에 보내는 것**이다.
-    /// 지금은 한국어와 영어 둘뿐이라 한국어가 아니면 영어로 본다.
-    /// 방송국 이름과 한국 지상파 편성표는 고유명사라 서버가 원문을 그대로 준다.
-    static var serverLanguage: String {
-        Locale.preferredLanguages.first.map { $0.hasPrefix("ko") ? "ko" : "en" } ?? "ko"
-    }
+    /// 기기 설정이 아니라 앱이 실제로 고른 번들을 따라가야 화면과 어긋나지 않는다.
+    static var serverLanguage: String { AppLanguage.serverLanguage }
 }

@@ -38,6 +38,7 @@ final class PodcastModel {
         } catch {
             items = []
             source = nil
+            guard !isCancellation(error) else { return }
             errorText = (error as? ProxyError)?.errorDescription ?? String(localized: "팟캐스트를 가져오지 못했습니다.")
         }
     }
@@ -71,6 +72,7 @@ final class EpisodeListModel {
             episodes = page.items
             nextCursor = page.nextCursor
         } catch {
+            guard !isCancellation(error) else { return }
             errorText = (error as? ProxyError)?.errorDescription ?? String(localized: "에피소드를 가져오지 못했습니다.")
         }
     }

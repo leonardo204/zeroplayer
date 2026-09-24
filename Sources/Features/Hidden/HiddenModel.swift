@@ -33,6 +33,7 @@ final class HiddenModel {
             log.info("채널 \(list.items.count)개")
         } catch {
             channels = []
+            guard !isCancellation(error) else { return }
             errorText = (error as? ProxyError)?.errorDescription ?? String(localized: "채널 목록을 가져오지 못했습니다.")
             return
         }

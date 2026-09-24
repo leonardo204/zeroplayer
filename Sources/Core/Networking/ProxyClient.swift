@@ -59,14 +59,31 @@ enum ProxyError: Error, LocalizedError {
     case offline
     case badStatus(Int)
     case decoding
+    /// 화면을 옮기거나 다시 찾으면서 앞선 요청을 우리가 취소했다.
+    /// 실패가 아니라서 사용자에게 알리지 않고 캐시로 내려가지도 않는다.
+    case cancelled
 
     var errorDescription: String? {
         switch self {
         case .offline: String(localized: "네트워크에 닿지 못했습니다.")
         case .badStatus(let code): String(localized: "서버가 \(code) 로 답했습니다.")
         case .decoding: String(localized: "서버 응답을 읽지 못했습니다.")
+        case .cancelled: nil
         }
     }
+
+    var isCancelled: Bool {
+        if case .cancelled = self { return true }
+        return false
+    }
+}
+
+/// 우리가 취소한 요청인지 가린다. `URLSession` 은 `URLError.cancelled` 로,
+/// 구조적 동시성은 `CancellationError` 로 알려 준다.
+func isCancellation(_ error: Error) -> Bool {
+    if error is CancellationError { return true }
+    if let urlError = error as? URLError { return urlError.code == .cancelled }
+    return (error as? ProxyError)?.isCancelled ?? false
 }
 
 struct ProxyClient: ProxyClienting {
@@ -230,7 +247,7 @@ struct ProxyClient: ProxyClienting {
         } catch let error as ProxyError {
             throw error
         } catch {
-            throw ProxyError.offline
+            throw isCancellation(error) ? ProxyError.cancelled : ProxyError.offline
         }
     }
 
@@ -254,7 +271,7 @@ struct ProxyClient: ProxyClienting {
         } catch let error as ProxyError {
             throw error
         } catch {
-            throw ProxyError.offline
+            throw isCancellation(error) ? ProxyError.cancelled : ProxyError.offline
         }
     }
 
@@ -274,7 +291,7 @@ struct ProxyClient: ProxyClienting {
         } catch let error as ProxyError {
             throw error
         } catch {
-            throw ProxyError.offline
+            throw isCancellation(error) ? ProxyError.cancelled : ProxyError.offline
         }
     }
 

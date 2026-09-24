@@ -28,6 +28,9 @@ final class StationStore {
             }
             return Page(items: page.items, nextCursor: page.nextCursor, fromCache: false)
         } catch {
+            // 우리가 취소한 요청은 실패가 아니다. 캐시를 꺼내면 새 조건으로 다시 부른
+            // 목록 위에 옛 목록이 덮어씌워진다.
+            guard !isCancellation(error) else { throw error }
             guard query.isCacheable, query.cursor == nil else { throw error }
             let cached = cached(cacheKey: query.cacheKey)
             guard !cached.isEmpty else { throw error }

@@ -13,6 +13,8 @@ struct RootView: View {
     @State private var selection: Tab = RootView.initialTab
     /// 알람으로 열렸을 때 화면에 띄우는 문구. 무엇을 트는지 알려 준다.
     @State private var alarmBanner: String?
+    /// 밝게 볼지 어둡게 볼지. 설정에서 바꾸면 그 자리에서 화면이 바뀐다.
+    @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.system.rawValue
 
     /// 시뮬레이터에서 특정 탭을 바로 열어 확인하려고 둔 통로다.
     /// `-ZPStartTab discover` 로 켠다. 릴리스 빌드에서는 항상 추천 탭이다.
@@ -66,6 +68,7 @@ struct RootView: View {
                 .tabItem { Label("설정", systemImage: "gearshape") }
                 .tag(Tab.settings)
         }
+        .preferredColorScheme(AppTheme(rawValue: themeRaw)?.colorScheme)
         .sheet(isPresented: $isPlayerPresented) {
             PlayerView()
         }

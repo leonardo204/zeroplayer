@@ -46,6 +46,7 @@ final class DiscoverModel {
         } catch {
             items = []
             nextCursor = nil
+            guard !isCancellation(error) else { return }
             errorText = (error as? ProxyError)?.errorDescription ?? String(localized: "목록을 가져오지 못했습니다.")
         }
     }
