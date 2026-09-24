@@ -4,15 +4,18 @@
 웹 화면이 '업로드가 진행 중' 에서 안 풀릴 때 쓴다. 화면에 안 보이는 자산도
 API 로는 보이고 지울 수 있다.
 
-    export ASC_KEY_ID=P3F7A7RBL5
+    export ASC_KEY_ID=725K7F28QD
     export ASC_ISSUER_ID=<App Store Connect → 사용자 및 액세스 → 통합 에 있는 UUID>
-    export ASC_KEY_PATH=~/Downloads/AuthKey_P3F7A7RBL5.p8
+    export ASC_KEY_PATH=~/Downloads/AuthKey_725K7F28QD.p8
 
     python3 tools/asc-screenshots.py list          # 상태만 본다
     python3 tools/asc-screenshots.py clean         # COMPLETE 아닌 것을 지운다
     python3 tools/asc-screenshots.py clean --all   # 전부 지운다
 
 JWT 서명은 openssl 로 한다 — 이 맥에 cryptography·pyjwt 가 없다.
+
+키는 `AuthKey_725K7F28QD.p8` 이다. 맥의 Downloads 에 .p8 이 네 개 있는데
+나머지 셋은 APNs 키라 이 API 에는 401 이 온다.
 """
 import base64, json, os, subprocess, sys, time, urllib.request, urllib.error
 

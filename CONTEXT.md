@@ -759,20 +759,55 @@ grep -rn --include='*.swift' -E 'Text\(|Label\(' Sources | grep -E '\?\?' | grep
 마침표로 끝낸다"와 "For sleep 같은 조각으로 답하지 않는다"를 적었다.
 옛 문구로 만들어 둔 영어 세트 120개는 지우고 다시 만들었다.
 
+## 6-16-7. 스크린샷은 웹이 아니라 API 로 올린다
+
+App Store Connect 웹 화면이 **'스크린샷 업로드가 진행 중'** 에서 풀리지 않았다. 지우고
+다시 올리기, 강제 새로고침, 로그아웃, 사파리·크롬 바꾸기, 알파 채널 제거, PNG→JPG,
+크기 바꾸기를 다 해도 같았다. 몇 시간을 여기서 썼다.
+
+**API 로 보니 걸린 자산은 한 건도 없었다.** 올라간 것은 전부 `COMPLETE` 였고 필수 칸도
+다 채워져 있었다. 즉 서버 데이터는 처음부터 멀쩡했고 **웹 화면 표시만 잘못돼 있었다.**
+그래서 브라우저를 버리고 API 로 올렸다 — 열여섯 장이 몇 초에 끝났다.
+
+```sh
+export ASC_KEY_ID=725K7F28QD
+export ASC_ISSUER_ID=<사용자 및 액세스 → 통합 의 UUID>
+export ASC_KEY_PATH=~/Downloads/AuthKey_725K7F28QD.p8
+
+python3 tools/asc-screenshots.py list                       # 무엇이 올라가 있나
+python3 tools/asc-screenshots.py clean                      # 걸린 것만 지운다
+python3 tools/asc-upload-screenshots.py 2.0 ko APP_IPHONE_67 Screenshots/jpg-ko
+python3 tools/asc-upload-screenshots.py 2.0 ko APP_IPAD_PRO_3GEN_129 Screenshots/jpg-ipad-ko
+```
+
+**키를 헷갈리지 않는다.** Downloads 의 `.p8` 네 개 중 App Store Connect API 키는
+`AuthKey_725K7F28QD.p8` 뿐이다. `P3F7A7RBL5` 를 비롯한 나머지 셋은 APNs 키라 401
+(`NOT_AUTHORIZED`)이 온다. JWT 구조가 맞는데 401 이면 먼저 키를 의심한다.
+
+**디스플레이 타입은 두 개만 채우면 된다.** 아이폰 `APP_IPHONE_67`(1320×2868)과
+아이패드 `APP_IPAD_PRO_3GEN_129`(2064×2752)다. 아래 크기(6.5·6.3인치 등)는 App Store
+Connect 가 위에서 받아 쓴다 — 웹 화면에 흐릿하게 보이는 것이 그것이고 업로드 중이 아니다.
+
+**올리는 순서는 파일 이름 순서다.** 이름 앞에 번호를 붙여 둔 이유가 이것이다.
+
 ## 6-17. 다음 할 일 — 출시
 
 `docs/08-release.md` 를 따른다. 코드는 다 들어갔고 남은 것은 콘솔 작업과 실기기 확인이다.
 
 **콘솔에서 할 일**
 
-- [ ] App Store Connect 2.0 버전 정보에 마케팅 URL·지원 URL·개인정보처리방침 URL 을 넣는다
-      (값은 `docs/09-appstore-submit.md` 1번)
+- [x] App Store Connect 2.0 에 URL 세 개·설명·키워드·프로모션·릴리스 노트를 넣었다
+      (API 로 확인했다. 개인정보처리방침 URL 은 버전이 아니라 앱 단위 칸이다)
 - [x] AdMob 앱 ID 와 배너 광고 단위 4개를 `Configs/Release.xcconfig` 에 넣었다.
       아카이브까지 확인했다 — 테스트 ID 가 남아 있으면 아카이브가 멈춘다
 - [ ] AdMob 동의 메시지를 한국어로 만든다
 - [ ] 내 기기를 AdMob 테스트 기기로 등록한다 (실제 ID 로 내 광고를 누르면 무효 트래픽이다)
 - [ ] 스토어에 2.0 이 반영된 뒤 AdMob 앱 인증을 다시 누른다 (인증은 제출을 막지 않는다)
 - [x] 스크린샷 네 벌을 찍어 뒀다 — 아이폰 `Screenshots/ko`·`en`, 아이패드 `ipad-ko`·`ipad-en`
+- [x] 한국어 스크린샷 16장을 2.0 에 올렸다 (아이폰 8 + 아이패드 8, 전부 `COMPLETE`).
+      웹이 막혀 API 로 올렸다 — 6-16-7 참고
+- [ ] 영어 현지화를 더할지 정한다. 지금 스토어 현지화는 한국어 하나뿐이고,
+      영어를 더하면 설명·키워드와 함께 `jpg-en`·`jpg-ipad-en` 도 올려야 한다
 - [x] 한국어·영어 설명·키워드·프로모션 텍스트·릴리스 노트를 써 뒀다 (`docs/09-appstore-submit.md`)
 - [x] 심사 메모를 써 뒀다 (`docs/09-appstore-submit.md` 7번). 지침 2.3.1 때문에 반드시 넣는다
 - [ ] 알람 커스텀 사운드(30초 `.caf`)를 넣는다. 지금은 시스템 기본음이다

@@ -108,3 +108,31 @@ App Store Connect 가 자산 하나를 물고 있으면 화면 어디에도 표�
 크기 칸은 **가장 큰 것 하나만** 채운다. iPhone 은 6.9(1320×2868), iPad 는 13"(2064×2752).
 아래 크기는 "6.9 디스플레이 사용" 으로 자동 상속된다 — 그 칸은 흐리게 보이고 '모두 삭제' 가
 꺼져 있다. 업로드 중이 아니라 상속된 것이니 건드리지 않는다.
+
+## 웹 화면이 '업로드가 진행 중' 에서 안 풀릴 때
+
+브라우저를 거치지 말고 API 로 올린다. 실제로 이 길로 풀었다 — 웹에서 몇 시간을 헤맨
+자리였는데, API 로는 열여섯 장이 몇 초에 끝났다.
+
+```sh
+export ASC_KEY_ID=725K7F28QD
+export ASC_ISSUER_ID=<사용자 및 액세스 → 통합 의 UUID>
+export ASC_KEY_PATH=~/Downloads/AuthKey_725K7F28QD.p8
+
+python3 tools/asc-screenshots.py list                       # 지금 무엇이 올라가 있나
+python3 tools/asc-upload-screenshots.py 2.0 ko APP_IPHONE_67 Screenshots/jpg-ko
+python3 tools/asc-upload-screenshots.py 2.0 ko APP_IPAD_PRO_3GEN_129 Screenshots/jpg-ipad-ko
+```
+
+`COMPLETE` 가 되면 끝난 것이다. `UPLOAD_COMPLETE` 는 파일은 다 보냈고 애플이
+아직 처리 중인 상태로, 몇 초 뒤 `COMPLETE` 로 바뀐다.
+
+| 디스플레이 타입 | 크기 | 폴더 |
+| --- | --- | --- |
+| `APP_IPHONE_67` | 1320×2868 | `jpg-ko` · `jpg-en` |
+| `APP_IPAD_PRO_3GEN_129` | 2064×2752 | `jpg-ipad-ko` · `jpg-ipad-en` |
+
+**키를 헷갈리지 않는다.** Downloads 의 `.p8` 네 개 중 App Store Connect API 키는
+`AuthKey_725K7F28QD.p8` 하나다. 나머지 셋은 APNs 키라 401 이 온다.
+
+**JPG 를 쓴다.** PNG 도 규격에는 맞지만 웹 업로드가 여기서 막혔다. JPG 는 용량도 절반이다.
