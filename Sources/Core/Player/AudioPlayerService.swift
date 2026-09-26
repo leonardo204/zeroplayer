@@ -77,6 +77,12 @@ final class AudioPlayerService: AudioPlaying {
     @ObservationIgnored private var liveAccumulated: TimeInterval = 0
     /// 인터럽트 때문에 우리가 멈춘 것인지 구분한다.
     @ObservationIgnored private var pausedByInterruption = false
+    /// 인터럽트가 시작된 시각. 오래 끊겼으면 스트림을 새로 연다.
+    @ObservationIgnored private var interruptedAt: Date?
+    /// 첫 소리가 나기 전에 끊겼는지. 이때는 이어 트는 게 아니라 처음부터 다시 건다.
+    @ObservationIgnored private var interruptedWhileLoading = false
+    /// 이보다 오래 끊겼으면 라이브 스트림은 이어 붙지 않는다. 연결을 새로 만든다.
+    static let liveReconnectThreshold: TimeInterval = 60
     /// 지금 재생이 어디서 시작됐는지. 청취 기록에 그대로 들어간다.
     @ObservationIgnored private var origin: PlaybackOrigin = .manual
     @ObservationIgnored private var isSessionOpen = false
@@ -139,6 +145,9 @@ final class AudioPlayerService: AudioPlaying {
         elapsed = 0
         liveAccumulated = 0
         liveStartedAt = nil
+        pausedByInterruption = false
+        interruptedWhileLoading = false
+        interruptedAt = nil
         state = .loading
         pushNowPlaying()
 
@@ -195,6 +204,8 @@ final class AudioPlayerService: AudioPlaying {
         savePosition(force: true)
         accumulateLiveElapsed()
         pausedByInterruption = false
+        interruptedWhileLoading = false
+        interruptedAt = nil
         state = .paused
         pushNowPlaying()
     }
@@ -555,17 +566,47 @@ final class AudioPlayerService: AudioPlaying {
             guard let self else { return }
             switch interruption {
             case .began:
-                if self.state == .playing {
+                switch self.state {
+                case .playing:
                     self.player?.pause()
                     self.accumulateLiveElapsed()
                     self.state = .paused
                     self.pausedByInterruption = true
+                    self.interruptedAt = Date()
                     self.pushNowPlaying()
+                case .loading:
+                    // 첫 소리가 나기 전에 전화가 왔다. 그냥 두면 15초 워치독이 멀쩡한
+                    // 방송을 죽은 것으로 보고 서버에 신고한다(`fail(.noAudio)`).
+                    self.player?.pause()
+                    self.watchdog?.cancel()
+                    self.watchdog = nil
+                    self.pausedByInterruption = true
+                    self.interruptedWhileLoading = true
+                    self.interruptedAt = Date()
+                default:
+                    break
                 }
             case .ended(let shouldResume):
                 guard self.pausedByInterruption else { return }
                 self.pausedByInterruption = false
-                if shouldResume { Task { await self.resume() } }
+                let wasLoading = self.interruptedWhileLoading
+                let silence = self.interruptedAt.map { Date().timeIntervalSince($0) } ?? 0
+                self.interruptedWhileLoading = false
+                self.interruptedAt = nil
+                guard shouldResume, let item = self.current else { return }
+
+                // 라이브 스트림은 오래 끊기면 서버가 연결을 놓아 버린다. 기존
+                // `AVPlayer` 에 play() 만 부르면 붙지 않고, 그 실패가 다시 방송국
+                // 신고로 이어진다. 그래서 오래 끊겼으면 처음부터 새로 건다.
+                let needsFresh = wasLoading
+                    || (item.isLive && silence >= Self.liveReconnectThreshold)
+                let origin = self.origin
+                if needsFresh {
+                    self.log.info("인터럽트가 \(Int(silence))초라 스트림을 새로 연다")
+                    Task { await self.play(item, origin: origin) }
+                } else {
+                    Task { await self.resume() }
+                }
             }
         }
 

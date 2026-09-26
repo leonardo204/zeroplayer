@@ -76,6 +76,13 @@ enum AlarmKitScheduler {
         }
         cancelAll()
 
+        // 고른 알람음을 미리 그려 둔다. 파일은 울릴 때 읽히므로 여기서 써 두면 된다.
+        var liveSounds: Set<String> = []
+        for alarm in alarms where alarm.isEnabled {
+            if let name = alarm.ensureSoundFile() { liveSounds.insert(name) }
+        }
+        AlarmSoundStore.prune(keeping: liveSounds)
+
         var scheduled = 0
         for alarm in alarms where alarm.isEnabled {
             // `??` 는 오른쪽을 autoclosure 로 받아서 await 를 못 쓴다.
@@ -90,6 +97,9 @@ enum AlarmKitScheduler {
     private static func schedule(_ alarm: AlarmSetting, item: PlayableItem?) async -> Int {
         let root = alarm.localID
         var count = 0
+        // 우리 알람음을 고르지 않았으면 기본음이다. 기본음은 1분 넘게 반복해서 울린다.
+        let sound: AlertConfiguration.AlertSound = alarm.ensureSoundFile()
+            .map { .named($0) } ?? .default
 
         for index in 0..<chainCount {
             guard let schedule = schedule(for: alarm, offsetMinutes: index * chainInterval) else {
@@ -104,7 +114,7 @@ enum AlarmKitScheduler {
                 stopIntent: StopAlarmIntent(alarmID: id, rootID: root),
                 secondaryIntent: WakeRadioIntent(
                     alarmID: id, rootID: root, item: item, situation: alarm.situation),
-                sound: .default)
+                sound: sound)
             do {
                 _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 count += 1

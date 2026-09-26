@@ -191,6 +191,8 @@ struct PlayerView: View {
                 VStack(spacing: 4) {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
                         .font(.title3)
+                        .foregroundStyle(isFavorite
+                            ? AnyShapeStyle(AppColor.favorite) : AnyShapeStyle(.primary))
                     Text("즐겨찾기").font(.caption2)
                 }
             }

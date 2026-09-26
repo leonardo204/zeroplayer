@@ -25,6 +25,14 @@ final class AlarmSetting {
     var label: String
     var isEnabled: Bool
     var createdAt: Date
+
+    /// 고른 알람음의 키. 비어 있으면 iOS 기본 알람음이다(반복해서 울리고 가장 크다).
+    /// 값이 있으면 `AlarmSoundCatalog` 의 그 소리를 우리가 그려 쓴다.
+    var soundToneID: String?
+    /// 우리 알람음의 음량. 0…1 이고 기본음일 때는 쓰지 않는다.
+    var soundVolume: Double = 0.8
+    /// 점점 커지게 할지. 기본음일 때는 쓰지 않는다.
+    var soundFadeIn: Bool = false
     /// 서버에 반영하지 못한 변경이 남아 있는지. 다음에 앱을 열 때 다시 밀어 넣는다.
     var needsSync: Bool
 
@@ -39,7 +47,10 @@ final class AlarmSetting {
         situation: Situation? = .wake,
         label: String = String(localized: "알람"),
         isEnabled: Bool = true,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        soundToneID: String? = nil,
+        soundVolume: Double = 0.8,
+        soundFadeIn: Bool = false
     ) {
         self.localID = UUID()
         self.hour = hour
@@ -53,6 +64,9 @@ final class AlarmSetting {
         self.label = label
         self.isEnabled = isEnabled
         self.createdAt = createdAt
+        self.soundToneID = soundToneID
+        self.soundVolume = soundVolume
+        self.soundFadeIn = soundFadeIn
         self.needsSync = true
     }
 }
@@ -91,6 +105,21 @@ extension AlarmSetting {
 
     var timeText: String {
         String(format: "%02d:%02d", hour, minute)
+    }
+
+    /// 고른 알람음. nil 이면 iOS 기본음이다.
+    var tone: AlarmTone? { AlarmSoundCatalog.tone(id: soundToneID) }
+
+    /// 화면에 보여 줄 알람음 이름.
+    var soundText: String {
+        tone?.label ?? String(localized: "기본음")
+    }
+
+    /// 이 알람이 쓸 사운드 파일을 만들어 두고 이름을 돌려준다.
+    /// nil 이면 기본음을 쓴다는 뜻이다.
+    func ensureSoundFile() -> String? {
+        guard let tone else { return nil }
+        return AlarmSoundStore.ensure(tone: tone, volume: soundVolume, fadeIn: soundFadeIn)
     }
 
     /// '평일', '주말', '매일', 또는 '월·수·금'.

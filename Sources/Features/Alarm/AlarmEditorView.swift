@@ -19,6 +19,9 @@ struct AlarmEditorView: View {
     @State private var sourceTitle: String?
     @State private var isPickerPresented = false
     @State private var isLoaded = false
+    @State private var soundToneID: String?
+    @State private var soundVolume: Double = 0.8
+    @State private var soundFadeIn = false
 
     private static let weekdayNames = ["", String(localized: "일"), String(localized: "월"),
                                        String(localized: "화"), String(localized: "수"), String(localized: "목"),
@@ -79,6 +82,9 @@ struct AlarmEditorView: View {
                          ? String(localized: "그 시각에 맞는 방송을 골라 틉니다.")
                          : String(localized: "지정한 방송국이 그대로 재생됩니다."))
                 }
+
+                AlarmSoundSection(
+                    toneID: $soundToneID, volume: $soundVolume, fadeIn: $soundFadeIn)
 
                 Section("이름") {
                     TextField("알람", text: $label)
@@ -159,6 +165,9 @@ struct AlarmEditorView: View {
         situation = alarm.situation ?? .wake
         sourceID = alarm.sourceID
         sourceTitle = alarm.sourceTitle
+        soundToneID = alarm.soundToneID
+        soundVolume = alarm.soundVolume
+        soundFadeIn = alarm.soundFadeIn
     }
 
     private func save() async {
@@ -181,6 +190,9 @@ struct AlarmEditorView: View {
             alarm.sourceID = sourceKind == .auto ? nil : sourceID
             alarm.sourceTitle = sourceKind == .auto ? nil : sourceTitle
             alarm.situation = sourceKind == .auto ? situation : nil
+            alarm.soundToneID = soundToneID
+            alarm.soundVolume = soundVolume
+            alarm.soundFadeIn = soundFadeIn
             await store.update(alarm)
         } else {
             let created = AlarmSetting(
@@ -191,7 +203,10 @@ struct AlarmEditorView: View {
                 sourceID: sourceKind == .auto ? nil : sourceID,
                 sourceTitle: sourceKind == .auto ? nil : sourceTitle,
                 situation: sourceKind == .auto ? situation : nil,
-                label: label.isEmpty ? String(localized: "알람") : label
+                label: label.isEmpty ? String(localized: "알람") : label,
+                soundToneID: soundToneID,
+                soundVolume: soundVolume,
+                soundFadeIn: soundFadeIn
             )
             await store.add(created)
         }

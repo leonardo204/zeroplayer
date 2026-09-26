@@ -135,7 +135,7 @@ struct DiscoverView: View {
                             Button(isOn ? "빼기" : "즐겨찾기", systemImage: isOn ? "heart.slash" : "heart") {
                                 FavoriteStore(context: modelContext).toggle(station.playable)
                             }
-                            .tint(isOn ? .gray : .pink)
+                            .tint(isOn ? AppColor.favoriteOff : AppColor.favorite)
                         }
                         .task { await loadMore(after: station) }
                     }
@@ -224,6 +224,8 @@ struct DiscoverView: View {
                 showFavoritesOnly.toggle()
             } label: {
                 Image(systemName: showFavoritesOnly ? "heart.fill" : "heart")
+                    .foregroundStyle(showFavoritesOnly
+                        ? AnyShapeStyle(AppColor.favorite) : AnyShapeStyle(.tint))
             }
             .accessibilityLabel(showFavoritesOnly ? "전체 목록 보기" : "즐겨찾기만 보기")
         }
@@ -285,7 +287,7 @@ struct DiscoverView: View {
             if isFavorite(station.id) {
                 Image(systemName: "heart.fill")
                     .font(.caption)
-                    .foregroundStyle(.pink)
+                    .foregroundStyle(AppColor.favorite)
             }
             if player.current?.id == station.id {
                 Image(systemName: player.state == .playing ? "speaker.wave.2.fill" : "pause.fill")

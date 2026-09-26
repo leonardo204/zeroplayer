@@ -131,7 +131,7 @@ struct AlarmsView: View {
                 Text("\(alarm.repeatText) · \(alarm.label)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                Text(alarm.sourceText)
+                Text("\(alarm.sourceText) · \(alarm.soundText)")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)

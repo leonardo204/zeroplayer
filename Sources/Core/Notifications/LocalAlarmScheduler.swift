@@ -64,7 +64,12 @@ enum LocalAlarmScheduler {
         let content = UNMutableNotificationContent()
         content.title = alarm.label.isEmpty ? String(localized: "알람") : alarm.label
         content.body = String(localized: "\(alarm.sourceText) · 눌러서 재생하세요.")
-        content.sound = .default
+        // 고른 알람음이 있으면 그것으로. `Library/Sounds` 는 알림도 같이 본다.
+        if let name = alarm.ensureSoundFile() {
+            content.sound = UNNotificationSound(named: UNNotificationSoundName(name))
+        } else {
+            content.sound = .default
+        }
         content.categoryIdentifier = PushRegistrar.categoryID
         if #available(iOS 15.0, *) {
             // 집중 모드에서도 뜨게 한다. 권한이 없으면 iOS 가 조용히 보통 알림으로 내린다.

@@ -53,7 +53,7 @@ struct RecommendView: View {
                             } label: {
                                 Label(isOn ? "빼기" : "즐겨찾기", systemImage: isOn ? "heart.slash" : "heart")
                             }
-                            .tint(isOn ? .gray : .pink)
+                            .tint(isOn ? AppColor.favoriteOff : AppColor.favorite)
                         }
                     }
                 }
@@ -126,7 +126,7 @@ struct RecommendView: View {
                     if favorites.contains(where: { $0.itemID == entry.id }) {
                         Image(systemName: "heart.fill")
                             .font(.caption2)
-                            .foregroundStyle(.pink)
+                            .foregroundStyle(AppColor.favorite)
                     }
                 }
 
