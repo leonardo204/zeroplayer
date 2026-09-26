@@ -15,7 +15,7 @@ struct AlarmsView: View {
 
     var body: some View {
         List {
-            if push.permission != .granted {
+            if !push.isAlarmReady {
                 Section {
                     permissionRow
                 }
@@ -38,10 +38,7 @@ struct AlarmsView: View {
             Section {
                 EmptyView()
             } footer: {
-                Text("""
-                무음 모드에서는 알람 소리가 나지 않습니다. 알림음은 한 번만 울리고 \
-                시계 앱처럼 끌 때까지 반복하지 않습니다. 알림을 눌러야 재생이 시작됩니다.
-                """)
+                Text(footerText)
             }
         }
         .navigationTitle("알람")
@@ -63,16 +60,32 @@ struct AlarmsView: View {
 
     // MARK: - 조각
 
+    /// 기기가 어느 길로 알람을 받는지에 따라 안내가 다르다.
+    private var footerText: String {
+        if AlarmDelivery.isAlarmKitAvailable {
+            return String(localized: """
+                알람은 무음 모드와 집중 모드에서도 울립니다. 알람 화면에서 '방송 켜기' \
+                를 누르면 앱을 열지 않고 방송이 시작됩니다.
+                """)
+        }
+        return String(localized: """
+            무음 모드에서는 알람 소리가 나지 않습니다. 알림음은 한 번만 울리고 \
+            시계 앱처럼 끌 때까지 반복하지 않습니다. 알림을 눌러야 재생이 시작됩니다.
+            """)
+    }
+
     private var permissionRow: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("알림이 꺼져 있습니다", systemImage: "bell.slash")
+            Label(
+                AlarmDelivery.isAlarmKitAvailable
+                    ? String(localized: "알람 권한이 꺼져 있습니다")
+                    : String(localized: "알림이 꺼져 있습니다"),
+                systemImage: "bell.slash")
                 .font(.subheadline.weight(.semibold))
-            Text(push.permission == .denied
-                 ? String(localized: "설정 앱에서 zeroPlayer 의 알림을 켜야 알람이 울립니다.")
-                 : String(localized: "알람이 울리려면 알림을 허용해야 합니다."))
+            Text(permissionText)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            if push.permission == .denied {
+            if push.alarmPermission == .denied {
                 Button("설정 열기") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
@@ -80,13 +93,31 @@ struct AlarmsView: View {
                 }
                 .buttonStyle(.bordered)
             } else {
-                Button("알림 허용하기") {
-                    Task { await push.requestPermission() }
+                Button(AlarmDelivery.isAlarmKitAvailable
+                       ? String(localized: "알람 허용하기")
+                       : String(localized: "알림 허용하기")) {
+                    Task {
+                        await push.requestAlarmPermission()
+                        await store.reschedule()
+                    }
                 }
                 .buttonStyle(.borderedProminent)
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var permissionText: String {
+        switch (AlarmDelivery.isAlarmKitAvailable, push.alarmPermission == .denied) {
+        case (true, true):
+            return String(localized: "설정 앱에서 zeroPlayer 의 알람을 켜야 울립니다.")
+        case (true, false):
+            return String(localized: "알람이 울리려면 알람 예약을 허용해야 합니다.")
+        case (false, true):
+            return String(localized: "설정 앱에서 zeroPlayer 의 알림을 켜야 알람이 울립니다.")
+        case (false, false):
+            return String(localized: "알람이 울리려면 알림을 허용해야 합니다.")
+        }
     }
 
     private func row(for alarm: AlarmSetting) -> some View {

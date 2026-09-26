@@ -42,6 +42,9 @@ final class PushRegistrar: NSObject {
     /// 알림을 눌러 들어왔을 때 무엇을 틀지. 화면이 이걸 보고 재생한다.
     var pendingPlay: AlarmPushInfo?
 
+    /// AlarmKit 알람 권한. iOS 26 이상에서만 뜻이 있다.
+    private(set) var alarmKitPermission: Permission = .notAsked
+
     @ObservationIgnored private let client: ProxyClienting
     @ObservationIgnored private let log = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "zeroPlayer", category: "push")
@@ -61,13 +64,71 @@ final class PushRegistrar: NSObject {
         registerCategories()
         UNUserNotificationCenter.current().delegate = self
         await refreshPermission()
+
+        // AlarmKit 으로 가는 기기는 서버 푸시를 받지 않는다. 시스템 알람과 푸시가
+        // 같은 시각에 함께 오면 두 번 깨우는 셈이다(`AlarmDelivery`).
+        guard !AlarmDelivery.usesAlarmKit else {
+            await dropTokenForAlarmKit()
+            return
+        }
         if permission == .granted { registerWithAPNs() }
     }
 
+    /// 예전에 올려 둔 APNs 토큰을 서버에서 지운다. 성공하면 다시 하지 않는다.
+    private func dropTokenForAlarmKit() async {
+        let key = "zp.push.droppedForAlarmKit"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        do {
+            try await client.deletePushToken()
+            UserDefaults.standard.set(true, forKey: key)
+            hasToken = false
+            log.info("AlarmKit 를 쓰므로 서버 푸시 토큰을 지웠다")
+        } catch {
+            // 다음에 앱을 열 때 다시 해 본다.
+            log.info("푸시 토큰을 지우지 못했다: \(String(describing: error), privacy: .private)")
+        }
+    }
+
+    // MARK: - 화면이 보는 알람 권한
+
+    /// 알람이 울릴 준비가 됐는지. 어느 길로 가는지에 따라 보는 값이 다르다.
+    var isAlarmReady: Bool {
+        AlarmDelivery.isAlarmKitAvailable ? alarmKitPermission == .granted : permission == .granted
+    }
+
+    /// 화면에 띄울 권한 상태. AlarmKit 기기면 알람 권한, 그 밖에는 알림 권한이다.
+    var alarmPermission: Permission {
+        AlarmDelivery.isAlarmKitAvailable ? alarmKitPermission : permission
+    }
+
+    /// 사용자가 '알람 허용하기' 를 눌렀다.
+    @discardableResult
+    func requestAlarmPermission() async -> Bool {
+        guard AlarmDelivery.isAlarmKitAvailable else { return await requestPermission() }
+        let granted = await AlarmDelivery.requestAlarmKitPermission()
+        refreshAlarmKitPermission()
+        return granted
+    }
+
+    private func refreshAlarmKitPermission() {
+        guard AlarmDelivery.isAlarmKitAvailable else { return }
+        if AlarmDelivery.usesAlarmKit {
+            alarmKitPermission = .granted
+        } else if AlarmDelivery.needsAlarmKitPermission {
+            alarmKitPermission = .notAsked
+        } else {
+            alarmKitPermission = .denied
+        }
+    }
+
     func refreshPermission() async {
+        refreshAlarmKitPermission()
         #if DEBUG
         // 스크린샷 모드에서는 실제 상태로 덮어쓰지 않는다.
-        if UserDefaults.standard.string(forKey: "ZPFakePushGranted") == "1" { return }
+        if UserDefaults.standard.string(forKey: "ZPFakePushGranted") == "1" {
+            alarmKitPermission = .granted
+            return
+        }
         #endif
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         switch settings.authorizationStatus {

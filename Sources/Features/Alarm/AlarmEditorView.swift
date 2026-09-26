@@ -76,7 +76,7 @@ struct AlarmEditorView: View {
                     Text("무엇을 틀지")
                 } footer: {
                     Text(sourceKind == .auto
-                         ? String(localized: "울릴 때 그 시각에 맞는 방송을 서버가 골라 알려 줍니다.")
+                         ? String(localized: "그 시각에 맞는 방송을 골라 틉니다.")
                          : String(localized: "지정한 방송국이 그대로 재생됩니다."))
                 }
 
@@ -84,9 +84,9 @@ struct AlarmEditorView: View {
                     TextField("알람", text: $label)
                 }
 
-                if push.permission != .granted {
+                if !push.isAlarmReady {
                     Section {
-                        Label("알림이 꺼져 있어 지금은 울리지 않습니다.", systemImage: "bell.slash")
+                        Label("권한이 꺼져 있어 지금은 울리지 않습니다.", systemImage: "bell.slash")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -165,9 +165,10 @@ struct AlarmEditorView: View {
         let parts = Calendar.current.dateComponents([.hour, .minute], from: time)
         let store = AlarmStore(context: modelContext)
 
-        // 알람을 처음 켜는 자리다. 여기서 알림 권한을 묻는다.
-        if push.permission == .notAsked {
-            await push.requestPermission()
+        // 알람을 처음 켜는 자리다. 여기서 권한을 묻는다.
+        // 무엇을 묻는지는 기기에 따라 다르다 — iOS 26 이상은 알람 권한, 그 아래는 알림 권한이다.
+        if push.alarmPermission == .notAsked {
+            await push.requestAlarmPermission()
         }
 
         if let alarm {

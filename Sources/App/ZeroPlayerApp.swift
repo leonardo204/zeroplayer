@@ -48,6 +48,9 @@ struct ZeroPlayerApp: App {
         player.attach(positions: PositionStore(context: container.mainContext))
         player.attach(hidden: hidden)
 
+        // 알람 화면의 단추가 눌리면 화면 없이 이 재생기를 쓴다(`docs/10-alarmkit.md`).
+        AlarmPlaybackBridge.shared.attach(player: player)
+
         self.container = container
         self.listeningStore = store
         _player = State(initialValue: player)

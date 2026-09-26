@@ -36,7 +36,7 @@ final class AlarmStore {
         context.insert(alarm)
         save()
         await push(alarm)
-        await rescheduleLocal()
+        await reschedule()
     }
 
     /// 화면이 값을 바꾼 뒤 부른다.
@@ -44,7 +44,7 @@ final class AlarmStore {
         alarm.needsSync = true
         save()
         await push(alarm)
-        await rescheduleLocal()
+        await reschedule()
     }
 
     func delete(_ alarm: AlarmSetting) async {
@@ -54,7 +54,7 @@ final class AlarmStore {
         if let serverID {
             try? await client.deleteAlarm(id: serverID)
         }
-        await rescheduleLocal()
+        await reschedule()
     }
 
     func toggle(_ alarm: AlarmSetting, on: Bool) async {
@@ -95,7 +95,7 @@ final class AlarmStore {
         // 아직 올라가는 중인 알람이 있으면 내려받지 않는다. 서버 목록에는 있는데
         // 기기 쪽에는 서버 ID 가 아직 안 적혀 있어 같은 알람을 새로 만들어 버린다.
         guard Self.inFlight.isEmpty, let remote = try? await client.alarms() else {
-            await rescheduleLocal()
+            await reschedule()
             return
         }
 
@@ -119,11 +119,24 @@ final class AlarmStore {
             context.insert(alarm)
         }
         save()
-        await rescheduleLocal()
+        await reschedule()
     }
 
-    func rescheduleLocal() async {
-        await LocalAlarmScheduler.reschedule(all())
+    /// 알람을 기기에 다시 건다. 어느 길로 갈지는 `AlarmDelivery` 가 정한다.
+    ///
+    /// AlarmKit 으로 가는 기기에서는 로컬 백업 알림을 걸지 않는다. 같은 시각에
+    /// 시스템 알람과 알림이 함께 울리면 두 번 깨우는 셈이 된다.
+    func reschedule() async {
+        let list = all()
+        if #available(iOS 26.0, *), AlarmDelivery.usesAlarmKit {
+            await AlarmKitScheduler.reschedule(list) { alarm in
+                guard let situation = alarm.situation else { return nil }
+                return await AlarmPlaybackBridge.shared.resolve(situation: situation)
+            }
+            LocalAlarmScheduler.cancelAll()
+            return
+        }
+        await LocalAlarmScheduler.reschedule(list)
     }
 
     private func save() {

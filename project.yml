@@ -94,6 +94,11 @@ targets:
         UILaunchScreen: {}
         UIBackgroundModes:
           - audio
+        # AlarmKit(iOS 26 이상). 이 문장이 비어 있으면 알람을 아예 걸 수 없다.
+        # 권한 창의 앞 문단은 시스템이 쓰고 이 한 줄이 그 아래 붙는다.
+        NSAlarmKitUsageDescription: 고른 시각에 알람을 울려 방송을 틀어 주려고 알람을 예약합니다.
+        # 알람 화면은 ActivityKit 표시를 쓴다.
+        NSSupportsLiveActivities: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         # 아이패드는 네 방향을 다 적어야 한다. 하나라도 빠지면 업로드가 막힌다
