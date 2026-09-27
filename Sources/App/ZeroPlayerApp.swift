@@ -1,6 +1,7 @@
 import SwiftData
 import SwiftUI
 import UIKit
+import os
 
 /// APNs 토큰은 `UIApplicationDelegate` 로만 온다. SwiftUI 앱에도 대리자를 붙일 수 있다.
 final class AppDelegate: NSObject, UIApplicationDelegate {
@@ -70,6 +71,7 @@ struct ZeroPlayerApp: App {
                 .task { await adConsent.start() }
                 .task { await startNotifications() }
                 .task { await seedAlarmIfRequested() }
+                .task { await bakeTonesIfRequested() }
                 .task { seedHistoryIfRequested() }
                 .task { await alarmPushIfRequested() }
                 .task { await unlockHiddenIfRequested() }
@@ -158,6 +160,29 @@ struct ZeroPlayerApp: App {
         #endif
     }
 
+    /// 알람음 20곡을 실제로 구워 보고 결과를 로그에 남긴다.
+    /// `-ZPBakeTones 1` 로 켠다. 곡을 더했을 때 기기에서 풀리는지 확인하는 자리다.
+    /// 릴리스 빌드에는 들어가지 않는다.
+    private func bakeTonesIfRequested() async {
+        #if DEBUG
+        guard UserDefaults.standard.string(forKey: "ZPBakeTones") == "1" else { return }
+        let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "zeroPlayer", category: "alarm")
+        var ok = 0
+        for tone in AlarmSoundCatalog.tones {
+            guard let data = AlarmSoundCatalog.wavData(tone: tone, volume: 1, fadeIn: false) else {
+                log.error("굽기 실패 \(tone.id, privacy: .public)")
+                continue
+            }
+            // WAV 머리 44바이트를 뺀 표본 수로 길이를 센다.
+            let seconds = Double(data.count - 44) / 2 / AlarmSoundCatalog.sampleRate
+            log.info("구움 \(tone.id, privacy: .public) \(data.count)바이트 \(String(format: "%.1f", seconds))초")
+            _ = AlarmSoundStore.ensure(tone: tone, volume: 1, fadeIn: false)
+            ok += 1
+        }
+        log.info("알람음 \(ok)/\(AlarmSoundCatalog.tones.count) 곡을 구웠다")
+        #endif
+    }
+
     private func seedAlarmIfRequested() async {
         #if DEBUG
         guard let raw = UserDefaults.standard.string(forKey: "ZPSeedAlarm"), raw.contains(":") else { return }
@@ -165,10 +190,19 @@ struct ZeroPlayerApp: App {
         guard parts.count == 2 else { return }
         let store = AlarmStore(context: container.mainContext)
         guard store.all().isEmpty else { return }
-        await store.add(AlarmSetting(
+        // 알람음까지 골라 둔다. `-ZPSeedTone bach-cello1` 로 키를 주고,
+        // `-ZPSeedVolume 0.4` 로 음량을 준다. 알람음이 실제로 파일로 구워지는지
+        // 손으로 고르지 않고 확인하려고 둔 통로다.
+        let toneID = UserDefaults.standard.string(forKey: "ZPSeedTone")
+        let volume = UserDefaults.standard.object(forKey: "ZPSeedVolume") as? Double
+        let alarm = AlarmSetting(
             hour: parts[0], minute: parts[1],
             weekdays: [2, 3, 4, 5, 6],
-            sourceKind: .auto, situation: .wake, label: String(localized: "아침")))
+            sourceKind: .auto, situation: .wake, label: String(localized: "아침"),
+            soundToneID: toneID.flatMap { AlarmSoundCatalog.tone(id: $0) }?.id,
+            soundVolume: volume ?? 0.8,
+            soundFadeIn: UserDefaults.standard.string(forKey: "ZPSeedFade") == "1")
+        await store.add(alarm)
         #endif
     }
 

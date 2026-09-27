@@ -14,16 +14,23 @@ struct AlarmSoundSection: View {
 
     @State private var preview = AlarmSoundPreview()
 
+    private var tone: AlarmTone? { AlarmSoundCatalog.tone(id: toneID) }
+
     var body: some View {
         Section {
-            Picker("알람음", selection: $toneID) {
-                Text("기본음").tag(String?.none)
-                ForEach(AlarmSoundCatalog.tones) { tone in
-                    Text(tone.label).tag(String?.some(tone.id))
+            NavigationLink {
+                AlarmTonePicker(toneID: $toneID, volume: volume, preview: preview)
+            } label: {
+                HStack {
+                    Text("알람음")
+                    Spacer()
+                    Text(tone?.label ?? String(localized: "기본음"))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
             }
 
-            if let tone = AlarmSoundCatalog.tone(id: toneID) {
+            if let tone {
                 HStack(spacing: 12) {
                     Image(systemName: "speaker.fill")
                         .font(.caption)
@@ -38,11 +45,11 @@ struct AlarmSoundSection: View {
                 Toggle("점점 크게", isOn: $fadeIn)
 
                 Button {
-                    preview.toggle(tone: tone, volume: volume, fadeIn: fadeIn)
+                    preview.toggle(tone: tone, volume: volume)
                 } label: {
                     Label(
-                        preview.isPlaying ? "미리듣기 멈추기" : "미리듣기",
-                        systemImage: preview.isPlaying ? "stop.fill" : "play.fill")
+                        preview.playingID == tone.id ? "미리듣기 멈추기" : "미리듣기",
+                        systemImage: preview.playingID == tone.id ? "stop.fill" : "play.fill")
                 }
             }
         } header: {
@@ -50,41 +57,125 @@ struct AlarmSoundSection: View {
         } footer: {
             Text(toneID == nil
                  ? String(localized: "기본음은 끌 때까지 반복해서 울리고 가장 크게 납니다. 음량은 설정 앱의 '사운드 및 햅틱 > 벨소리 및 알림' 을 따릅니다.")
-                 : String(localized: "고른 소리는 한 번만 울립니다. 못 듣고 지나치지 않게 2분 간격으로 몇 번 더 겁니다. 미리듣기는 지금 기기 음량으로 들리고, 알람은 벨소리 볼륨으로 납니다."))
+                 : String(localized: "고른 곡은 한 번만 울립니다. 못 듣고 지나치지 않게 2분 간격으로 몇 번 더 겁니다. 미리듣기는 지금 기기 음량으로 들리고, 알람은 벨소리 볼륨으로 납니다."))
         }
         .onDisappear { preview.stop() }
     }
 }
 
+/// 알람음 고르는 화면. 누르면 그 자리에서 들려준다.
+private struct AlarmTonePicker: View {
+    @Binding var toneID: String?
+    let volume: Double
+    let preview: AlarmSoundPreview
+
+    var body: some View {
+        List {
+            Section {
+                row(title: String(localized: "기본음"),
+                    detail: String(localized: "애플 알람음 · 끌 때까지 반복, 가장 큼"),
+                    isOn: toneID == nil) {
+                    preview.stop()
+                    toneID = nil
+                }
+            }
+
+            Section {
+                ForEach(AlarmSoundCatalog.tones) { tone in
+                    row(title: tone.label, detail: tone.detail, isOn: toneID == tone.id,
+                        isPlaying: preview.playingID == tone.id) {
+                        toneID = tone.id
+                        preview.play(tone: tone, volume: volume)
+                    }
+                }
+            } header: {
+                Text("고전 멜로디")
+            } footer: {
+                Text("저작권이 끝난 곡을 직접 연주해 담았습니다. 누르면 들려줍니다.")
+            }
+        }
+        .navigationTitle("알람음")
+        .navigationBarTitleDisplayMode(.inline)
+        .onDisappear { preview.stop() }
+    }
+
+    private func row(
+        title: String, detail: String, isOn: Bool, isPlaying: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                if isPlaying {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if isOn {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.tint)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? [.isSelected] : [])
+    }
+}
+
 /// 미리듣기 재생기. 편집 화면에서만 쓴다.
+///
+/// 번들 음원을 그대로 재생한다. 음량은 파일을 다시 굽지 않고 재생기 쪽에서 맞춘다.
+/// '점점 크게' 는 빼고 들려준다 — 앞 10초에 걸쳐 오르는데 그 앞부분만 들으면
+/// 소리가 안 난다고 오해한다.
 @MainActor
 @Observable
 final class AlarmSoundPreview {
-    private(set) var isPlaying = false
+    /// 지금 들려주고 있는 알람음의 키. 없으면 멈춘 상태다.
+    private(set) var playingID: String?
 
     @ObservationIgnored private var player: AVAudioPlayer?
+    @ObservationIgnored private var stopTask: Task<Void, Never>?
     @ObservationIgnored private let log = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "zeroPlayer", category: "alarm")
 
-    func toggle(tone: AlarmTone, volume: Double, fadeIn: Bool) {
-        if isPlaying { stop(); return }
-        // 점점 커지기는 10초에 걸쳐 오르는데 미리듣기에서 그 앞부분만 들으면
-        // 소리가 안 난다고 오해한다. 그래서 미리듣기는 램프를 빼고 들려준다.
-        let data = AlarmSoundCatalog.wavData(tone: tone, volume: volume, fadeIn: false)
+    /// 한 곡 길이가 25초를 넘어서 끝까지 듣게 두지 않는다.
+    private static let previewSeconds: Double = 14
+
+    func toggle(tone: AlarmTone, volume: Double) {
+        if playingID == tone.id { stop() } else { play(tone: tone, volume: volume) }
+    }
+
+    func play(tone: AlarmTone, volume: Double) {
+        stop()
+        guard let url = AlarmSoundCatalog.bundleURL(for: tone) else {
+            log.error("미리듣기 파일이 없다: \(tone.resourceName, privacy: .public)")
+            return
+        }
         do {
             // 무음 스위치를 내려 둔 채 눌러도 들려야 해서 카테고리만 맞춘다.
             // 세션을 직접 켜고 끄지는 않는다 — 오디오 세션은 앱에 하나뿐이라
             // 여기서 내리면 듣고 있던 방송까지 같이 끊긴다.
             try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            let player = try AVAudioPlayer(data: data)
+            let player = try AVAudioPlayer(contentsOf: url)
             player.numberOfLoops = 0
-            player.volume = 1
+            // 슬라이더 값을 그대로 쓴다. 실제 파일도 같은 기울기로 줄여 굽는다.
+            player.volume = Float(0.3 + 0.7 * min(1, max(0, volume)))
             player.play()
             self.player = player
-            isPlaying = true
-            // 알람음 전체는 25초라 끝까지 듣게 두지 않는다.
-            Task { [weak self] in
-                try? await Task.sleep(for: .seconds(6))
+            playingID = tone.id
+            stopTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(Self.previewSeconds))
+                guard !Task.isCancelled else { return }
                 self?.stop()
             }
         } catch {
@@ -93,8 +184,10 @@ final class AlarmSoundPreview {
     }
 
     func stop() {
+        stopTask?.cancel()
+        stopTask = nil
         player?.stop()
         player = nil
-        isPlaying = false
+        playingID = nil
     }
 }

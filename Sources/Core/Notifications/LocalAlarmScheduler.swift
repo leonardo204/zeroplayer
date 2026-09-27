@@ -42,6 +42,14 @@ enum LocalAlarmScheduler {
         let ours = pending.map(\.identifier).filter { $0.hasPrefix(prefix) }
         center.removePendingNotificationRequests(withIdentifiers: ours)
 
+        // 켜진 알람이 쓸 알람음 파일을 먼저 만들어 두고, 안 쓰는 것은 치운다.
+        // 아래 루프는 한도에 닿으면 도중에 빠져나가서 그 뒤에서는 셀 수 없다.
+        var liveSounds: Set<String> = []
+        for alarm in alarms where alarm.isEnabled {
+            if let name = alarm.ensureSoundFile() { liveSounds.insert(name) }
+        }
+        AlarmSoundStore.prune(keeping: liveSounds)
+
         var scheduled = 0
         for alarm in alarms where alarm.isEnabled {
             for request in requests(for: alarm) {

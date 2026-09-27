@@ -90,30 +90,64 @@ let alert = AlarmPresentation.Alert(
 
 커스텀 알람음은 한 번 울리고 끝난다. 그래서 **2분 간격으로 여러 개를 함께 걸고**, 사용자가 끄거나 앱을 열면 남은 것을 전부 취소한다. 개수는 제약이 아니다.
 
-### 알람음 — 기본음과 우리 소리 중에서 고른다
+### 알람음 — 기본음과 고전 멜로디 20곡 중에서 고른다
 
-애플이 주는 선택지는 `sound: .default` 아니면 `.named(우리 파일)` 둘뿐이다. 시계 앱의 Radar·Apex 같은 시스템 벨소리는 앱이 읽을 수 없고, **음량을 지정하는 인자도 없다**(iOS 27 SDK 의 `AlertConfiguration.AlertSound` 에 `default` 와 `named(_:)` 만 있다).
+애플이 주는 선택지는 `sound: .default` 아니면 `.named(우리 파일)` 둘뿐이다. 시계 앱의 Radar·Apex 같은 시스템 벨소리는 앱이 읽을 수 없고, **음량을 지정하는 인자도 없다**(iOS 27 SDK 의 `AlertConfiguration.AlertSound` 에 `default` 와 `named(_:)` 만 있다). 알람 전용 벨소리 9종이 `ToneKit.framework/TKAlarmWakeUpRingtones.plist` 에 목록으로 있고 파일은 `ToneLibrary.framework/AlarmWakeUpRingtones/*.m4r` (54~64초)인데, private framework 안이라 샌드박스 밖이고 애플 저작물이라 번들에 넣을 수도 없다.
 
 그래서 편집 화면의 알람음 목록을 이렇게 짰다.
 
 | 고른 것 | 어떻게 울리나 | 음량 |
 | --- | --- | --- |
 | **기본음**(첫 줄, 기본값) | 끌 때까지 반복한다. 가장 크다 | 기기의 벨소리 볼륨을 따른다. 앱이 못 바꾼다 |
-| 우리 알람음 8가지 | 25초짜리가 **한 번** 울린다. 2분 간격 연쇄가 이를 메운다 | 슬라이더로 조절한다. 고른 값을 파형에 구워 넣는다 |
+| 고전 멜로디 20곡 | 22.5~29초짜리가 **한 번** 울린다. 2분 간격 연쇄가 이를 메운다 | 슬라이더로 조절한다. 고른 값을 파일에 구워 넣는다 |
 
-우리 알람음은 파일을 번들에 넣지 않고 **그때그때 그려 쓴다**(`Sources/Core/Notifications/AlarmSound.swift`). 음량과 '점점 크게' 가 파형의 인자라서, 사용자가 슬라이더를 옮기면 그 값으로 다시 그려 `Library/Sounds` 에 쓴다. 파일 이름에 소리·음량·점점크게가 들어가 있어 같은 조합이면 여러 알람이 한 파일을 같이 쓰고, 안 쓰는 파일은 예약할 때 치운다.
+확실히 깨워야 하는 사람은 기본음, 기분 좋게 깨고 싶은 사람은 멜로디다.
 
-소리를 추가하려면 `AlarmSoundCatalog.tones` 에 줄 하나를 더하면 된다. 편집 화면 목록에 그대로 늘어난다.
+#### 음원은 우리가 연주해 굽는다
 
-음량은 파형을 `tanh` 로 눌러 포화시킨 뒤 고른 값까지 정규화한다. 가장 크게 맞추면 피크 0dBFS, RMS −1.7~−9.1dBFS 가 나온다. 정규화를 빼면 최대치의 88% 에서 멈춘다.
+남의 녹음을 쓰면 권리가 걸린다. 오픈소스 알람음 세 곳을 알아봤는데 전부 막혔다.
+
+| 알아본 것 | 결과 |
+| --- | --- |
+| AOSP `data/sounds/alarms` | Apache 2.0 이 맞다(`Android.bp` 의 `frameworks_alarm_sounds` 에 파일이 명시돼 있다). 다만 전자음 계열이고 중복을 빼면 16종뿐이다 |
+| `robbiehanson/AlarmClock` (MIT) | 레포는 MIT 인데 **음원 출처가 지워져 있다.** artist 가 "Sample Alarms" 라는 자체 라벨이고 copyright 태그가 비었고, Credits 에 번역자 18명·디자이너 3명을 적어 두고 사운드만 빠졌다. 자연음 20종이 전부 23.5~23.8초로 균일해 원본을 잘라 쓴 흔적이 남았다. 정규화해도 −17dBFS 로 작다 |
+| Freesound CC0 | 라이선스는 깨끗하다(16곡을 페이지에서 직접 대조했다). 그런데 단음이라 멜로디가 안 되고, 자연음은 눌러도 −12~−18dBFS 에 그친다 |
+
+그래서 **저작권이 끝난 고전을 우리가 연주해 굽는다.** 녹음의 권리자가 우리라서 제3자 권리가 걸릴 자리가 없다. 곡은 전부 작곡가 사후 70년이 지난 것이다(파헬벨·비발디·바흐·하이든·모차르트·베토벤·로시니·그리그·슈트라우스 2세·드보르자크·엘가).
+
+음색은 **FluidR3 GM** 사운드폰트다. 원저작자 Frank Wen 이 배포 파일에 직접 적어 둔 문장으로 MIT 를 확인했다 — "I hereby release Fluid under the MIT license, as described in COPYING." 사운드폰트(148MB)는 저장소와 앱에 들어가지 않는다. 구울 때만 받아 쓴다.
+
+도구는 `tools/alarm-tones/` 다. 악보(`melodies.py`, 곡마다 함수 하나), 렌더러(`render.swift`, `AVAudioUnitSampler` 라 외부 도구가 필요 없다), 후처리(`post.py`), 권리 정리(`LICENSE-NOTES.md`)가 들어 있다. 다시 굽는 절차는 그 폴더의 `README.md` 에 있다.
+
+#### 형식과 크기
+
+| 항목 | 값 |
+| --- | --- |
+| 번들 형식 | IMA4 압축 CAF, 22.05kHz 모노. 20곡 5.9MB(곡당 약 300KB) |
+| 기기에서 | 링형 PCM WAV 로 풀어 `Library/Sounds` 에 쓴다 |
+| 길이 | 22.5 ~ 29.0초 (알람음 한도 30초 미만) |
+| 크기(음량 최대) | 피크 98~100%, RMS −8.0 ~ −8.2 dBFS |
+| 크기(음량 최소) | RMS −18.5 dBFS. 그래도 들린다 |
+
+**MP3 는 알람음으로 못 쓴다.** 알람 화면은 뜨는데 소리가 나지 않고 오류도 안 남는다. IMA4 CAF 는 `UNNotificationSound` 문서가 허용 형식으로 적어 둔 것이라 안전하고, WAV 대비 4분의 1로 줄어든다.
+
+곡마다 목표 크기(RMS −8.0dBFS)에 닿을 만큼만 눌러 키운다. 눌러야 하는 양이 곡에 따라 1.7~7배까지 달라서 고정값으로는 맞지 않는다 — `post.py` 가 이분법으로 찾는다.
+
+#### 파일을 쓰는 방식
+
+번들의 CAF 를 `AVAudioFile` 로 읽어 압축을 풀고, 음량과 '점점 크게' 를 적용해 링형 PCM WAV 로 `Library/Sounds` 에 쓴다(`Sources/Core/Notifications/AlarmSound.swift`). 파일 이름에 곡 키·음량 단계·점점크게가 들어가 있어 같은 조합이면 여러 알람이 한 파일을 같이 쓰고, 안 쓰는 파일은 예약할 때 치운다(`AlarmSoundStore.prune`).
+
+미리듣기는 파일을 다시 굽지 않는다. 번들 CAF 를 `AVAudioPlayer` 로 바로 틀고 `player.volume` 만 맞춘다. 오디오 세션은 카테고리만 건드린다 — 세션을 내리면 듣고 있던 방송까지 끊긴다.
 
 알람음 파일은 **발화 시점에** 읽힌다. 그래서 예약을 다시 걸지 않아도 파일만 바꾸면 다음 알람이 새 소리로 울린다.
+
+곡 키는 저장값이자 파일 이름이다. **한번 정하면 바꾸지 않는다** — 바꾸면 그 곡을 고른 알람이 조용히 기본음으로 떨어진다.
 
 방송 자체를 알람음으로 넣는 길도 재 봤고 되는 것까지 확인했다. 아래에 그 기록을 남긴다 — 다시 꺼낼 때를 위해서다.
 
 #### 방송을 알람음으로 — 접은 길의 기록
 
-**MP3 는 쓸 수 없다.** 알람 화면은 뜨는데 소리가 나지 않고, 오류도 남지 않는다. 링형 PCM 으로 바꿔야 한다. 22.05kHz · 16bit · 모노 · 25초로 확인했다.
+방송 스트림은 MP3 라 그대로는 못 쓴다(위와 같다). 링형 PCM 으로 바꿔야 한다. 22.05kHz · 16bit · 모노 · 25초로 확인했다.
 
 바꾸는 곳은 둘 중 하나다.
 
@@ -124,7 +158,7 @@ let alert = AlarmPresentation.Alert(
 
 지금 시험은 폰에서 바꿨다. 전송량이 3배 차이 나므로 이쪽이 낫다.
 
-#### 크기
+#### 방송 소리의 크기
 
 방송 원음은 알람음 기준으로 작다. 올드팝카페를 재보니 피크 −6.4dBFS, RMS −18.7dBFS 였다. 피크만 0dBFS 로 맞추면 6dB 밖에 못 올린다.
 
@@ -196,6 +230,10 @@ RMS 가 10dB 올랐는데도 **여전히 기본 알람음보다 작게 들린다
 | `Sources/Core/Notifications/AlarmIntents.swift` | 알람 화면의 두 단추. `AudioPlaybackIntent` 를 지우면 소리가 안 난다 |
 | `Sources/Core/Notifications/AlarmPlaybackBridge.swift` | 화면 없이 재생기를 부르는 통로. 자동 선택 알람이 무엇을 틀지도 여기서 고른다 |
 | `Sources/Core/Notifications/AlarmStore.swift` | `reschedule()` 에서 두 길을 가른다 |
+| `Sources/Core/Notifications/AlarmSound.swift` | 알람음 목록, 번들 CAF 를 풀어 `Library/Sounds` 에 쓰기, 안 쓰는 파일 치우기 |
+| `Sources/Features/Alarm/AlarmSoundSection.swift` | 알람음 고르는 화면·음량 슬라이더·미리듣기 |
+| `Sources/Resources/AlarmTones/zptone-*.caf` | 음원 20곡. IMA4 CAF, 5.9MB |
+| `tools/alarm-tones/` | 음원을 굽는 도구. 악보·렌더러·후처리·권리 정리 |
 | `Sources/Core/Notifications/PushRegistrar.swift` | AlarmKit 로 가면 APNs 등록을 건너뛰고 올려 둔 토큰을 지운다 |
 | `project.yml` | `NSAlarmKitUsageDescription`, `NSSupportsLiveActivities` |
 

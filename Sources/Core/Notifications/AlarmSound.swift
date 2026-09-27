@@ -2,63 +2,79 @@ import AVFoundation
 import Foundation
 import os
 
-/// 알람음 하나. 목록에 줄 하나를 더하면 화면의 선택지도 함께 늘어난다.
+/// 알람음 하나.
 ///
-/// 오디오 파일을 번들에 넣지 않고 그때그때 그려서 쓴다. 그래야 음량과
-/// '점점 커지기' 를 사용자가 고른 값으로 굽을 수 있다. 애플은 알람음으로
-/// 링형 PCM 만 받고(MP3 는 소리가 안 난다) 길이도 30초 미만이어야 한다.
+/// 소리는 저작권이 끝난 고전을 우리가 직접 연주해 구운 것이다. 음원 파일이
+/// `Sources/Resources/AlarmTones/zptone-<id>.caf` 로 번들에 들어 있고, 다시 굽는
+/// 도구는 `tools/alarm-tones/` 에 있다(악보·렌더러·라이선스 메모).
+///
+/// 애플은 알람음으로 링형 PCM·IMA4·µLaw·aLaw 만 받는다. MP3 를 넣으면 알람 화면은
+/// 뜨는데 소리가 안 난다(실기기 확인, `docs/10-alarmkit.md`). 그래서 번들에는
+/// IMA4 로 눌러 담고, 기기에서 링형 PCM WAV 로 풀어 쓴다.
 struct AlarmTone: Identifiable, Hashable, Sendable {
-    /// 파일 이름과 저장값에 쓰는 키. 한번 정하면 바꾸지 않는다.
+    /// 저장값과 파일 이름에 쓰는 키. 한번 정하면 바꾸지 않는다.
     let id: String
+    /// 곡 이름.
     let label: String
-    /// 그리는 방법. 0 부터 흐른 시간(초)을 받아 -1…1 을 돌려준다.
-    let shape: @Sendable (Double) -> Double
+    /// 목록에서 곡 아래에 붙는 한 줄. 작곡가와 성격이다.
+    let detail: String
+
+    /// 번들에 든 음원 파일 이름(확장자 없이).
+    var resourceName: String { "zptone-\(id)" }
 
     static func == (a: AlarmTone, b: AlarmTone) -> Bool { a.id == b.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
 enum AlarmSoundCatalog {
-    /// 알람음 길이. 30초를 넘기면 시스템이 기본음으로 바꿔 버린다.
-    static let seconds: Double = 25
+    /// 기기에서 풀어 쓸 때의 표본율. 번들 음원도 같은 값으로 구웠다.
     static let sampleRate: Double = 22_050
+    /// 점점 커지기에 쓰는 램프. 앞 이만큼 동안 0 에서 1 로 오른다.
+    static let rampSeconds: Double = 10
 
-    /// 고를 수 있는 알람음. 여기에 한 줄을 더하면 편집 화면에 그대로 나온다.
+    /// 고를 수 있는 알람음. 곡을 더하려면 `tools/alarm-tones/` 에서 구운 뒤
+    /// 파일을 `Sources/Resources/AlarmTones/` 에 넣고 여기에 한 줄을 더한다.
     static let tones: [AlarmTone] = [
-        AlarmTone(id: "beep", label: String(localized: "삐삐")) { t in
-            square(t, on: 0.25, period: 0.5) * sine(t, 1_046)
-        },
-        AlarmTone(id: "pulse", label: String(localized: "펄스")) { t in
-            square(t, on: 0.12, period: 0.24) * sine(t, 880)
-        },
-        AlarmTone(id: "chime", label: String(localized: "차임")) { t in
-            let step = Int(t / 0.28) % 4
-            let notes = [523.25, 659.25, 783.99, 659.25]
-            return square(t, on: 0.24, period: 0.28) * sine(t, notes[step])
-        },
-        AlarmTone(id: "bell", label: String(localized: "종")) { t in
-            let phase = t.truncatingRemainder(dividingBy: 1.6)
-            let decay = exp(-phase * 2.4)
-            return decay * (sine(t, 880) * 0.6 + sine(t, 1_320) * 0.3 + sine(t, 2_640) * 0.1)
-        },
-        AlarmTone(id: "sweep", label: String(localized: "사이렌")) { t in
-            let phase = t.truncatingRemainder(dividingBy: 1.2) / 1.2
-            return sine(t, 600 + 500 * phase)
-        },
-        AlarmTone(id: "urgent", label: String(localized: "경보")) { t in
-            let high = Int(t / 0.35) % 2 == 0
-            return square(t, on: 0.3, period: 0.35) * sine(t, high ? 1_200 : 1_600)
-        },
-        AlarmTone(id: "morning", label: String(localized: "아침")) { t in
-            let step = Int(t / 0.45) % 3
-            let notes = [587.33, 880.0, 1_174.66]
-            let phase = t.truncatingRemainder(dividingBy: 0.45)
-            let envelope = sin(.pi * min(1, phase / 0.4))
-            return envelope * sine(t, notes[step])
-        },
-        AlarmTone(id: "ripple", label: String(localized: "물결")) { t in
-            (0.55 + 0.45 * sin(2 * .pi * 5 * t)) * sine(t, 440)
-        },
+        AlarmTone(id: "grieg-morning", label: String(localized: "아침"),
+                  detail: String(localized: "그리그 · 상쾌한 플루트")),
+        AlarmTone(id: "bach-minuet", label: String(localized: "미뉴에트"),
+                  detail: String(localized: "바흐 · 경쾌한 오르골")),
+        AlarmTone(id: "bach-prelude", label: String(localized: "전주곡"),
+                  detail: String(localized: "바흐 · 맑은 첼레스타")),
+        AlarmTone(id: "beethoven-joy", label: String(localized: "환희의 송가"),
+                  detail: String(localized: "베토벤 · 밝은 현")),
+        AlarmTone(id: "pachelbel-canon", label: String(localized: "카논"),
+                  detail: String(localized: "파헬벨 · 차분한 하프")),
+        AlarmTone(id: "vivaldi-spring", label: String(localized: "봄"),
+                  detail: String(localized: "비발디 · 상쾌한 바이올린")),
+        AlarmTone(id: "mozart-turca", label: String(localized: "터키 행진곡"),
+                  detail: String(localized: "모차르트 · 경쾌한 피아노")),
+        AlarmTone(id: "mozart-nacht", label: String(localized: "나흐트무지크"),
+                  detail: String(localized: "모차르트 · 경쾌한 현")),
+        AlarmTone(id: "bach-cello1", label: String(localized: "무반주 첼로 1번"),
+                  detail: String(localized: "바흐 · 차분한 첼로 홀로")),
+        AlarmTone(id: "beethoven-elise", label: String(localized: "엘리제를 위하여"),
+                  detail: String(localized: "베토벤 · 익숙한 피아노")),
+        AlarmTone(id: "mozart-twinkle", label: String(localized: "작은 별"),
+                  detail: String(localized: "모차르트 · 밝은 오르골")),
+        AlarmTone(id: "mozart-k545", label: String(localized: "소나타 K.545"),
+                  detail: String(localized: "모차르트 · 맑은 피아노")),
+        AlarmTone(id: "bach-invention1", label: String(localized: "인벤션 1번"),
+                  detail: String(localized: "바흐 · 또랑또랑한 하프시코드")),
+        AlarmTone(id: "haydn-surprise", label: String(localized: "놀람 교향곡"),
+                  detail: String(localized: "하이든 · 경쾌한 현")),
+        AlarmTone(id: "dvorak-newworld", label: String(localized: "신세계 2악장"),
+                  detail: String(localized: "드보르자크 · 느린 잉글리시 호른")),
+        AlarmTone(id: "rossini-tell", label: String(localized: "윌리엄 텔"),
+                  detail: String(localized: "로시니 · 확실히 깨우는 트럼펫")),
+        AlarmTone(id: "strauss-danube", label: String(localized: "아름다운 도나우"),
+                  detail: String(localized: "슈트라우스 · 상쾌한 왈츠")),
+        AlarmTone(id: "bach-air", label: String(localized: "에어"),
+                  detail: String(localized: "바흐 · 차분한 오보에")),
+        AlarmTone(id: "beethoven-fifth", label: String(localized: "교향곡 5번"),
+                  detail: String(localized: "베토벤 · 확실히 깨우는 현")),
+        AlarmTone(id: "elgar-salut", label: String(localized: "사랑의 인사"),
+                  detail: String(localized: "엘가 · 따뜻한 바이올린")),
     ]
 
     static func tone(id: String?) -> AlarmTone? {
@@ -66,57 +82,79 @@ enum AlarmSoundCatalog {
         return tones.first { $0.id == id }
     }
 
-    // MARK: - 그리기
+    private static let log = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "zeroPlayer", category: "alarm")
 
-    private static func sine(_ t: Double, _ hz: Double) -> Double {
-        sin(2 * .pi * hz * t)
+    /// 번들에 든 음원 주소. 미리듣기는 이 파일을 그대로 재생한다.
+    static func bundleURL(for tone: AlarmTone) -> URL? {
+        Bundle.main.url(forResource: tone.resourceName, withExtension: "caf")
     }
 
-    /// `period` 마다 앞 `on` 초만 소리를 낸다.
-    private static func square(_ t: Double, on: Double, period: Double) -> Double {
-        t.truncatingRemainder(dividingBy: period) < on ? 1 : 0
-    }
+    // MARK: - 풀어 쓰기
 
-    /// 점점 커지기에 쓰는 램프. 앞 `rampSeconds` 동안 0 에서 1 로 오른다.
-    private static let rampSeconds: Double = 10
-
-    /// PCM 표본을 그린다. `volume` 은 0…1, 1 이 가장 크다.
-    ///
-    /// 알람음은 시끄러워야 제 구실을 한다. 그래서 파형을 눌러 포화시켜 소리를
-    /// 꽉 채운 뒤, 마지막에 고른 음량까지 끌어올린다. 정규화를 빼면 가장 크게
-    /// 맞춰도 최대치의 88% 밖에 안 나온다.
-    static func samples(tone: AlarmTone, volume: Double, fadeIn: Bool) -> [Int16] {
-        let count = Int(sampleRate * seconds)
-        let level = min(1, max(0, volume))
-        // 가장 작게 골라도 안 들리면 알람이 아니다. 아래를 잘라 둔다.
-        let target = 0.25 + 0.75 * level
-
-        var shaped = [Double](repeating: 0, count: count)
-        var loudest = 0.0
-        for i in 0..<count {
-            let t = Double(i) / sampleRate
-            // 눌러서 포화시킨다. 그냥 잘라내면 귀에 거슬리는 소리가 난다.
-            let value = tanh(tone.shape(t) * 1.8)
-            shaped[i] = value
-            loudest = max(loudest, abs(value))
+    /// 번들 음원을 읽어 표본으로 돌려준다. 압축(IMA4)을 풀어 −1…1 로 준다.
+    private static func decode(_ tone: AlarmTone) -> [Float]? {
+        guard let url = bundleURL(for: tone) else {
+            log.error("알람음 파일이 번들에 없다: \(tone.resourceName, privacy: .public)")
+            return nil
         }
-        guard loudest > 0.0001 else { return [Int16](repeating: 0, count: count) }
+        do {
+            let file = try AVAudioFile(forReading: url)
+            let frames = AVAudioFrameCount(file.length)
+            guard frames > 0 else { return nil }
+            // 압축 파일은 처리 형식(Float32 비끼움)으로 읽는다.
+            guard let buffer = AVAudioPCMBuffer(
+                pcmFormat: file.processingFormat, frameCapacity: frames) else { return nil }
+            try file.read(into: buffer)
+            guard let channels = buffer.floatChannelData, buffer.frameLength > 0 else { return nil }
 
-        let scale = target / loudest
-        var out = [Int16](repeating: 0, count: count)
-        for i in 0..<count {
-            var value = shaped[i] * scale
-            if fadeIn {
-                let t = Double(i) / sampleRate
-                value *= min(1, t / rampSeconds)
+            let count = Int(buffer.frameLength)
+            let channelCount = Int(buffer.format.channelCount)
+            var out = [Float](repeating: 0, count: count)
+            if channelCount == 1 {
+                out.withUnsafeMutableBufferPointer { dst in
+                    dst.baseAddress?.update(from: channels[0], count: count)
+                }
+            } else {
+                // 스테레오로 구운 파일이 섞여 들어와도 모노로 눌러 쓴다.
+                for i in 0..<count {
+                    var sum: Float = 0
+                    for c in 0..<channelCount { sum += channels[c][i] }
+                    out[i] = sum / Float(channelCount)
+                }
             }
-            out[i] = Int16(max(-1, min(1, value)) * 32_700)
+            return out
+        } catch {
+            log.error("알람음을 읽지 못했다: \(String(describing: error), privacy: .private)")
+            return nil
         }
-        return out
     }
 
-    static func wavData(tone: AlarmTone, volume: Double, fadeIn: Bool) -> Data {
-        var samples = samples(tone: tone, volume: volume, fadeIn: fadeIn)
+    /// 고른 음량과 '점점 크게' 를 적용해 링형 PCM WAV 를 만든다.
+    ///
+    /// 번들 음원은 이미 눌러 키워 둔 것이라(RMS 약 −8dBFS) 여기서는 곱하기만 한다.
+    /// `volume` 은 0…1 이고, 가장 작게 골라도 안 들리면 알람 구실을 못 하므로
+    /// 아래를 잘라 둔다.
+    static func wavData(tone: AlarmTone, volume: Double, fadeIn: Bool) -> Data? {
+        guard let source = decode(tone) else { return nil }
+        let level = min(1, max(0, volume))
+        let gain = Float(0.3 + 0.7 * level)
+        let rampFrames = fadeIn ? Int(rampSeconds * sampleRate) : 0
+
+        var samples = [Int16](repeating: 0, count: source.count)
+        for i in 0..<source.count {
+            var value = source[i] * gain
+            if rampFrames > 0, i < rampFrames {
+                value *= Float(i) / Float(rampFrames)
+            }
+            samples[i] = Int16(max(-1, min(1, value)) * 32_700)
+        }
+        return wav(samples)
+    }
+
+    /// 링형 PCM 모노 WAV 를 조립한다.
+    private static func wav(_ samples: [Int16]) -> Data {
+        var samples = samples
         var data = Data()
         func le32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { data.append(contentsOf: $0) } }
         func le16(_ v: UInt16) { withUnsafeBytes(of: v.littleEndian) { data.append(contentsOf: $0) } }
@@ -168,9 +206,12 @@ enum AlarmSoundStore {
         let name = fileName(tone: tone, volume: volume, fadeIn: fadeIn)
         let url = directory.appendingPathComponent(name)
         if FileManager.default.fileExists(atPath: url.path) { return name }
+        guard let data = AlarmSoundCatalog.wavData(tone: tone, volume: volume, fadeIn: fadeIn) else {
+            // 파일을 못 만들면 기본음으로 떨어진다. 안 울리는 쪽이 더 나쁘다.
+            return nil
+        }
         do {
-            try AlarmSoundCatalog.wavData(tone: tone, volume: volume, fadeIn: fadeIn)
-                .write(to: url, options: .atomic)
+            try data.write(to: url, options: .atomic)
             return name
         } catch {
             log.error("알람음을 쓰지 못했다: \(String(describing: error), privacy: .private)")

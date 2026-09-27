@@ -609,6 +609,18 @@ SDK 를 시작하지 않는다.
 문자열을 끼우면 `%@` 다. 카탈로그에 그 모양으로 적는다. 영어에서 순서가 바뀌면
 `%1$@`·`%2$@` 로 자리를 지정한다.
 
+**명령줄로 빌드하면 새 문구가 카탈로그에 저절로 들어가지 않는다.** `xcodebuild` 는
+컴파일러가 뽑은 `.stringsdata` 만 만들고 `Localizable.xcstrings` 에 합치지는 않는다.
+그 일은 Xcode 앱이 한다. 그래서 문구를 더한 뒤에는 이걸 돌린다.
+
+```sh
+python3 tools/loc-merge.py /tmp/zpbuild        # 빠진 열쇠를 더하고 영어 없는 것을 알려 준다
+python3 tools/loc-merge.py /tmp/zpbuild --prune  # 안 쓰는 열쇠까지 치운다(전체 빌드 뒤에만)
+```
+
+`--prune` 은 증분 빌드에서 쓰면 안 된다 — 다시 컴파일되지 않은 파일의 열쇠가 추출
+결과에 없어서, 쓰고 있는 문구까지 지운다.
+
 **서버 문구는 `server/src/lib/i18n.ts` 한 곳에 모았다.** 태그 이름, 상황 이름과 규칙 설명,
 시간대 이름, 알람 알림 본문이 들어 있다. 앱이 `GET /recommend?lang=en` 으로 언어를
 보내고, 알람은 `POST /push/token` 의 `lang` 으로 기기 언어를 저장해 두었다가 발송 때 쓴다.

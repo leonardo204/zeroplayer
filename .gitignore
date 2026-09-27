@@ -26,3 +26,12 @@ Sources/App/Info.plist
 server/node_modules/
 server/.wrangler/
 server/.dev.vars
+
+# 알람음 굽는 중간물. 사운드폰트는 148MB 라 저장소에 넣지 않는다(tools/alarm-tones/README.md).
+tools/alarm-tones/FluidR3_GM.sf2
+tools/alarm-tones/render
+tools/alarm-tones/scores/
+tools/alarm-tones/out/
+tools/alarm-tones/app/
+tools/alarm-tones/preview/
+tools/alarm-tones/caf/
