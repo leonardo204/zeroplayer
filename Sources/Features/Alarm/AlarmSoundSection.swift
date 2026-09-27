@@ -126,7 +126,12 @@ private struct AlarmTonePicker: View {
                         .foregroundStyle(.tint)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 2)
         }
+        // `.plain` 단추는 글자에만 터치가 걸린다. 줄 전체를 눌러도 잡히게
+        // 넓힌다 — 오른쪽 빈 곳이나 체크 표시를 눌러도 같은 동작이어야 한다.
+        .contentShape(Rectangle())
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? [.isSelected] : [])
     }
