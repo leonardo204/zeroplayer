@@ -843,6 +843,9 @@ Connect 가 위에서 받아 쓴다 — 웹 화면에 흐릿하게 보이는 것
 
 ## 6-17. 다음 할 일 — 심사 결과를 기다린다
 
+> **제출한 뒤에 알람을 크게 고쳤다.** 다음 빌드에 들어갈 것이고, 아직 스토어에 올라가지
+> 않았다. 무엇을 바꿨는지는 `docs/11-post-submit.md`, 왜 그렇게 했는지는 6-19 절에 있다.
+
 **2.0 빌드 2 를 2026-09-24 에 제출했다.** 버전 상태 `WAITING_FOR_REVIEW`,
 제출 객체 `aa412830-…` 에 담겨 있다. 지금 상태를 보려면 이렇게 한다.
 
@@ -875,7 +878,8 @@ python3 tools/asc-readiness.py
       기기 ID 는 앱을 실행하면 로그에 찍힌다(`testDeviceIdentifiers = [ "…" ]`)
 - [ ] AdMob 에 GDPR 동의 메시지를 만든다. EEA·영국에 필요하고 없으면 그 지역 광고가 안 나간다.
       **ATT 사전 안내는 만들지 않는다** — 만들면 한국 사용자에게도 창이 하나 더 뜬다
-- [ ] 알람 커스텀 사운드(30초 `.caf`). 지금은 시스템 기본음이다
+- [x] 알람 커스텀 사운드. 고전 멜로디 20곡을 넣었다(6-19, `tools/alarm-tones/`).
+      기본음도 목록 첫 줄에 그대로 남겨 두었다
 - [ ] Time Sensitive 엔타이틀먼트를 넣는다. **프로파일에는 이미 승인돼 있다**
       (`com.apple.developer.usernotifications.time-sensitive = true`).
       `Sources/App/zeroPlayer*.entitlements` 에 한 줄 더하면 된다
@@ -943,6 +947,131 @@ golf·wander·hamzzi-diet)의 바닥글과 live-translate 의 `llms.txt` 에도 
 배포했고, zerolive-root 의 `robots.txt` 사이트맵 줄에도 있다. 포트폴리오(me.zerolive.co.kr)
 쪽은 코드가 아니라 데이터다 — 홈 서버 PostgreSQL 의 `portfolio_projects.live_url` 에
 랜딩 주소를 넣으면 앱 카드에 '소개 페이지' 단추가 생긴다(id=29 에 넣어 뒀다).
+
+## 6-19. 2.0 제출 뒤에 알아낸 것 — 알람
+
+2026-09-25~27. 변경 목록은 `docs/11-post-submit.md`, 측정 근거는 `docs/10-alarmkit.md` 에 있다.
+여기에는 **다시 밟지 말아야 할 것**만 적는다.
+
+### 6-19-1. 6-17 에 적어 둔 전제 둘이 틀렸다
+
+`docs/01-features.md` 5.1 에 "무음 모드에서는 소리가 안 나고 이를 뚫으려면 Critical Alerts
+엔타이틀먼트가 필요하다" 고 적어 두었다. **iOS 26 부터는 아니다.** AlarmKit 알람은 무음 모드와
+집중 모드를 뚫고 별도 승인이 필요 없다. 애플 문서에 그대로 있다 —
+"It overrides both a device's focus and silent mode, if necessary."
+
+"알람 시각에 앱이 저절로 재생을 시작할 수는 없다" 는 절반만 맞았다. 탭 없는 자동 재생은
+여전히 안 되지만, **잠금 화면 단추 한 번으로 앱 화면을 열지 않고** 재생을 시작할 수 있다.
+
+### 6-19-2. `AudioPlaybackIntent` 를 빼면 소리가 안 난다
+
+알람 화면 단추에 물리는 App Intent 는 `LiveActivityIntent` 와 **`AudioPlaybackIntent` 를 함께**
+채택해야 한다. `LiveActivityIntent` 만 쓰면 깨어난 프로세스에서 오디오 세션이 열리지 않는다.
+
+```
+NSOSStatusErrorDomain code=560557684 ('!int') Session activation failed
+```
+
+`AVAudioSessionErrorCodeCannotInterruptOthers` 다. 20초 동안 40번 연속 거부됐고,
+`mixWithOthers` 로 세션을 열어도 `rate=0.0` 으로 재생이 붙지 않았다. 둘을 함께 채택하면
+첫 시도에 0.0초로 열린다. **애플 문서에 없고 실기기에서 재서 알아낸 것이다.**
+
+### 6-19-3. 알람이 두 번 울리는 길이 셋 있다
+
+시스템 알람·서버 푸시·로컬 백업 알림이 같은 시각에 함께 오면 두 번 이상 깨운다.
+`AlarmDelivery` 가 길을 하나로 정하고, AlarmKit 으로 갈 때 로컬 백업을 치우고 서버 푸시
+토큰을 지운다. 여기서 두 번 걸렸다.
+
+- **토큰을 지웠다는 표시를 되돌릴 수 있어야 한다.** 알람 권한을 껐다 다시 켜면 그 사이에
+  토큰이 다시 올라가는데, `zp.push.droppedForAlarmKit` 가 남아 있으면 두 번째로 켤 때
+  토큰을 지우지 않는다. 그래서 토큰을 올릴 때 표시를 턴다.
+- **권한을 받은 그 자리에서 지워야 한다.** 다음에 앱을 열 때까지 기다리면 그 사이에 걸린
+  첫 알람이 두 번 울린다.
+
+서버 쪽은 손대지 않았다. 토큰이 없으면 보낼 대상이 없어서 그대로 조용해진다.
+
+### 6-19-4. 표본율을 22.05kHz 로 내리면 소리가 막힌다
+
+용량을 줄이려고 알람음을 22.05kHz 로 구웠는데, 나이퀴스트가 11.025kHz 라 그 위가 통째로
+사라진다. 실측으로 11kHz 위가 **−200dB, 즉 아무것도 없었다.** 현의 반짝임과 피아노 어택이
+거기 있어서 담요를 덮은 소리가 됐다. 44.1kHz 로 구우니 11~16kHz 가 −25~−48dB 로 살아났다.
+용량은 20곡 5.9MB → 12MB 로 는다.
+
+리샘플에는 저역통과를 먼저 걸어야 한다. 선형 보간만 하면 잘릴 고역이 접혀 들어와 탁해진다.
+
+### 6-19-5. 캐시 이름에 음원의 지문을 넣는다
+
+알람음 파일은 이름이 같으면 다시 굽지 않는다. 이름에 곡·음량·점점크게만 들어 있어서
+**번들 음원을 44.1kHz 로 갈았는데 이미 걸린 알람은 옛 22.05kHz 소리로 계속 울렸다.**
+번들 파일 크기를 이름에 붙여 저절로 무효화되게 했다. 사람이 판 번호를 올려 주는 방식은
+쓰지 않는다 — 이번에 내가 그걸 잊어서 생긴 문제다.
+
+기기에서 굽는 코드에 표본율이 `22_050` 으로 박혀 있던 것도 함께 고쳤다. 그대로 두면
+44.1kHz 음원이 절반 속도로 늘어져 재생된다.
+
+### 6-19-6. `.plain` 단추는 글자에만 터치가 걸린다
+
+`Spacer` 로 벌린 빈 곳은 눌러도 안 잡힌다. `.contentShape(Rectangle())` 를 **단추 라벨 안쪽**에
+두어야 줄 전체가 잡힌다. 밖에 두면 단추를 감싼 뷰의 터치 영역만 넓어지고 그 자리에는 받을
+제스처가 없어서 아무 일도 일어나지 않는다. 목록 화면 여섯 곳을 전수 확인했고 알람음 목록
+한 곳만 틀렸다.
+
+### 6-19-7. 명령줄 빌드는 새 문구를 문자열 카탈로그에 합치지 않는다
+
+컴파일러가 `.stringsdata` 로 문구를 정확히 뽑아 놓는데, 그것을 `Localizable.xcstrings` 에
+합치는 일은 **Xcode 앱이 한다.** `xcodebuild` 로만 빌드하면 새 문구가 카탈로그에 안 들어가고
+한국어 원문이 그대로 화면에 나온다. `tools/loc-merge.py` 로 합친다.
+
+```sh
+python3 tools/loc-merge.py /tmp/zpbuild
+```
+
+지금 키 318개이고, 단어가 든 키는 영어 번역이 모두 있다. 남은 넷(`%lld`·`· %@` 등)은
+단어가 없어 번역할 것이 없다.
+
+### 6-19-8. 인터럽트 복구가 방송국을 죽였다
+
+전화가 오면 두 자리에서 멀쩡한 방송국을 죽은 것으로 서버에 신고했다.
+
+- **첫 소리가 나기 전에 전화가 오면** `.began` 을 `state == .playing` 에서만 처리해 흘려보냈다.
+  15초 워치독이 그대로 돌아 `fail(.noAudio)` 를 냈고, 그 신고가 쌓이면 남의 방송국이
+  목록에서 빠진다. 이제 로딩 중 인터럽트는 워치독을 세우고 끝난 뒤 처음부터 다시 건다.
+- **긴 통화 뒤**에는 기존 `AVPlayer` 에 `play()` 만 불러도 라이브 스트림이 붙지 않는다.
+  서버가 연결을 놓아 버리기 때문이다. 끊긴 시간이 60초를 넘으면 새로 연다.
+
+### 6-19-9. 알람음 음원의 권리
+
+오픈소스 알람음을 셋 알아봤고 전부 접었다.
+
+| 알아본 것 | 결과 |
+| --- | --- |
+| AOSP `data/sounds/alarms` | Apache 2.0 이 맞다. 다만 전자음 계열이고 고유한 소리는 16종뿐이다 |
+| `robbiehanson/AlarmClock` (MIT) | 레포는 MIT 인데 음원 출처가 지워져 있다. 원저작자 표시와 copyright 태그가 없고, 번역자 18명·디자이너 3명을 적은 Credits 에 사운드만 빠졌다 |
+| Freesound CC0 | 라이선스는 깨끗한데 단음이라 멜로디가 안 된다 |
+
+**MIT 라는 사실이 음원의 권리를 보장하지 않는다.** 저작권자가 자기 것에 대해 준 허가일 뿐이고,
+제3자 음원이 섞여 있으면 그가 넘길 권리가 없다. 그래서 저작권이 끝난 고전을 우리가 연주해
+굽는 쪽으로 갔다. 도구와 권리 정리는 `tools/alarm-tones/` 에 있다.
+
+### 6-19-10. 새로 생긴 파일
+
+| 파일 | 하는 일 |
+| --- | --- |
+| `Sources/Core/Notifications/AlarmDelivery.swift` | 알람을 어느 길로 보낼지 정한다 |
+| `Sources/Core/Notifications/AlarmKitScheduler.swift` | 2분 간격 4개 연쇄로 걸고 치운다 |
+| `Sources/Core/Notifications/AlarmIntents.swift` | 알람 화면의 두 단추 |
+| `Sources/Core/Notifications/AlarmPlaybackBridge.swift` | 화면 없이 재생기를 부르는 통로 |
+| `Sources/Core/Notifications/AlarmSound.swift` | 알람음 20곡 목록과 굽기 |
+| `Sources/Features/Alarm/AlarmSoundSection.swift` | 알람음 고르기·음량·미리듣기 |
+| `Sources/Core/UI/AppColor.swift` | 에셋으로 못 덮는 강조색 |
+| `Sources/Resources/AlarmTones/zptone-*.caf` | 음원 20곡, 12MB |
+| `tools/alarm-tones/` | 음원 굽는 도구와 권리 정리 |
+| `tools/loc-merge.py` | `.stringsdata` 를 문자열 카탈로그에 합친다 |
+| `docs/10-alarmkit.md` | AlarmKit 실기기 측정과 설계 |
+| `docs/11-post-submit.md` | 제출 이후 변경 목록 |
+
+실기기 확인용 통로도 늘었다. `-ZPBakeTones 1` 은 20곡을 실제로 구워 표본율과 길이를
+파일로 남긴다(`Documents/bake-report.txt`). 케이블로 로그를 못 볼 때 쓴다.
 
 ## 7. 정해둔 것과 아직 안 정한 것
 
