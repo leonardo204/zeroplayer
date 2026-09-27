@@ -30,7 +30,7 @@
 | 알람 예약 개수 | 1000건 전부 성공. `maximumLimitReached` 안 남 |
 | 예약 뒤 사운드 파일 덮어쓰기 | 덮어쓴 새 소리로 울린다 — 발화 시점에 파일을 읽는다 |
 | 무음 모드 · 집중 모드 | AlarmKit 이 뚫는다. Critical Alerts 엔타이틀먼트가 필요 없다 |
-| PCM WAV 를 알람음으로 | 소리가 난다. 22.05kHz · 16bit · 모노 · 25초로 확인 |
+| PCM WAV 를 알람음으로 | 소리가 난다. 44.1kHz · 16bit · 모노 · 23~29초로 확인 |
 | 서버에서 방송 앞부분을 받아 알람음으로 | 된다. 받는 데 13~15초, 폰에서 PCM 변환은 0.1초 |
 
 ### 안 되는 것
@@ -123,7 +123,7 @@ let alert = AlarmPresentation.Alert(
 
 | 항목 | 값 |
 | --- | --- |
-| 번들 형식 | IMA4 압축 CAF, 22.05kHz 모노. 20곡 5.9MB(곡당 약 300KB) |
+| 번들 형식 | IMA4 압축 CAF, 44.1kHz 모노. 20곡 12MB(곡당 약 600KB) |
 | 기기에서 | 링형 PCM WAV 로 풀어 `Library/Sounds` 에 쓴다 |
 | 길이 | 22.5 ~ 29.0초 (알람음 한도 30초 미만) |
 | 크기(음량 최대) | 피크 98~100%, RMS −8.0 ~ −8.2 dBFS |
@@ -131,7 +131,11 @@ let alert = AlarmPresentation.Alert(
 
 **MP3 는 알람음으로 못 쓴다.** 알람 화면은 뜨는데 소리가 나지 않고 오류도 안 남는다. IMA4 CAF 는 `UNNotificationSound` 문서가 허용 형식으로 적어 둔 것이라 안전하고, WAV 대비 4분의 1로 줄어든다.
 
-곡마다 목표 크기(RMS −8.0dBFS)에 닿을 만큼만 눌러 키운다. 눌러야 하는 양이 곡에 따라 1.7~7배까지 달라서 고정값으로는 맞지 않는다 — `post.py` 가 이분법으로 찾는다.
+곡마다 목표 크기(RMS −8.0dBFS)에 닿을 만큼만 눌러 키운다. 눌러야 하는 양이 곡에 따라 0.8~3.2배로 달라서 고정값으로는 맞지 않는다 — `post.py` 가 이분법으로 찾는다.
+
+**표본율을 22.05kHz 로 내리지 않는다.** 처음에는 용량을 줄이려고 내렸는데, 그러면 나이퀴스트가 11.025kHz 라 그 위가 통째로 사라진다. 실측으로 11kHz 위가 −200dB, 즉 아무것도 없었다. 현의 반짝임과 피아노 어택이 거기 있어서 담요를 덮은 소리가 됐다. 44.1kHz 로 구우니 11~16kHz 가 −25~−48dB 로 살아났다. 용량은 5.9MB → 12MB 로 는다.
+
+**눌림 상한은 2.5 배다.** 더 누르면 어택이 뭉개져 다시 막힌 소리가 된다. 목표 크기에 못 닿는 곡은 후처리를 세게 하지 말고 악보에서 고친다 — 세기를 올리거나 이음새를 늘리거나 악기를 바꾼다. 하이든은 반주가 pizzicato 라 거의 안 들렸고, 지속하는 현으로 바꾸니 눌림이 2.5 → 1.7배로 오히려 줄었다. `masterGain` 은 12dB 가 상한이라 그 위를 적으면 조용히 잘린다.
 
 #### 파일을 쓰는 방식
 
@@ -147,7 +151,7 @@ let alert = AlarmPresentation.Alert(
 
 #### 방송을 알람음으로 — 접은 길의 기록
 
-방송 스트림은 MP3 라 그대로는 못 쓴다(위와 같다). 링형 PCM 으로 바꿔야 한다. 22.05kHz · 16bit · 모노 · 25초로 확인했다.
+방송 스트림은 MP3 라 그대로는 못 쓴다(위와 같다). 링형 PCM 으로 바꿔야 한다. 22.05kHz · 16bit · 모노 · 25초로 확인했다(그때는 알람음도 22.05k 였다).
 
 바꾸는 곳은 둘 중 하나다.
 
@@ -232,7 +236,7 @@ RMS 가 10dB 올랐는데도 **여전히 기본 알람음보다 작게 들린다
 | `Sources/Core/Notifications/AlarmStore.swift` | `reschedule()` 에서 두 길을 가른다 |
 | `Sources/Core/Notifications/AlarmSound.swift` | 알람음 목록, 번들 CAF 를 풀어 `Library/Sounds` 에 쓰기, 안 쓰는 파일 치우기 |
 | `Sources/Features/Alarm/AlarmSoundSection.swift` | 알람음 고르는 화면·음량 슬라이더·미리듣기 |
-| `Sources/Resources/AlarmTones/zptone-*.caf` | 음원 20곡. IMA4 CAF, 5.9MB |
+| `Sources/Resources/AlarmTones/zptone-*.caf` | 음원 20곡. IMA4 CAF 44.1kHz, 12MB |
 | `tools/alarm-tones/` | 음원을 굽는 도구. 악보·렌더러·후처리·권리 정리 |
 | `Sources/Core/Notifications/PushRegistrar.swift` | AlarmKit 로 가면 APNs 등록을 건너뛰고 올려 둔 토큰을 지운다 |
 | `project.yml` | `NSAlarmKitUsageDescription`, `NSSupportsLiveActivities` |
@@ -249,5 +253,6 @@ iOS 26 이상에서 AlarmKit 권한을 받았으면 AlarmKit 하나만 쓴다. �
 
 ### 남은 것
 
-- 실기기에서 알람을 걸고 단추를 눌러 방송이 나오는 것까지는 시험 앱으로 확인했다. **zeroPlayer 본체로 같은 것을 다시 확인해야 한다.**
+- 알람이 울리고 단추로 방송이 나오는 것까지는 실기기에서 확인했다.
+- **44.1kHz 로 바꾼 음원을 실기기에서 아직 울려 보지 못했다.** 굽는 경로는 맥에서 같은 `AVAudioFile` 로 검증했다(표본율 44100, 길이·크기 일치). 기기에서는 `-ZPBakeTones 1` 로 20곡을 구워 파일 크기가 곡당 2.3MB 대(22.05k 시절 1.1MB 의 두 배)인지 보면 된다.
 - 자정을 넘는 연쇄(23:54 이후 알람)는 요일까지 밀어야 해서 지금은 건너뛴다.

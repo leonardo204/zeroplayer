@@ -28,7 +28,6 @@ struct AlarmTone: Identifiable, Hashable, Sendable {
 
 enum AlarmSoundCatalog {
     /// 기기에서 풀어 쓸 때의 표본율. 번들 음원도 같은 값으로 구웠다.
-    static let sampleRate: Double = 22_050
     /// 점점 커지기에 쓰는 램프. 앞 이만큼 동안 0 에서 1 로 오른다.
     static let rampSeconds: Double = 10
 
@@ -92,8 +91,11 @@ enum AlarmSoundCatalog {
 
     // MARK: - 풀어 쓰기
 
-    /// 번들 음원을 읽어 표본으로 돌려준다. 압축(IMA4)을 풀어 −1…1 로 준다.
-    private static func decode(_ tone: AlarmTone) -> [Float]? {
+    /// 번들 음원을 읽어 표본과 표본율을 돌려준다. 압축(IMA4)을 풀어 −1…1 로 준다.
+    ///
+    /// 표본율을 파일에서 읽는 것이 중요하다. 여기에 고정값을 쓰면 음원을 다시 구워
+    /// 표본율이 바뀌었을 때 WAV 머리말과 어긋나 소리가 느려지거나 빨라진다.
+    private static func decode(_ tone: AlarmTone) -> (samples: [Float], sampleRate: Double)? {
         guard let url = bundleURL(for: tone) else {
             log.error("알람음 파일이 번들에 없다: \(tone.resourceName, privacy: .public)")
             return nil
@@ -123,7 +125,7 @@ enum AlarmSoundCatalog {
                     out[i] = sum / Float(channelCount)
                 }
             }
-            return out
+            return (out, buffer.format.sampleRate)
         } catch {
             log.error("알람음을 읽지 못했다: \(String(describing: error), privacy: .private)")
             return nil
@@ -136,10 +138,11 @@ enum AlarmSoundCatalog {
     /// `volume` 은 0…1 이고, 가장 작게 골라도 안 들리면 알람 구실을 못 하므로
     /// 아래를 잘라 둔다.
     static func wavData(tone: AlarmTone, volume: Double, fadeIn: Bool) -> Data? {
-        guard let source = decode(tone) else { return nil }
+        guard let decoded = decode(tone) else { return nil }
+        let source = decoded.samples
         let level = min(1, max(0, volume))
         let gain = Float(0.3 + 0.7 * level)
-        let rampFrames = fadeIn ? Int(rampSeconds * sampleRate) : 0
+        let rampFrames = fadeIn ? Int(rampSeconds * decoded.sampleRate) : 0
 
         var samples = [Int16](repeating: 0, count: source.count)
         for i in 0..<source.count {
@@ -149,11 +152,11 @@ enum AlarmSoundCatalog {
             }
             samples[i] = Int16(max(-1, min(1, value)) * 32_700)
         }
-        return wav(samples)
+        return wav(samples, sampleRate: decoded.sampleRate)
     }
 
     /// 링형 PCM 모노 WAV 를 조립한다.
-    private static func wav(_ samples: [Int16]) -> Data {
+    private static func wav(_ samples: [Int16], sampleRate: Double) -> Data {
         var samples = samples
         var data = Data()
         func le32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { data.append(contentsOf: $0) } }

@@ -173,9 +173,12 @@ struct ZeroPlayerApp: App {
                 log.error("굽기 실패 \(tone.id, privacy: .public)")
                 continue
             }
-            // WAV 머리 44바이트를 뺀 표본 수로 길이를 센다.
-            let seconds = Double(data.count - 44) / 2 / AlarmSoundCatalog.sampleRate
-            log.info("구움 \(tone.id, privacy: .public) \(data.count)바이트 \(String(format: "%.1f", seconds))초")
+            // 머리말에 적힌 표본율로 길이를 센다. 음원을 다시 구우면 바뀌는 값이다.
+            let rate = data.withUnsafeBytes { raw -> UInt32 in
+                raw.loadUnaligned(fromByteOffset: 24, as: UInt32.self).littleEndian
+            }
+            let seconds = Double(data.count - 44) / 2 / Double(max(1, rate))
+            log.info("구움 \(tone.id, privacy: .public) \(data.count)바이트 \(rate)Hz \(String(format: "%.1f", seconds))초")
             _ = AlarmSoundStore.ensure(tone: tone, volume: 1, fadeIn: false)
             ok += 1
         }

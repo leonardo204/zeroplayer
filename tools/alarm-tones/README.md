@@ -26,8 +26,10 @@ license, as described in COPYING." 사운드폰트(148MB)는 저장소에 넣지
 
 ```sh
 cd tools/alarm-tones
+# GitHub raw 경로는 404 페이지(HTML)를 내려주는 때가 있다. 받은 뒤 반드시 확인한다.
 curl -fsSL -o FluidR3_GM.sf2 \
-  https://github.com/urish/cinto/raw/master/static/sf2/FluidR3_GM.sf2
+  "https://sourceforge.net/projects/androidframe/files/soundfonts/FluidR3_GM.sf2/download"
+file FluidR3_GM.sf2          # 'SoundFont/Bank' 가 나와야 한다(148MB)
 swiftc -O render.swift -o render
 ```
 
@@ -42,11 +44,25 @@ python3 melodies.py scores        # 악보 20개
 for f in scores/*.txt; do
   ./render FluidR3_GM.sf2 "$f" "out/$(basename "${f%.txt}").wav"
 done
-python3 post.py                   # preview/(스테레오)  app/(22.05k 모노)
+for f in out/*.wav; do
+  python3 post.py "$f" "app/$(basename "$f")" 44100 2.5 0.35
+done
 ```
 
-`post.py` 가 곡마다 목표 크기(RMS −8.0 dBFS)에 닿을 만큼만 눌러 키운다. 곡에 따라
-1.7~7배까지 달라서 고정값으로는 맞지 않는다. 끝에 점검 결과를 찍는다.
+`post.py` 가 곡마다 목표 크기(RMS −8.0 dBFS)에 닿을 만큼만 눌러 키운다. 인자는
+`<입력> <출력> <표본율> <눌림 상한> <고역 프리젠스>` 다.
+
+**표본율을 22.05kHz 로 내리지 않는다.** 그러면 나이퀴스트가 11.025kHz 라 그 위가
+통째로 사라진다(실측 −200dB). 현의 반짝임과 피아노 어택이 거기 있어서, 내리면
+담요를 덮은 소리가 된다. 44.1kHz 로 구우면 11~16kHz 가 −25~−48dB 로 살아난다.
+
+**눌림 상한은 2.5 다.** 더 누르면 어택이 뭉개져 다시 막힌 소리가 된다. 목표 크기에
+못 닿으면 후처리를 세게 하지 말고 **악보에서 고친다** — 세기(velocity)를 올리거나
+이음새(legato)를 늘리거나 악기를 바꾼다. 곡별 예외는 `post.py` 의 `DRIVE_MAX` 에
+한 곳으로 모아 뒀다(지금은 윌리엄 텔만 3.5 다).
+
+`masterGain` 은 **12dB 가 상한**이다. 그 위를 적으면 조용히 잘린다 — 하이든에 16 을
+적어 뒀다가 잘려서 소리가 작았다.
 
 ## 앱에 넣기
 
@@ -57,8 +73,12 @@ for f in app/*.wav; do
 done
 ```
 
-IMA4 로 담으면 곡당 1.1MB → 300KB 로 줄고, 애플이 알람음으로 받아 주는 형식이다
-(MP3 는 알람 화면만 뜨고 소리가 안 난다 — `docs/10-alarmkit.md`).
+IMA4 로 담으면 곡당 2.3MB → 600KB 로 줄고, 애플이 알람음으로 받아 주는 형식이다
+(MP3 는 알람 화면만 뜨고 소리가 안 난다 — `docs/10-alarmkit.md`). 20곡이 12MB 다.
+
+표본율을 바꿔도 앱 코드는 안 건드려도 된다. 기기에서 굽는 쪽이 파일에서 읽은
+표본율을 그대로 쓴다(`AlarmSoundCatalog.wavData`). 예전에는 22050 이 박혀 있어서,
+음원만 44.1k 로 갈면 절반 속도로 늘어져 재생됐다.
 
 파일 이름을 ASCII 로 바꿔 `Sources/Resources/AlarmTones/zptone-<키>.caf` 로 옮기고,
 `AlarmSoundCatalog.tones` 에 한 줄을 더한다. 키는 파일 이름과 저장값에 쓰이므로

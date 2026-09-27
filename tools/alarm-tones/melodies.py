@@ -48,11 +48,13 @@ def bach_minuet():
            ('B4',1),('C5',.5),('B4',.5),('A4',.5),('G4',.5),
            ('F#4',1),('G4',.5),('A4',.5),('B4',.5),('G4',.5),
            ('B4',1),('A4',2)]
-    n1, end = seq(spb, mel, slot=0, vel=100)
+    n1, end = seq(spb, mel, slot=0, vel=118)
     bass = [(['G3','B3'],3),(['G3','D4'],3),(['C3','E3'],3),(['G3','B3'],3),
             (['C3','E3'],3),(['G3','B3'],3),(['D3','A3'],3),(['G3','D4'],3)]
-    n2, _ = chords(spb, bass, slot=1, vel=50)
-    return dict(tempo_len=end, inst={0:(10,1.0,0.0), 1:(8,0.40,0.0)}, notes=n1+n2, rev=18)
+    n2, _ = chords(spb, bass, slot=1, vel=76)
+    # 오르골은 때린 뒤 빠르게 잦아들어 무음이 많다. 그대로 두면 후처리가 목표 크기까지
+    # 못 올리고(−12dBFS 에서 멈춘다) 더 누르면 어택이 뭉갠다. 여기서 키워 둔다.
+    return dict(tempo_len=end, inst={0:(10,1.0,0.0,9), 1:(8,0.62,0.0,7)}, notes=n1+n2, rev=18)
 
 def bach_prelude():
     """Bach, 평균율 1권 전주곡 C장조 BWV 846 (1722). 첼레스타."""
@@ -248,12 +250,13 @@ def haydn_surprise():
     P = lambda a, b, c, d: [(a,1),(a,1),(b,1),(b,1),(c,1),(c,1),(d,2)]
     mel = P('C5','E5','G5','E5') + P('F5','D5','B4','G4') \
         + P('E5','G5','C6','A5') + P('F5','D5','G4','C5')
-    n1, end = seq(u, mel, slot=0, vel=108, legato=0.8)
+    n1, end = seq(u, mel, slot=0, vel=120, legato=0.94)
     C = ['C3','E3','G3']; G = ['G2','D3','G3']
     harm = [(C,8),(G,8),(C,8),(G,4),(C,4)]
-    n2, _ = chords(u, harm, slot=1, vel=58, legato=0.75)
-    # 현은 짧게 끊으면 소리가 거의 안 난다. 길이를 늘리고 악기를 올려 둔다.
-    return dict(tempo_len=end, inst={0:(48,1.0,0.0,16), 1:(45,0.8,0.0,12)}, notes=n1+n2, rev=24)
+    n2, _ = chords(u, harm, slot=1, vel=80, legato=0.98)
+    # `masterGain` 은 12dB 가 상한이라 그 위를 적어도 잘린다(16 을 적어 뒀다가 잘렸다).
+    # 반주는 pizzicato(45) 를 쓰면 더 짧게 끊겨 거의 안 들린다. 지속하는 현으로 둔다.
+    return dict(tempo_len=end, inst={0:(48,1.0,0.0,12), 1:(48,0.78,0.0,12)}, notes=n1+n2, rev=24)
 
 
 def dvorak_newworld():
