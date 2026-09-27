@@ -127,11 +127,15 @@ private struct AlarmTonePicker: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 2)
+            .padding(.vertical, 4)
+            // `.plain` 단추는 글자에만 터치가 걸린다. `Spacer` 로 벌린 빈 곳은
+            // 눌러도 안 잡힌다. 그래서 줄 전체를 터치 영역으로 만든다.
+            //
+            // 이 줄이 **단추 안쪽**에 있어야 한다. 밖에 두면 단추를 감싼 뷰의
+            // 터치 영역만 넓어지고, 그 자리에는 받을 제스처가 없어서 아무 일도
+            // 일어나지 않는다(실제로 그랬다).
+            .contentShape(Rectangle())
         }
-        // `.plain` 단추는 글자에만 터치가 걸린다. 줄 전체를 눌러도 잡히게
-        // 넓힌다 — 오른쪽 빈 곳이나 체크 표시를 눌러도 같은 동작이어야 한다.
-        .contentShape(Rectangle())
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? [.isSelected] : [])
     }

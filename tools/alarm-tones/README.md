@@ -96,6 +96,24 @@ dict(tempo_len=<한바퀴 초>, inst={<슬롯>: (<GM프로그램>, <볼륨>, <�
 `write_score` 가 한 바퀴를 26초까지 되풀이해 채운다. 알람음 한도가 30초 미만이라
 그 안에서 끝나야 한다.
 
+## 음원을 다시 구운 뒤
+
+앱 코드는 손댈 것이 없다. 표본율은 파일에서 읽고, 기기에 캐시된 알람음도 번들 파일
+크기가 바뀌면 자동으로 다시 구워진다(`AlarmSoundStore.fileName` 의 지문).
+
+확인은 이렇게 한다.
+
+```sh
+D=00008160-001C51D136600036 ; B=com.zerolive.cloudRadioN
+xcrun devicectl device process launch --device $D --terminate-existing $B -ZPBakeTones 1
+sleep 20
+xcrun devicectl device copy from --device $D --domain-type appDataContainer \
+  --domain-identifier $B --source Documents/bake-report.txt --destination /tmp/bake-report.txt
+cat /tmp/bake-report.txt
+```
+
+곡마다 바이트·표본율·길이가 찍히고 마지막 줄이 `구운 곡 20/20` 이면 된다.
+
 ## 정직하게 적어 두는 것
 
 악보를 기억으로 적은 것이라 음이 틀린 곳이 있을 수 있다. 확신도가 갈린다.

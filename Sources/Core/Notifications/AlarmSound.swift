@@ -89,6 +89,21 @@ enum AlarmSoundCatalog {
         Bundle.main.url(forResource: tone.resourceName, withExtension: "caf")
     }
 
+    /// 번들 음원의 지문. 파일 크기를 KB 로 줄인 값이다.
+    ///
+    /// 캐시해 둔 알람음 파일 이름에 붙여 쓴다. 음원을 다시 구우면 크기가 달라져
+    /// 이름이 바뀌고, 그러면 옛 파일을 그대로 쓰지 않는다. 실제로 표본율을
+    /// 22.05kHz 에서 44.1kHz 로 올렸을 때 이미 캐시된 알람이 옛 소리로 계속
+    /// 울렸다. 사람이 판 번호를 올려 주는 방식은 그때 잊었으므로 쓰지 않는다.
+    static func sourceTag(for tone: AlarmTone) -> String {
+        guard
+            let url = bundleURL(for: tone),
+            let size = try? FileManager.default
+                .attributesOfItem(atPath: url.path)[.size] as? Int
+        else { return "0" }
+        return String(size / 1_024)
+    }
+
     // MARK: - 풀어 쓰기
 
     /// 번들 음원을 읽어 표본과 표본율을 돌려준다. 압축(IMA4)을 풀어 −1…1 로 준다.
@@ -198,9 +213,13 @@ enum AlarmSoundStore {
     }
 
     /// 같은 소리·음량이면 파일 하나를 여러 알람이 같이 쓴다.
+    ///
+    /// 이름 끝의 숫자는 번들 음원의 지문이다. 음원을 다시 구우면 그 값이 바뀌어
+    /// 옛 캐시를 쓰지 않고 새로 굽는다. 남은 옛 파일은 `prune` 이 치운다.
     static func fileName(tone: AlarmTone, volume: Double, fadeIn: Bool) -> String {
         let step = Int((min(1, max(0, volume)) * 20).rounded())
-        return "\(prefix)\(tone.id)-\(step)\(fadeIn ? "-f" : "").wav"
+        let tag = AlarmSoundCatalog.sourceTag(for: tone)
+        return "\(prefix)\(tone.id)-\(step)\(fadeIn ? "-f" : "")-\(tag).wav"
     }
 
     /// 파일을 만들어 두고 이름을 돌려준다. 이미 있으면 다시 쓰지 않는다.

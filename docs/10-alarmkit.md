@@ -139,7 +139,11 @@ let alert = AlarmPresentation.Alert(
 
 #### 파일을 쓰는 방식
 
-번들의 CAF 를 `AVAudioFile` 로 읽어 압축을 풀고, 음량과 '점점 크게' 를 적용해 링형 PCM WAV 로 `Library/Sounds` 에 쓴다(`Sources/Core/Notifications/AlarmSound.swift`). 파일 이름에 곡 키·음량 단계·점점크게가 들어가 있어 같은 조합이면 여러 알람이 한 파일을 같이 쓰고, 안 쓰는 파일은 예약할 때 치운다(`AlarmSoundStore.prune`).
+번들의 CAF 를 `AVAudioFile` 로 읽어 압축을 풀고, 음량과 '점점 크게' 를 적용해 링형 PCM WAV 로 `Library/Sounds` 에 쓴다(`Sources/Core/Notifications/AlarmSound.swift`). 파일 이름에 곡 키·음량 단계·점점크게·**번들 음원의 지문**이 들어가 있어 같은 조합이면 여러 알람이 한 파일을 같이 쓰고, 안 쓰는 파일은 예약할 때 치운다(`AlarmSoundStore.prune`).
+
+지문을 붙이는 이유가 있다. `ensure` 는 같은 이름 파일이 있으면 다시 굽지 않는다. 그래서 번들 음원을 44.1kHz 로 다시 구웠을 때 **이미 캐시된 알람은 옛 22.05kHz 소리로 계속 울렸다.** 지문은 번들 파일 크기를 KB 로 줄인 값이라(`AlarmSoundCatalog.sourceTag`) 음원이 바뀌면 이름이 바뀌고 새로 굽는다. 사람이 판 번호를 올려 주는 방식은 쓰지 않는다 — 그 방식이면 잊는다.
+
+WAV 머리말의 표본율도 번들 파일에서 읽은 값을 쓴다. 상수로 박아 두면 음원을 다시 구운 순간 소리가 절반 속도로 늘어진다.
 
 미리듣기는 파일을 다시 굽지 않는다. 번들 CAF 를 `AVAudioPlayer` 로 바로 틀고 `player.volume` 만 맞춘다. 오디오 세션은 카테고리만 건드린다 — 세션을 내리면 듣고 있던 방송까지 끊긴다.
 

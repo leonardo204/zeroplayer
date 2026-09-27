@@ -165,6 +165,14 @@ struct ZeroPlayerApp: App {
     /// 릴리스 빌드에는 들어가지 않는다.
     private func bakeTonesIfRequested() async {
         #if DEBUG
+        // 결과를 파일로도 남긴다. 케이블로 로그를 못 볼 때 이것만 꺼내 보면 된다.
+        var report = ["args=\(ProcessInfo.processInfo.arguments.joined(separator: " "))"]
+        func flush() {
+            let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            try? report.joined(separator: "\n").write(
+                to: dir.appendingPathComponent("bake-report.txt"), atomically: true, encoding: .utf8)
+        }
+        flush()
         guard UserDefaults.standard.string(forKey: "ZPBakeTones") == "1" else { return }
         let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "zeroPlayer", category: "alarm")
         var ok = 0
@@ -179,10 +187,13 @@ struct ZeroPlayerApp: App {
             }
             let seconds = Double(data.count - 44) / 2 / Double(max(1, rate))
             log.info("구움 \(tone.id, privacy: .public) \(data.count)바이트 \(rate)Hz \(String(format: "%.1f", seconds))초")
+            report.append("\(tone.id) \(data.count)바이트 \(rate)Hz \(String(format: "%.1f", seconds))초")
             _ = AlarmSoundStore.ensure(tone: tone, volume: 1, fadeIn: false)
             ok += 1
         }
         log.info("알람음 \(ok)/\(AlarmSoundCatalog.tones.count) 곡을 구웠다")
+        report.append("구운 곡 \(ok)/\(AlarmSoundCatalog.tones.count)")
+        flush()
         #endif
     }
 
