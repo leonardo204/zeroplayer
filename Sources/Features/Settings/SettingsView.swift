@@ -200,6 +200,8 @@ struct SettingsView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture { countVersionTap() }
+
+                    NavigationLink("오픈소스 라이선스") { LicensesView() }
                 } footer: {
                     if let unlockError {
                         Text(unlockError).foregroundStyle(.red)

@@ -153,39 +153,14 @@ version`(QA1623) 으로 떨어졌다. 지금은 `"1,2"` 다. 아이패드 스크
 - [ ] 글자 크기를 가장 크게 해도 화면이 깨지지 않는다
 - [ ] VoiceOver 로 재생·일시정지·프리셋 실행을 할 수 있다
 
-## 7. 다음 빌드 릴리스 노트
+## 7. 다음 빌드 — 2.1.0 (빌드 3)
 
-2.0 을 제출한 뒤 알람을 크게 고쳤다. 변경 목록은 `docs/11-post-submit.md`, 근거는
-`CONTEXT.md` 6-19 절에 있다. 아래 문구를 App Store Connect 의 '이번 버전의 새로운 기능' 에 넣는다.
+2.0 을 제출한 뒤 알람을 크게 고쳐 버전을 올렸다. 변경 목록은 `docs/11-post-submit.md`,
+근거는 `CONTEXT.md` 6-19 절에 있다.
 
-**한국어**
-
-```
-알람을 새로 만들었습니다.
-
-• 무음 모드나 집중 모드를 켜 두어도 알람이 울립니다(iOS 26 이상).
-• 알람 화면에서 '방송 켜기' 를 누르면 앱이 열리지 않고 바로 방송이 나옵니다.
-• 알람음을 고전 멜로디 스무 곡 가운데 고를 수 있습니다. 바흐 무반주 첼로,
-  그리그 아침, 모차르트 터키 행진곡처럼 잠을 깨기 좋은 곡을 담았습니다.
-  음량과 '점점 크게' 도 따로 맞춥니다.
-• 못 듣고 지나치지 않게 2분 간격으로 몇 번 더 울립니다.
-• 전화를 받은 뒤 라디오가 다시 이어집니다.
-• 즐겨찾기 표시를 한눈에 보이게 바꿨습니다.
-```
-
-**영어** (스토어 현지화를 영어까지 늘릴 때만 쓴다)
-
-```
-The alarm has been rebuilt.
-
-• Alarms now ring even with Silent mode or a Focus turned on (iOS 26 and later).
-• Tap "Play radio" on the alarm screen and the station starts without opening the app.
-• Choose from twenty classical pieces — Bach's Cello Suite No. 1, Grieg's Morning,
-  Mozart's Turkish March and more. Volume and fade-in are adjustable.
-• The alarm repeats every two minutes so you don't sleep through it.
-• Radio resumes after a phone call.
-• Favourites are easier to spot.
-```
+App Store Connect 에 넣을 문구는 `docs/09-appstore-submit.md` 에 모아 두었다 —
+프로모션 텍스트는 2 절, 릴리스 노트는 6 절, 심사 메모는 7 절이다. 사본을 두지 않으려고
+여기에 다시 적지 않는다.
 
 ### 7.1 제출 전 점검
 

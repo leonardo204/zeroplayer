@@ -20,7 +20,23 @@ App Store Connect 의 칸에 그대로 붙여 넣을 값이다. 한국어와 영
 
 ## 2. 프로모션 텍스트 (170자)
 
-심사 없이 언제든 바꿀 수 있는 유일한 칸이다.
+심사 없이 언제든 바꿀 수 있는 유일한 칸이다. 그래서 새 기능을 가장 먼저 알리는 자리로 쓴다.
+
+### 2.1.0 — 지금 넣을 것
+
+**한국어** (104자)
+
+```
+알람을 새로 만들었습니다. 무음 모드에서도 울리고, 알람 화면에서 한 번 누르면 앱이 열리지 않은 채 라디오가 나옵니다. 알람음은 바흐·모차르트 등 고전 멜로디 스무 곡 가운데 고릅니다.
+```
+
+**영어** (154자)
+
+```
+The alarm is rebuilt. It rings through Silent mode, one tap starts live radio without opening the app, and you can wake to any of twenty classical pieces.
+```
+
+### 2.0 — 앞 버전에 넣었던 것
 
 **한국어** (78자)
 
@@ -190,7 +206,42 @@ internet radio,podcast,sleep timer,radio alarm,white noise,focus,study,driving,s
 
 ## 6. 새로운 기능 (릴리스 노트)
 
-1.7 에서 바뀐 것이 많아 그대로 적는다.
+### 2.1.0 — 지금 넣을 것
+
+알람을 새로 만든 버전이다. 무엇을 바꿨는지는 `docs/11-post-submit.md` 에 있다.
+
+**한국어**
+
+```
+알람을 새로 만들었습니다.
+
+• 무음 모드나 집중 모드를 켜 두어도 알람이 울립니다(iOS 26 이상).
+• 알람 화면에서 '방송 켜기' 를 누르면 앱이 열리지 않고 바로 방송이 나옵니다.
+• 알람음을 고전 멜로디 스무 곡 가운데 고릅니다. 바흐 무반주 첼로, 그리그 아침,
+  모차르트 터키 행진곡처럼 잠을 깨기 좋은 곡을 담았습니다. 음량과 '점점 크게' 도
+  따로 맞춥니다.
+• 못 듣고 지나치지 않게 2분 간격으로 몇 번 더 울립니다.
+• 전화를 받은 뒤 라디오가 다시 이어집니다.
+• 즐겨찾기 표시를 한눈에 보이게 바꿨습니다.
+```
+
+**영어** (스토어 현지화를 영어까지 늘릴 때만 쓴다)
+
+```
+The alarm has been rebuilt.
+
+• Alarms now ring even with Silent mode or a Focus turned on (iOS 26 and later).
+• Tap "Play radio" on the alarm screen and the station starts without opening the app.
+• Choose from twenty classical pieces — Bach's Cello Suite No. 1, Grieg's Morning,
+  Mozart's Turkish March and more. Volume and fade-in are adjustable.
+• The alarm repeats every two minutes so you don't sleep through it.
+• Radio resumes after a phone call.
+• Favourites are easier to spot.
+```
+
+### 2.0 — 앞 버전에 넣었던 것
+
+1.7 에서 바뀐 것이 많아 그대로 적었다.
 
 **한국어**
 
@@ -244,15 +295,40 @@ No ads are shown on any screen related to it.
 The app plays internet radio and podcasts with the screen off. That is the core use
 (falling asleep, driving), which is why UIBackgroundModes includes audio.
 
-[Alarms]
-Alarms are delivered as notifications. iOS does not allow an app to start audio by
-itself when a push arrives, so the user taps the notification and playback then starts.
-The app does not try to work around this. A local notification is scheduled as a backup
-for the same time in case the server cannot be reached.
+[Alarms - changed in 2.1.0]
+On iOS 26 and later the app schedules alarms with AlarmKit, so they are system alarms
+and ring through Silent mode and Focus. On iOS 25 and earlier the previous behaviour is
+unchanged: a push notification with a local notification scheduled as a backup for the
+same time, which the user taps to start playback.
+
+Exactly one of the two paths is active on a device. When AlarmKit authorization is
+granted the app cancels its local backup notifications and deletes its APNs token from
+our server, so the user is never woken twice for the same alarm.
+
+Because a custom alarm sound plays only once, one alarm is scheduled as four alarms two
+minutes apart. Stopping the alarm, or opening the app, cancels the remaining ones.
+
+[Starting playback from the alarm screen]
+The AlarmKit alert has two buttons: "Stop" and "Play radio". Both are App Intents that
+adopt LiveActivityIntent and AudioPlaybackIntent. When the user taps "Play radio" the
+system launches our process without opening the app, and the intent starts the radio
+stream. This is the documented purpose of AudioPlaybackIntent — the app is not starting
+audio on its own, it is responding to a user tap on a system alarm. Nothing plays until
+that button is pressed.
+
+[Alarm sounds - no third-party recordings]
+The 20 alarm melodies bundled in the app are our own recordings. The compositions are in
+the public domain (Bach, Mozart, Beethoven, Vivaldi, Pachelbel, Haydn, Grieg, Rossini,
+Strauss II, Dvorak, Elgar - all more than 70 years after the composer's death) and we
+rendered them ourselves from MIDI data using the FluidR3 GM soundfont, which its author
+Frank Wen released under the MIT license. No sampled or licensed recordings are
+included. Attribution and the full license text are shown in Settings.
 
 [Time Sensitive Notifications]
-Requested so alarms appear during Focus. The entitlement is not bundled yet; it will be
-added once approved.
+Still requested for the iOS 25 and earlier path, where alarms are delivered as
+notifications and need to appear during Focus. The entitlement is not bundled yet; it
+will be added once approved. On iOS 26 and later it is not needed, because AlarmKit
+alarms break through Focus on their own.
 
 [Broadcast content]
 Streams are played as the station provides them. Nothing is re-encoded and the
