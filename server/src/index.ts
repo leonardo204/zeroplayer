@@ -34,6 +34,7 @@ import {
   updateAlarm,
 } from './routes/alarms'
 import { dispatchDueAlarms, pruneAlarmSends } from './lib/alarmDispatch'
+import { listChannelsAdmin, patchChannelAdmin, probeChannelAdmin } from './routes/hiddenAdmin'
 import { hasAPNsKeys } from './lib/apns'
 
 const PREFIX = '/zp/v1'
@@ -249,6 +250,18 @@ export default {
           })
           return json(result)
         }
+        // 지상파 채널 — 대시보드 화면에서 주소를 고친다. 그동안 d1 execute 로 손으로 고쳤다.
+        if (method === 'GET' && path === '/admin/hidden/channels') {
+          return await listChannelsAdmin(env)
+        }
+        const adminChannelMatch = path.match(/^\/admin\/hidden\/channels\/([^/]+)$/)
+        if (method === 'PATCH' && adminChannelMatch) {
+          return await patchChannelAdmin(env, decodeURIComponent(adminChannelMatch[1]), request)
+        }
+        const adminProbeMatch = path.match(/^\/admin\/hidden\/channels\/([^/]+)\/probe$/)
+        if (method === 'POST' && adminProbeMatch) {
+          return await probeChannelAdmin(env, decodeURIComponent(adminProbeMatch[1]))
+        }
         if (method === 'POST' && path === '/admin/streams/check') {
           const size = Number.parseInt(url.searchParams.get('size') ?? env.STREAM_CHECK_BATCH, 10) || 150
           return json(await checkStreamBatch(env, size))
@@ -267,10 +280,18 @@ export default {
       try {
         if (event.cron === '* * * * *') {
           const result = await dispatchDueAlarms(env)
-          // 조용한 분에는 sync_state 를 건드리지 않는다. 매분 쓰면 기록이 의미를 잃는다.
-          if (result.due > 0) {
+          // 매분 쓰지 않는다. 그러면 기록이 '방금 돌았다' 말고는 아무것도 말해 주지 않는다.
+          //
+          // 그렇다고 조용한 분에 아무것도 안 남기면 반대 문제가 생긴다. 울릴 알람이 하루 없으면
+          // 마지막 기록이 하루 전이 되어, 밖에서 보는 쪽은 배치가 멈춘 것과 구별할 수 없다.
+          // (대시보드가 이 기록으로 배치 지연을 잡는다.) 그래서 정시에는 대상이 없어도 한 줄 남긴다 —
+          // 하루 24번이면 기록은 여전히 읽을 만하고, 살아 있다는 사실은 전해진다.
+          const onTheHour = new Date().getUTCMinutes() === 0
+          if (result.due > 0 || onTheHour) {
             await markSync(env, 'alarm_dispatch', result.failed === 0,
-              `대상 ${result.due} · 발송 ${result.sent} · 건너뜀 ${result.skipped} · 실패 ${result.failed}`)
+              result.due > 0
+                ? `대상 ${result.due} · 발송 ${result.sent} · 건너뜀 ${result.skipped} · 실패 ${result.failed}`
+                : '울릴 알람 없음')
           }
         } else if (event.cron === '0 */6 * * *') {
           await syncAll(env)
