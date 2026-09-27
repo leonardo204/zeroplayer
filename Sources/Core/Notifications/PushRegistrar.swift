@@ -75,12 +75,18 @@ final class PushRegistrar: NSObject {
     }
 
     /// 예전에 올려 둔 APNs 토큰을 서버에서 지운다. 성공하면 다시 하지 않는다.
+    /// 서버 푸시 토큰을 이미 지웠는지. 앱을 열 때마다 지우자고 부르지 않으려고 남긴다.
+    ///
+    /// 되돌릴 수 있어야 한다. 알람 권한을 껐다가 다시 켜면 그 사이에 토큰이 다시
+    /// 올라가는데, 이 표시가 남아 있으면 두 번째로 켤 때 토큰을 지우지 않아
+    /// 시스템 알람과 서버 푸시가 함께 울린다. 그래서 토큰을 올릴 때 지운다.
+    private static let droppedKey = "zp.push.droppedForAlarmKit"
+
     private func dropTokenForAlarmKit() async {
-        let key = "zp.push.droppedForAlarmKit"
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        guard !UserDefaults.standard.bool(forKey: Self.droppedKey) else { return }
         do {
             try await client.deletePushToken()
-            UserDefaults.standard.set(true, forKey: key)
+            UserDefaults.standard.set(true, forKey: Self.droppedKey)
             hasToken = false
             log.info("AlarmKit 를 쓰므로 서버 푸시 토큰을 지웠다")
         } catch {
@@ -107,6 +113,9 @@ final class PushRegistrar: NSObject {
         guard AlarmDelivery.isAlarmKitAvailable else { return await requestPermission() }
         let granted = await AlarmDelivery.requestAlarmKitPermission()
         refreshAlarmKitPermission()
+        // 허락받은 그 자리에서 토큰을 지운다. 다음에 앱을 열 때까지 기다리면
+        // 그 사이에 걸린 첫 알람이 시스템 알람과 서버 푸시로 두 번 울린다.
+        if granted { await dropTokenForAlarmKit() }
         return granted
     }
 
@@ -180,6 +189,8 @@ final class PushRegistrar: NSObject {
         let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
         hasToken = true
         lastError = nil
+        // 푸시 길로 돌아왔다. 다시 AlarmKit 으로 갈 때 토큰을 또 지워야 하므로 표시를 턴다.
+        UserDefaults.standard.set(false, forKey: Self.droppedKey)
         log.info("APNs 토큰을 받았다 (\(hex.count)자)")
 
         let client = self.client
