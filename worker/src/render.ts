@@ -14,6 +14,8 @@ import { COPY, type Copy, type Lang } from "./content";
 
 export const SITE = "https://zeroplayer.zerolive.co.kr";
 export const APP_STORE_URL = "https://apps.apple.com/kr/app/zeroplayer/id1610259595";
+/** App Store 앱 ID. 사파리 스마트 배너(apple-itunes-app)가 이 값으로 앱을 찾는다. */
+export const APP_ID = "1610259595";
 export const REPO_URL = "https://github.com/leonardo204/zeroplayer";
 export const CONTACT_EMAIL = "zerolive7@gmail.com";
 export const APP_NAME = "zeroPlayer";
@@ -92,6 +94,7 @@ const SIBLINGS: { host: string; ko: string; en: string }[] = [
 	{ host: "golf", ko: "라운드온", en: "RoundOn" },
 	{ host: "wander", ko: "Wandery", en: "Wandery" },
 	{ host: "hamzzi-diet", ko: "햄찌 다이어트", en: "햄찌 다이어트" },
+	{ host: "live-translate", ko: "Cross-liveTranslate", en: "Cross-liveTranslate" },
 	{ host: "zeroplayer", ko: "zeroPlayer", en: "zeroPlayer" },
 ];
 const SELF_HOST = "zeroplayer";
@@ -143,11 +146,16 @@ ${o.keywords ? `<meta name="keywords" content="${esc(o.keywords)}">` : ""}
 <meta property="og:url" content="${o.canonical}">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="${o.lang === "ko" ? "ko_KR" : "en_US"}">
-<meta property="og:image" content="${SITE}/assets/icon.png">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="${SITE}${o.lang === "en" ? "/assets/og-en.jpg" : "/assets/og.jpg"}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(c.ogImageAlt)}">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(o.title)}">
 <meta name="twitter:description" content="${esc(o.desc)}">
-<meta name="twitter:image" content="${SITE}/assets/icon.png">
+<meta name="twitter:image" content="${SITE}${o.lang === "en" ? "/assets/og-en.jpg" : "/assets/og.jpg"}">
+<meta name="twitter:image:alt" content="${esc(c.ogImageAlt)}">
+<meta name="apple-itunes-app" content="app-id=${APP_ID}">
 <link rel="icon" href="/assets/icon.png">
 <link rel="apple-touch-icon" href="/assets/icon.png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -458,8 +466,57 @@ export function renderPrivacy(lang: Lang): string {
 	});
 }
 
+/**
+ * 문의 문서의 `<h2>` 와 그 아래 문단을 뽑아 FAQPage 구조화 데이터를 만든다.
+ *
+ * 글을 두 벌 적지 않는다. 화면에 보이는 것과 기계가 읽는 것이 갈라지면 구글이
+ * 구조화 데이터 위반으로 보고, 갈라진 줄도 모르게 된다. 그래서 같은 문자열에서 뽑는다.
+ * 첫 `<h2>` 앞의 문단은 머리말이라 건너뛴다.
+ */
+function faqFromDoc(html: string, url: string): unknown | null {
+	const parts = html.split(/<h2>/).slice(1);
+	const qa = parts
+		.map((chunk) => {
+			const end = chunk.indexOf("</h2>");
+			if (end < 0) return null;
+			const q = stripTags(chunk.slice(0, end));
+			const a = stripTags(chunk.slice(end + 5));
+			return q && a ? { q, a } : null;
+		})
+		.filter((x): x is { q: string; a: string } => x !== null);
+	if (!qa.length) return null;
+
+	return {
+		"@context": "https://schema.org",
+		"@type": "FAQPage",
+		"@id": url + "#faq",
+		mainEntity: qa.map((x) => ({
+			"@type": "Question",
+			name: x.q,
+			acceptedAnswer: { "@type": "Answer", text: x.a },
+		})),
+	};
+}
+
+/** 태그를 걷어내고 엔터티를 되돌려 줄글 한 덩이로 만든다. */
+function stripTags(html: string): string {
+	return html
+		.replace(/<[^>]+>/g, " ")
+		.replace(/&rarr;/g, "→")
+		.replace(/&nbsp;/g, " ")
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
 export function renderSupport(lang: Lang): string {
 	const c = COPY[lang];
+	const doc = lang === "ko" ? SUPPORT_KO : SUPPORT_EN;
+	const url = SITE + (lang === "en" ? "/en/support" : "/support");
+	const faq = faqFromDoc(doc, url);
 	return shell({
 		lang,
 		title: `${c.supportTitle} — ${APP_NAME}`,
@@ -470,7 +527,8 @@ export function renderSupport(lang: Lang): string {
 		canonical: SITE + (lang === "en" ? "/en/support" : "/support"),
 		altKo: SITE + "/support",
 		altEn: SITE + "/en/support",
-		body: docShell(lang, c.supportTitle, c.supportUpdated, lang === "ko" ? SUPPORT_KO : SUPPORT_EN),
+		body: docShell(lang, c.supportTitle, c.supportUpdated, doc),
+		jsonLd: [faq].filter((x): x is unknown => x !== null),
 	});
 }
 const PRIVACY_KO = `

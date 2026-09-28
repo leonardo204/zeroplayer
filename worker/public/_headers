@@ -1,0 +1,16 @@
+# 정적 파일 캐시.
+#
+# 기본값이 `max-age=0, must-revalidate` 라 방문할 때마다 그림을 다시 묻는다.
+# 화면 캡처와 아이콘은 바뀌지 않는 파일이니 길게 잡는다. 바꿀 일이 생기면
+# 파일 이름을 바꾸거나(권장) 이 값을 줄이고 배포한다.
+/assets/shots/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/assets/og.jpg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/assets/og-en.jpg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/assets/icon.png
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400

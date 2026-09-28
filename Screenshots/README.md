@@ -50,6 +50,11 @@ xcrun simctl spawn $DEV defaults write -g AppleLocale -string en_US
 서버에 등록해 둔 알람을 그대로 내려받는다. 그러면 영어 화면에 지난 한국어 알람 이름이
 섞인다.
 
+**찍은 뒤 위쪽 띠를 확인한다.** 시뮬레이터를 `erase` 하고 부팅하면 잠시 뒤
+"Apple Intelligence 준비 완료" 시스템 알림이 배너로 뜬다. 그 순간 찍으면 캡처에 그대로
+남는데, 영어 벌에도 **한국어 배너**가 박힌다(실제로 `en/02-player.png` 이 그랬다).
+배너는 몇 초 뒤 사라지므로 조금 기다렸다 다시 찍으면 된다.
+
 **지상파 화면은 넣지 않는다.** 해제해야 보이는 기능이라 스토어 화면에 올리면 해제하지
 않은 사람이 찾다가 못 찾는다. 대신 심사 메모에 여는 방법을 적는다.
 
@@ -73,6 +78,17 @@ cd Screenshots && for f in ko/*.png; do
   sips --resampleWidth 1284 "ko-6.7/$(basename $f)"
   sips -c 2778 1284 "ko-6.7/$(basename $f)"
 done
+```
+
+랜딩(`worker/public/assets/shots/`)에 쓸 작은 벌은 `sips` 로 줄이지 않는다. 같은 화면인데도
+JPEG 가 두 배로 커진다 — 재생 화면이 `sips` 로는 97KB, `LANCZOS` 로는 61KB 였다.
+
+```python
+from PIL import Image
+im = Image.open('Screenshots/en/02-player.png').convert('RGB')
+im = im.resize((860, round(860*im.height/im.width)), Image.LANCZOS)
+im.save('worker/public/assets/shots/player-en.jpg', 'JPEG',
+        quality=78, optimize=True, progressive=True)
 ```
 
 ## 알파 채널을 반드시 걷어낸다

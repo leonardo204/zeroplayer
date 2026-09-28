@@ -55,6 +55,8 @@ export interface Copy {
 	title: string;
 	desc: string;
 	keywords: string;
+	/** 공유 카드 그림의 대체 글. 그림을 못 받는 곳에서 이 문장이 대신 나간다. */
+	ogImageAlt: string;
 
 	navFeatures: string;
 	navAlarm: string;
@@ -125,6 +127,8 @@ const KO: Copy = {
 		"취침·운전·공부·작업·기상 가운데 하나를 누르면 그 시각에 맞는 인터넷 라디오나 팟캐스트가 바로 재생되고, 정해 둔 시간이 지나면 소리가 서서히 줄며 꺼집니다. 아이폰·아이패드 무료 앱.",
 	keywords:
 		"인터넷 라디오,라디오 앱,팟캐스트,수면 타이머,취침 타이머,자동 종료,라디오 알람,클래식 알람음,아이폰 라디오,zeroPlayer",
+	ogImageAlt:
+		"zeroPlayer 화면 셋 — 프리셋 목록, 재생 화면, 알람 화면.",
 
 	navFeatures: "기능",
 	navAlarm: "알람",
@@ -305,6 +309,8 @@ const EN: Copy = {
 		"Tap one of five moments — sleep, driving, study, work, waking up — and a fitting internet radio station or podcast starts right away, then fades out and stops when your timer runs down. Free for iPhone and iPad.",
 	keywords:
 		"internet radio,radio app,podcast player,sleep timer,fade out,radio alarm,classical alarm sounds,iphone radio,zeroPlayer",
+	ogImageAlt:
+		"Three zeroPlayer screens — the preset list, the player and the alarm.",
 
 	navFeatures: "Features",
 	navAlarm: "Alarm",

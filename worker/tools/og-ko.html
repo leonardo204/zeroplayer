@@ -1,0 +1,40 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1200px;height:630px;overflow:hidden;background:#101820;
+  font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;
+  color:#fff;display:flex;align-items:center;position:relative}
+/* 왼쪽 위에서 은은하게 밝아지는 바탕. 그라데이션을 배경 전체에 쓰지 않고 한 겹만 둔다 */
+body::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(70% 90% at 12% 0%,rgba(73,165,203,.22) 0%,rgba(16,24,32,0) 62%)}
+.left{position:relative;width:640px;padding:0 0 0 72px;flex:none}
+.brand{display:flex;align-items:center;gap:14px;margin-bottom:34px}
+.brand img{width:52px;height:52px;border-radius:12px}
+.brand .n{font-size:27px;font-weight:700;letter-spacing:-.6px}
+h1{font-size:50px;font-weight:800;line-height:1.26;letter-spacing:-1.9px;margin-bottom:22px}
+h1 em{font-style:normal;color:#7CC6E4}
+p{font-size:20px;line-height:1.6;color:#9BA8B3;letter-spacing:-.4px;max-width:530px}
+.meta{margin-top:34px;display:flex;align-items:center;gap:13px;
+  font-size:15.5px;color:#6E7B87;letter-spacing:-.2px}
+.meta i{font-style:normal;width:3px;height:3px;border-radius:50%;background:#3C4855}
+/* 화면 캡처 셋을 겹쳐 세운다. 가짜 기기 테두리는 그리지 않는다 */
+.shots{position:relative;flex:1;height:630px}
+.shots img{position:absolute;border-radius:19px;
+  box-shadow:0 26px 70px rgba(0,0,0,.52);outline:1px solid rgba(255,255,255,.09);outline-offset:-1px}
+.s1{width:206px;top:150px;left:2px;opacity:.55}
+.s2{width:234px;top:98px;left:120px;opacity:.8}
+.s3{width:262px;top:46px;left:252px}
+</style></head><body>
+<div class="left">
+  <div class="brand"><img src="../public/assets/icon.png"><span class="n">zeroPlayer</span></div>
+  <h1>무엇을 들을지 고르는 대신,<br><em>지금 무엇을 하는지</em>만</h1>
+  <p>취침·운전·공부·작업·기상. 상황을 누르면 방송이 정해지고, 정해 둔 시간이 지나면 스스로 꺼집니다.</p>
+  <div class="meta"><span>iPhone · iPad</span><i></i><span>iOS 17.0+</span><i></i><span>무료</span></div>
+</div>
+<div class="shots">
+  <img class="s1" src="../public/assets/shots/alarm-ko.jpg">
+  <img class="s2" src="../public/assets/shots/player-ko.jpg">
+  <img class="s3" src="../public/assets/shots/presets-ko.jpg">
+</div>
+</body></html>
