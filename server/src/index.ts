@@ -296,7 +296,13 @@ export default {
           // 마지막 기록이 하루 전이 되어, 밖에서 보는 쪽은 배치가 멈춘 것과 구별할 수 없다.
           // (대시보드가 이 기록으로 배치 지연을 잡는다.) 그래서 정시에는 대상이 없어도 한 줄 남긴다 —
           // 하루 24번이면 기록은 여전히 읽을 만하고, 살아 있다는 사실은 전해진다.
-          const onTheHour = new Date().getUTCMinutes() === 0
+          //
+          // 정시인지는 **예정 시각**(`event.scheduledTime`)으로 판단한다. 벽시계(`new Date()`)로
+          // 보면 안 된다. Cloudflare 는 cron 을 예정보다 늦게 전달하는데, 그 지연이 1분을 넘으면
+          // 매분 배치는 멀쩡히 도는데 정시 한 줄만 영영 안 써진다. 실제로 그랬다 —
+          // 2026-09-28 01:00Z 부터 `:00` 분 호출이 `:01` 분으로 밀리면서 기록이 끊겼고,
+          // 밖에서는 배치가 멈춘 것으로 보였다(알람은 하나도 안 놓쳤다).
+          const onTheHour = new Date(event.scheduledTime).getUTCMinutes() === 0
           if (result.due > 0 || onTheHour) {
             await markSync(env, 'alarm_dispatch', result.failed === 0,
               result.due > 0
