@@ -22,7 +22,21 @@ App Store Connect 의 칸에 그대로 붙여 넣을 값이다. 한국어와 영
 
 심사 없이 언제든 바꿀 수 있는 유일한 칸이다. 그래서 새 기능을 가장 먼저 알리는 자리로 쓴다.
 
-### 2.1.0 — 지금 넣을 것
+### 2.1.1 — 지금 넣을 것
+
+**한국어** (104자)
+
+```
+마음에 안 드는 방송은 '그만 듣기' 를 누르면 바로 다음 방송으로 넘어가고, 다시는 앱이 고를 때 나오지 않습니다. 알람은 무음 모드에서도 울리고 고전 멜로디 스무 곡 가운데 고릅니다.
+```
+
+**영어** (168자)
+
+```
+Tap "Stop playing this" and the next station starts — it never returns in an automatic pick. Alarms ring through Silent mode, with twenty classical melodies to wake to.
+```
+
+### 2.1.0 — 앞 버전에 넣었던 것
 
 **한국어** (104자)
 
@@ -206,7 +220,34 @@ internet radio,podcast,sleep timer,radio alarm,white noise,focus,study,driving,s
 
 ## 6. 새로운 기능 (릴리스 노트)
 
-### 2.1.0 — 지금 넣을 것
+### 2.1.1 — 지금 넣을 것
+
+**한국어**
+
+```
+마음에 안 드는 방송을 뺄 수 있습니다.
+
+• 재생 화면에서 '그만 듣기' 를 누르면 그 방송이 멈추고 바로 다음 방송이 나옵니다.
+• 뺀 방송은 추천 목록과 프리셋·알람의 자동 선택에서 다시 나오지 않습니다.
+  탐색 탭에서는 그대로 찾아 들을 수 있습니다. 목록에서 감추지는 않습니다.
+• 설정 → 그만 듣는 방송 에서 언제든 되돌립니다.
+• 30초 안에 넘긴 방송은 다음부터 아래로 내려갑니다. 알람이 고를 때도 그렇게 합니다.
+```
+
+**영어** (스토어 현지화를 영어까지 늘릴 때만 쓴다)
+
+```
+You can now drop a station you don't want to hear.
+
+• Tap "Stop playing this" on the player and the next station starts right away.
+• A dropped station no longer appears when the app picks — in recommendations, in a
+  preset, or for an alarm. You can still find it and play it from the Browse tab;
+  it is not hidden from the list.
+• Restore any of them from Settings → Stopped stations.
+• Stations you skip within 30 seconds now move down the list, alarms included.
+```
+
+### 2.1.0 — 앞 버전에 넣었던 것
 
 알람을 새로 만든 버전이다. 무엇을 바꿨는지는 `docs/11-post-submit.md` 에 있다.
 
@@ -279,18 +320,20 @@ Your old alarms and channel list were carried over.
 
 ## 7. 심사 메모 (App Review Information → Notes)
 
-**지상파 라디오를 반드시 적는다.** 심사 지침 2.3.1 이 숨겨진 기능과 문서화되지 않은
-기능을 금지한다. 여는 방법을 적어 두면 '숨긴 기능' 이 아니라 '설명된 기능' 이 된다.
+심사자가 먼저 물을 만한 것을 미리 적어 두는 칸이다. 백그라운드 오디오, 알람이 무음 모드를
+뚫는 이유, 번들에 든 음원의 권리, 서버로 무엇이 가는지 — 설명이 없으면 지침 위반으로 보일
+수 있는 것들이다.
+
+**지상파(히든) 설명은 2.1.1 에서 뺐다.** 1.7 부터 있던 기능이고 그 뒤 심사를 여러 번
+통과했다. 되살리려면 `[Hidden feature — please read]` 블록을 이력에서 꺼내 아래 메모 맨
+앞에 붙인다 — 참고용 사본을 여기 두지 않는 이유는, 붙여 넣을 메모 바로 옆에 같은 모양의
+블록이 있으면 잘못 복사하기 때문이다.
+
+```sh
+git show b4fb88b:docs/09-appstore-submit.md | sed -n '/Hidden feature/,/related to it/p'
+```
 
 ```
-[Hidden feature — please read]
-Tapping the version number on the Settings screen 12 times reveals a "Terrestrial"
-segment in the Browse tab. It lists Korean terrestrial radio channels (KBS, MBC, SBS,
-CBS, TBS, AFN). This is not a hidden or undocumented feature in the sense of guideline
-2.3.1 — it is carried over from version 1.7, where the same feature existed, and it is
-documented here so the reviewer can reach it. It can be turned off again from Settings.
-No ads are shown on any screen related to it.
-
 [Background audio]
 The app plays internet radio and podcasts with the screen off. That is the core use
 (falling asleep, driving), which is why UIBackgroundModes includes audio.
@@ -330,6 +373,16 @@ notifications and need to appear during Focus. The entitlement is not bundled ye
 will be added once approved. On iOS 26 and later it is not needed, because AlarmKit
 alarms break through Focus on their own.
 
+[Excluding stations - new in 2.1.1]
+"Stop playing this" on the player drops the current station and starts the next candidate.
+A dropped station is skipped whenever the app picks automatically, but it is still listed
+and playable in the Browse tab - it is not hidden from the user.
+
+The list of dropped station ids is stored on the device. It is uploaded to our server only
+on iOS 25 and earlier, where the server is the one that decides what an alarm plays; on
+iOS 26 and later the app decides, so nothing is uploaded and any earlier copy is deleted.
+It holds station ids only - no titles, no listening history, nothing about the person.
+
 [Broadcast content]
 Streams are played as the station provides them. Nothing is re-encoded and the
 stations' own ads are not removed. Station name, country and homepage link are shown.
@@ -339,13 +392,13 @@ playback, so a station can be removed server-side at any time.
 [Listening history]
 What the user listens to stays on the device (SwiftData) and is never sent to a server.
 The only values sent are an install UUID (created by the app, kept in the Keychain, used
-for alarm registration and rate limiting), the APNs device token, and a station ID when
-a stream fails to play.
+for alarm registration and rate limiting), the APNs device token, a station ID when a
+stream fails to play, and - on iOS 25 and earlier only - the ids of stations the user
+dropped, so a server-chosen alarm does not play one of them.
 
 [Ads]
 AdMob banners appear on the For You, Browse, Presets and Stats screens only. There are
-no ads on the player screen, the mini player, any terrestrial radio screen, or the
-screen opened by an alarm.
+no ads on the player screen, the mini player, or the screen opened by an alarm.
 
 [Test account]
 Not needed. No sign-in anywhere in the app.
@@ -376,7 +429,7 @@ Not needed. No sign-in anywhere in the app.
 | `08-alarm` | 알람 |
 
 **지상파 화면은 넣지 않았다.** 해제해야 보이는 기능이라 스토어 화면에 올리면 해제하지
-않은 사람이 찾다가 못 찾는다. 심사 메모에는 적는다(7번).
+않은 사람이 찾다가 못 찾는다. 2.1.1 부터 심사 메모에도 적지 않는다(7번).
 
 올리는 순서는 파일 이름 순서 그대로 둔다. 첫 석 장이 검색 결과에서 먼저 보이므로
 상황 고르기·재생·타이머가 앞에 오게 했다.
