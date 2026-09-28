@@ -29,7 +29,7 @@ interface Env {
 	TRAFFIC_TOKEN?: string;
 }
 
-const LAST_MOD = "2026-09-24";
+const LAST_MOD = "2026-09-28";
 
 /**
  * AdMob 게시자 선언.
@@ -206,21 +206,31 @@ to stop, so a single tap produces sound and nothing else has to be decided.
 
 ## Features
 
-- Internet radio from around the world (radio-browser data): browse by country, genre and
-  language, or search by name. Stations that stop responding are dropped from the list.
-- Podcasts: charts, search, episode playback, skip back 15 seconds, playback speed, and
-  resume where you left off.
+- Internet radio from around the world (radio-browser data): around 4,900 stations on the
+  list. Browse by country, genre and language, or search by name. Stations that stop
+  responding are checked hourly and dropped, and duplicates are folded into one entry.
+- Podcasts: charts, search, and more than ten thousand episodes across a couple of hundred
+  shows. Skip back 15 seconds, skip forward 30, 1.0x to 2.0x speed, and resume where you
+  left off.
 - Sleep timer: 15, 30, 45, 60, 90 minutes or a custom value, with a 30-second fade-out
-  instead of an abrupt cut.
-- Situation presets: station, timer and fade-out saved together under a name. Leaving the
-  source on automatic lets the app pick a fitting station each time.
+  instead of an abrupt cut. Ten minutes can be added to what is left.
+- Situation presets: station, timer and fade-out saved together under a name. Five are
+  bundled (sleep 45 min, driving no timer, study 90 min, work no timer, wake up 30 min).
+  Leaving the source on automatic lets the app pick a fitting station each time.
 - Recommendations that take the hour, the weekday and your own listening history into
   account. The reordering by personal history happens on the device.
-- Radio alarm: a notification at a set time that starts the station when tapped, set per
-  weekday.
+- Radio alarm. On iOS 26 and later it is scheduled as a system alarm: it rings through
+  Silent mode and Focus, and tapping "Play radio" on the alarm screen starts the station
+  without opening the app. The alarm is set four times two minutes apart so it is not
+  slept through. On iOS 25 and earlier a notification arrives instead and tapping it
+  starts the station, which means Silent mode has to be off.
+- Alarm sounds: the default alarm sound or one of twenty classical melodies (Bach's Cello
+  Suite No. 1, Grieg's Morning Mood, Mozart's Turkish March and others). The compositions
+  are in the public domain and the recordings were made for this app. Volume and a
+  gradual fade-in are set per alarm.
 - Listening history with a monthly summary, stored on the device only.
 - Lock screen and Control Center support, background playback, and resume after a phone
-  call interrupts.
+  call interrupts. Light and dark appearance.
 
 ## Privacy
 
@@ -230,6 +240,8 @@ station and podcast lists only; the app sends it a random install UUID, the app 
 query, and the id of any station that failed to play. Audio streams come straight from the
 broadcaster, not through the developer's server. Banner ads (Google AdMob) appear on list and
 history screens but never on the playback screen or on a screen opened by an alarm.
+On iOS 26 and later the app deletes its push token from the server as soon as alarm permission is
+granted, because the system schedules the alarm and the server has no part in it.
 Policy: ${SITE}/privacy (Korean), ${SITE}/en/privacy (English)
 
 ## Advertising

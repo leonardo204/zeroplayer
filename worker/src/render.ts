@@ -1,6 +1,13 @@
 /**
  * 화면을 그린다. 글은 content.ts, 스타일은 styles.ts 가 맡는다.
  * 한국어가 기본이고 /en 아래가 영어다.
+ *
+ * 구조에 둔 규칙
+ *  - 섹션마다 배지를 얹지 않는다. 제목과 한 문단으로 연다.
+ *  - 기능을 카드로 늘어놓지 않는다. 이름과 설명을 짝지은 정의 목록으로 둔다.
+ *  - 화면 캡처는 실제 앱 캡처를 줄여 쓴다(Screenshots/ 에서 왔다). 기기 테두리를
+ *    그려 넣지 않는다 — 가짜 목업처럼 보인다.
+ *  - 히어로의 캡처만 바로 받고 나머지는 loading="lazy" 로 미룬다.
  */
 import { CSS } from "./styles";
 import { COPY, type Copy, type Lang } from "./content";
@@ -10,7 +17,7 @@ export const APP_STORE_URL = "https://apps.apple.com/kr/app/zeroplayer/id1610259
 export const REPO_URL = "https://github.com/leonardo204/zeroplayer";
 export const CONTACT_EMAIL = "zerolive7@gmail.com";
 export const APP_NAME = "zeroPlayer";
-export const APP_VERSION = "2.0";
+export const APP_VERSION = "2.1";
 export const MIN_IOS = "17.0";
 
 function paths(lang: Lang) {
@@ -31,13 +38,44 @@ function esc(s: string): string {
 		.replace(/"/g, "&quot;");
 }
 
+/** 줄을 나눌 자리(\n)를 <br> 로 바꾼다. 좁은 화면에서는 CSS 가 이 br 을 감춘다. */
+function lines(s: string): string {
+	return esc(s).split("\n").join("<br> ");
+}
+
+/**
+ * 상황 다섯 개 앞에 붙는 글리프.
+ *
+ * 앱은 SF Symbols 를 쓰지만 웹에서는 쓸 수 없어서 같은 뜻의 선 아이콘을 직접 그렸다.
+ * 앱의 프리셋 기본값(`Preset.defaults()`)에 있는 기호와 짝을 맞춘다 —
+ * moon.zzz.fill, car.fill, book.fill, laptopcomputer, sunrise.fill.
+ */
+const GLYPH: Record<string, string> = {
+	moon: `<path d="M18.4 14.1A7.3 7.3 0 0 1 7.9 4.7a6.1 6.1 0 1 0 10.5 9.4z"/>`,
+	car: `<path d="M6.2 13.4l1.4-4A1.8 1.8 0 0 1 9.3 8.1h3.4a1.8 1.8 0 0 1 1.7 1.3l1.4 4"/><rect x="3.9" y="13.4" width="14.2" height="3.6" rx="1.3"/><path d="M7 17v1M15 17v1"/>`,
+	book: `<path d="M11 7.3v11"/><path d="M11 7.3c-1.4-.9-3.4-1.2-5.8-1v10.2c2.4-.2 4.4.1 5.8 1"/><path d="M11 7.3c1.4-.9 3.4-1.2 5.8-1v10.2c-2.4-.2-4.4.1-5.8 1"/>`,
+	laptop: `<rect x="5.2" y="6.5" width="11.6" height="8" rx="1.2"/><path d="M3.4 17.1h15.2"/>`,
+	sunrise: `<path d="M3.6 17.1h14.8"/><path d="M7 13.3a4 4 0 0 1 8 0"/><path d="M11 5.3v2.2M5.7 7.8l1.5 1.5M16.3 7.8l-1.5 1.5"/>`,
+};
+
+function glyph(key: string): string {
+	return `<svg class="g" width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor"
+ stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[key] ?? ""}</svg>`;
+}
+
+/** 화면 캡처 한 장. 한국어·영어 캡처를 따로 둔다. */
+function shot(file: string, lang: Lang, alt: string, eager = false): string {
+	return `<div class="shot"><img src="/assets/shots/${file}-${lang}.jpg" alt="${esc(alt)}"
+ width="430" height="932" ${eager ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'}></div>`;
+}
+
 function appStoreBadge(c: Copy): string {
-	return `<a href="${APP_STORE_URL}" target="_blank" rel="noopener" class="appstore-badge" aria-label="${esc(c.badgeAria)}">
-  <svg width="168" height="50" viewBox="0 0 160 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
-    <rect width="160" height="48" rx="9" fill="#000"/>
-    <path d="M27.9 24.6c0-3.1 2.5-4.6 2.7-4.7-1.5-2.1-3.7-2.4-4.5-2.5-1.9-.2-3.8 1.1-4.7 1.1-1 0-2.5-1.1-4.1-1.1-2.1 0-4.1 1.2-5.1 3.1-2.2 3.8-.6 9.4 1.5 12.5 1.1 1.5 2.3 3.2 4 3.1 1.6-.1 2.2-1 4.2-1s2.5 1 4.2 1c1.7 0 2.9-1.5 4-3 1.3-1.7 1.8-3.4 1.8-3.5-.1 0-3.5-1.3-3.5-5.3zm-3.1-9.7c.9-1.1 1.5-2.6 1.3-4.2-1.3.1-2.9.9-3.8 2-.8 1-1.5 2.5-1.3 4 1.4.1 2.9-.7 3.8-1.8z" fill="#fff"/>
-    <text x="49" y="20" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="9" fill="#fff" letter-spacing=".3">${esc(c.badgeSmall)}</text>
-    <text x="49" y="36" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="17" font-weight="600" fill="#fff" letter-spacing="-.3">${esc(c.badgeBig)}</text>
+	return `<a href="${APP_STORE_URL}" target="_blank" rel="noopener" class="badge" aria-label="${esc(c.badgeAria)}">
+  <svg width="162" height="48" viewBox="0 0 162 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
+    <rect width="162" height="48" rx="9" fill="#111"/>
+    <path d="M28.9 24.6c0-3.1 2.5-4.6 2.7-4.7-1.5-2.1-3.7-2.4-4.5-2.5-1.9-.2-3.8 1.1-4.7 1.1-1 0-2.5-1.1-4.1-1.1-2.1 0-4.1 1.2-5.1 3.1-2.2 3.8-.6 9.4 1.5 12.5 1.1 1.5 2.3 3.2 4 3.1 1.6-.1 2.2-1 4.2-1s2.5 1 4.2 1c1.7 0 2.9-1.5 4-3 1.3-1.7 1.8-3.4 1.8-3.5-.1 0-3.5-1.3-3.5-5.3zm-3.1-9.7c.9-1.1 1.5-2.6 1.3-4.2-1.3.1-2.9.9-3.8 2-.8 1-1.5 2.5-1.3 4 1.4.1 2.9-.7 3.8-1.8z" fill="#fff"/>
+    <text x="50" y="20" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="9" fill="#fff" letter-spacing=".4">${esc(c.badgeSmall)}</text>
+    <text x="50" y="36" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="17" font-weight="600" fill="#fff" letter-spacing="-.3">${esc(c.badgeBig)}</text>
   </svg>
 </a>`;
 }
@@ -47,7 +85,6 @@ function appStoreBadge(c: Copy): string {
  *
  * 서브도메인끼리 서로 모르는 채 떨어져 있으면 검색 엔진이 각자를 외딴 섬으로 보고
  * robots.txt 만 확인하고 돌아간다. 새로 만든 곳일수록 그렇다.
- * 자기 자신은 빼고 그리고, 한국어 이름밖에 없는 앱은 영어 화면에서도 그대로 쓴다.
  */
 const SIBLINGS: { host: string; ko: string; en: string }[] = [
 	{ host: "lnhud", ko: "LnHud", en: "LnHud" },
@@ -63,7 +100,7 @@ const PORTFOLIO = "https://me.zerolive.co.kr";
 function siblingLinks(lang: Lang): string {
 	return SIBLINGS.filter((s) => s.host !== SELF_HOST)
 		.map((s) => `<a href="https://${s.host}.zerolive.co.kr/">${esc(lang === "en" ? s.en : s.ko)}</a>`)
-		.join(" &nbsp;·&nbsp; ");
+		.join("<span aria-hidden=\"true\">·</span>");
 }
 
 interface ShellOpts {
@@ -94,7 +131,7 @@ function shell(o: ShellOpts): string {
 <meta name="description" content="${esc(o.desc)}">
 ${o.keywords ? `<meta name="keywords" content="${esc(o.keywords)}">` : ""}
 <meta name="author" content="zerolive">
-<meta name="theme-color" content="#49A5CB">
+<meta name="theme-color" content="#ffffff">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
 <link rel="canonical" href="${o.canonical}">
 <link rel="alternate" hreflang="ko" href="${o.altKo}">
@@ -113,47 +150,51 @@ ${o.keywords ? `<meta name="keywords" content="${esc(o.keywords)}">` : ""}
 <meta name="twitter:image" content="${SITE}/assets/icon.png">
 <link rel="icon" href="/assets/icon.png">
 <link rel="apple-touch-icon" href="/assets/icon.png">
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 <style>${CSS}</style>
 ${ld}
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-inner">
-    <a href="${p.home}" class="nav-logo">
-      <img src="/assets/icon.png" alt="" width="30" height="30">
+<div class="nav">
+  <div class="wrap">
+    <a href="${p.home}" class="brand">
+      <img src="/assets/icon.png" alt="" width="26" height="26">
       <span>${APP_NAME}</span>
     </a>
-    <div class="nav-links">
+    <nav>
       <a href="${p.home}#features">${esc(c.navFeatures)}</a>
-      <a href="${p.home}#how">${esc(c.navHow)}</a>
+      <a href="${p.home}#alarm">${esc(c.navAlarm)}</a>
       <a href="${p.home}#privacy">${esc(c.navPrivacy)}</a>
       <a href="${p.home}#faq">${esc(c.navFaq)}</a>
       <a href="${p.support}">${esc(c.navSupport)}</a>
-    </div>
-    <a class="lang" href="${p.other}" hreflang="${o.lang === "ko" ? "en" : "ko"}">${esc(c.langSwitchLabel)}</a>
+    </nav>
+    <a class="lang" href="${p.other}" hreflang="${o.lang === "ko" ? "en" : "ko"}">${esc(c.langSwitch)}</a>
   </div>
-</nav>
+</div>
 
 ${o.body}
 
 <footer>
-  <div class="container">
-    <span>© 2026 ${APP_NAME} · <a href="${PORTFOLIO}${o.lang === "en" ? "/en" : "/ko"}">${esc(c.footerNote)}</a></span>
-    <span>
-      <a href="${p.privacy}">${esc(c.footerPrivacy)}</a> &nbsp;·&nbsp;
-      <a href="${p.support}">${esc(c.footerSupport)}</a> &nbsp;·&nbsp;
-      <a href="mailto:${CONTACT_EMAIL}">${esc(c.footerContact)}</a>
-    </span>
+  <div class="wrap">
+    <div class="rowa">
+      <span>© 2026 ${APP_NAME} · <a href="${PORTFOLIO}${o.lang === "en" ? "/en" : "/ko"}">${esc(c.footerAbout)}</a></span>
+      <span>
+        <a href="${p.privacy}">${esc(c.footerPrivacy)}</a> ·
+        <a href="${p.support}">${esc(c.footerSupport)}</a> ·
+        <a href="mailto:${CONTACT_EMAIL}">${esc(c.footerContact)}</a>
+      </span>
+    </div>
+    <div class="rowb"><span class="lbl">${esc(c.footerMore)}</span>${siblingLinks(o.lang)}</div>
   </div>
-  <div class="container sib"><span class="lb">${esc(c.footerMore)}</span>${siblingLinks(o.lang)}</div>
 </footer>
 
 </body>
 </html>`;
 }
+
+/* ── 구조화 데이터 ─────────────────────────────────────────── */
 
 /** 사이트 자체를 설명한다. 검색 결과에 사이트 이름이 제대로 표기되게 한다. */
 function siteJsonLd(lang: Lang): unknown {
@@ -197,6 +238,9 @@ function appJsonLd(lang: Lang): unknown {
 		downloadUrl: APP_STORE_URL,
 		installUrl: APP_STORE_URL,
 		image: SITE + "/assets/icon.png",
+		screenshot: c.shots.map((s) => `${SITE}/assets/shots/${s.file}-${lang}.jpg`),
+		featureList: c.defs.map((d) => d.k),
+		inLanguage: ["ko", "en"],
 		author: { "@id": SITE + "/#publisher" },
 		offers: { "@type": "Offer", price: "0", priceCurrency: "KRW" },
 	};
@@ -215,79 +259,161 @@ function faqJsonLd(lang: Lang): unknown {
 	};
 }
 
+/* ── 랜딩 ─────────────────────────────────────────────────── */
+
 export function renderLanding(lang: Lang): string {
 	const c = COPY[lang];
 	const p = paths(lang);
 
+	const moods = c.moods
+		.map(
+			(m) => `<div class="mood">
+        ${glyph(m.glyph)}
+        <div class="n">${esc(m.name)}</div>
+        <div class="d">${esc(m.desc)}</div>
+        <div class="t">${esc(m.timer)}</div>
+      </div>`,
+		)
+		.join("\n      ");
+
+	const strip = c.shots
+		.map(
+			(s) => `<figure>
+        ${shot(s.file, lang, s.title)}
+        <figcaption><b>${esc(s.title)}</b>${esc(s.caption)}</figcaption>
+      </figure>`,
+		)
+		.join("\n      ");
+
+	const defs = c.defs
+		.map(
+			(d) => `<div class="def">
+        <dt>${esc(d.k)}</dt>
+        <dd>${esc(d.v)}${d.sub ? `<span class="sub">${esc(d.sub)}</span>` : ""}</dd>
+      </div>`,
+		)
+		.join("\n      ");
+
+	const tones = c.tones
+		.map((t) => `<div class="tone"><b>${esc(t.name)}</b><i>${esc(t.by)}</i></div>`)
+		.join("\n        ");
+
+	const specs = c.specs
+		.map((s) => `<div><dt>${esc(s.k)}</dt><dd>${esc(s.v)}</dd></div>`)
+		.join("\n      ");
+
+	const faqs = c.faqs
+		.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`)
+		.join("\n      ");
+
 	const body = `
+<main>
+
 <header class="hero">
-  <div class="container">
-    <h1 class="section-title">${esc(c.heroTitle)}</h1>
-    <p class="section-sub">${esc(c.heroSub)}</p>
-    ${appStoreBadge(c)}
-    <p class="hero-meta">${esc(c.heroMeta)}</p>
-    <div class="moods">
-      ${c.moods.map((m) => `<div class="mood"><div class="m-name">${esc(m.name)}</div><div class="m-time">${esc(m.time)}</div></div>`).join("\n      ")}
+  <div class="wrap hero-grid">
+    <div>
+      <h1 class="h-hero">${lines(c.heroTitle)}</h1>
+      <p class="lede">${esc(c.heroLede)}</p>
+      <div class="hero-cta">${appStoreBadge(c)}</div>
+      <p class="hero-spec">${c.heroSpec.map((s) => `<span>${esc(s)}</span>`).join("")}</p>
     </div>
+    ${shot("presets", lang, c.heroShotAlt, true)}
   </div>
 </header>
 
-<section class="section alt" id="situations">
-  <div class="container text-center">
-    <span class="section-badge">${esc(c.moodsBadge)}</span>
-    <h2 class="section-title">${esc(c.moodsTitle)}</h2>
-    <p class="section-sub mx-auto">${esc(c.moodsSub)}</p>
+<section class="sec" id="situations">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 class="h-sec">${esc(c.moodsTitle)}</h2>
+      <p class="lede">${esc(c.moodsLede)}</p>
+    </div>
+    <div class="moods">
+      ${moods}
+    </div>
+    <p class="note" style="margin-top:26px;max-width:620px">${esc(c.moodsNote)}</p>
   </div>
 </section>
 
-<section class="section" id="features">
-  <div class="container">
-    <span class="section-badge">${esc(c.featBadge)}</span>
-    <h2 class="section-title">${esc(c.featTitle)}</h2>
-    <p class="section-sub">${esc(c.featSub)}</p>
-    <div class="features-grid">
-      ${c.features.map((f) => `<article class="feature"><div class="ic">${esc(f.ic)}</div><h3>${esc(f.h)}</h3><p>${esc(f.p)}</p></article>`).join("\n      ")}
+<section class="sec alt" id="screens">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 class="h-sec">${esc(c.shotsTitle)}</h2>
+      <p class="lede">${esc(c.shotsLede)}</p>
+    </div>
+    <div class="strip">
+      ${strip}
     </div>
   </div>
 </section>
 
-<section class="section alt" id="how">
-  <div class="container">
-    <span class="section-badge">${esc(c.howBadge)}</span>
-    <h2 class="section-title">${esc(c.howTitle)}</h2>
-    <p class="section-sub">${esc(c.howSub)}</p>
-    <div class="rows">
-      ${c.rows.map((r) => `<div class="row"><div class="k">${esc(r.k)}</div><div class="v">${esc(r.v)}</div></div>`).join("\n      ")}
+<section class="sec" id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 class="h-sec">${esc(c.featTitle)}</h2>
+      <p class="lede">${esc(c.featLede)}</p>
+    </div>
+    <dl class="defs">
+      ${defs}
+    </dl>
+  </div>
+</section>
+
+<section class="night" id="alarm">
+  <div class="wrap night-grid">
+    <div>
+      <h2 class="h-sec">${esc(c.alarmTitle)}</h2>
+      <p class="lede" style="margin-top:14px">${esc(c.alarmLede)}</p>
+      <p class="note" style="margin-top:14px">${esc(c.alarmNote)}</p>
+      <h3 class="note" style="margin-top:34px;font-weight:600">${esc(c.tonesLabel)}</h3>
+      <div class="tones">
+        ${tones}
+      </div>
+    </div>
+    ${shot("alarm", lang, c.alarmShotAlt)}
+  </div>
+</section>
+
+<section class="sec" id="privacy">
+  <div class="wrap">
+    <div class="sec-head" style="margin-bottom:0">
+      <h2 class="h-sec">${esc(c.privTitle)}</h2>
+      <p class="lede">${esc(c.privLede)}</p>
+      <p style="margin-top:20px"><a href="${p.privacy}">${esc(c.privLink)}</a></p>
     </div>
   </div>
 </section>
 
-<section class="section" id="privacy">
-  <div class="container text-center">
-    <span class="section-badge">${esc(c.privBadge)}</span>
-    <h2 class="section-title">${esc(c.privTitle)}</h2>
-    <p class="section-sub mx-auto">${esc(c.privSub)}</p>
-    <p style="margin-top:22px"><a href="${p.privacy}">${esc(c.footerPrivacy)}</a></p>
-  </div>
-</section>
-
-<section class="section alt" id="faq">
-  <div class="container narrow">
-    <span class="section-badge">${esc(c.faqBadge)}</span>
-    <h2 class="section-title">${esc(c.faqTitle)}</h2>
+<section class="sec alt" id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 class="h-sec">${esc(c.faqTitle)}</h2>
+    </div>
     <div class="faq">
-      ${c.faqs.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("\n      ")}
+      ${faqs}
     </div>
   </div>
 </section>
 
-<section class="cta">
-  <div class="container">
-    <h2>${esc(c.ctaTitle)}</h2>
-    <p>${esc(c.ctaSub)}</p>
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head" style="margin-bottom:34px">
+      <h2 class="h-sec">${esc(c.specTitle)}</h2>
+    </div>
+    <dl class="spec">
+      ${specs}
+    </dl>
+  </div>
+</section>
+
+<section class="get">
+  <div class="wrap">
+    <h2 class="h-sec">${esc(c.getTitle)}</h2>
+    <p class="lede">${esc(c.getLede)}</p>
     ${appStoreBadge(c)}
   </div>
 </section>
+
+</main>
 `;
 
 	return shell({
@@ -303,9 +429,21 @@ export function renderLanding(lang: Lang): string {
 	});
 }
 
+/* ── 문서 ─────────────────────────────────────────────────── */
+
+function docShell(lang: Lang, title: string, updated: string, inner: string): string {
+	const c = COPY[lang];
+	const p = paths(lang);
+	return `<main class="doc"><div class="wrap prose">
+<h1>${esc(title)}</h1>
+<p class="updated">${esc(updated)}</p>
+${inner}
+<p><a class="back" href="${p.home}">${esc(c.backHome)}</a></p>
+</div></main>`;
+}
+
 export function renderPrivacy(lang: Lang): string {
 	const c = COPY[lang];
-	const body = lang === "ko" ? PRIVACY_KO : PRIVACY_EN;
 	return shell({
 		lang,
 		title: `${c.privacyTitle} — ${APP_NAME}`,
@@ -316,35 +454,25 @@ export function renderPrivacy(lang: Lang): string {
 		canonical: SITE + (lang === "en" ? "/en/privacy" : "/privacy"),
 		altKo: SITE + "/privacy",
 		altEn: SITE + "/en/privacy",
-		body: `<main class="doc"><div class="container narrow">
-<h1>${esc(c.privacyTitle)}</h1>
-<p class="updated">${esc(c.privacyUpdated)}</p>
-${body}
-</div></main>`,
+		body: docShell(lang, c.privacyTitle, c.privacyUpdated, lang === "ko" ? PRIVACY_KO : PRIVACY_EN),
 	});
 }
 
 export function renderSupport(lang: Lang): string {
 	const c = COPY[lang];
-	const body = lang === "ko" ? SUPPORT_KO : SUPPORT_EN;
 	return shell({
 		lang,
 		title: `${c.supportTitle} — ${APP_NAME}`,
 		desc:
 			lang === "ko"
-				? "zeroPlayer 문의와 도움말. 소리가 안 날 때, 타이머가 안 맞을 때 먼저 볼 것."
-				: "zeroPlayer support. What to check when there is no sound or the timer behaves oddly.",
+				? "zeroPlayer 문의와 도움말. 소리가 안 날 때, 알람이 안 울릴 때 먼저 볼 것."
+				: "zeroPlayer support. What to check when there is no sound or an alarm did not ring.",
 		canonical: SITE + (lang === "en" ? "/en/support" : "/support"),
 		altKo: SITE + "/support",
 		altEn: SITE + "/en/support",
-		body: `<main class="doc"><div class="container narrow">
-<h1>${esc(c.supportTitle)}</h1>
-<p class="updated">${esc(c.supportUpdated)}</p>
-${body}
-</div></main>`,
+		body: docShell(lang, c.supportTitle, c.supportUpdated, lang === "ko" ? SUPPORT_KO : SUPPORT_EN),
 	});
 }
-
 const PRIVACY_KO = `
 <p>zeroPlayer 는 계정을 만들지 않습니다. 이름·이메일·전화번호를 묻지 않고 로그인 화면도 없습니다.
 이 문서는 그럼에도 오가는 값이 무엇인지 적어 둔 것입니다.</p>
@@ -374,9 +502,16 @@ const PRIVACY_KO = `
 <p>무엇을 얼마나 들었는지, 어떤 프리셋을 쓰는지는 보내지 않습니다.</p>
 
 <h2>알람을 켰을 때</h2>
-<p>알람을 쓰시면 애플 푸시 서비스(APNs)가 발급한 기기 토큰을 서버에 보관합니다. 정해진 시각에
-알림을 보내기 위한 것이고, 알람을 모두 끄거나 앱을 지우면 더는 쓰이지 않습니다.
-알림 권한은 알람을 처음 켤 때만 묻습니다.</p>
+<p>알람이 어느 길로 울리는지가 iOS 판에 따라 다르고, 서버에 남는 값도 그에 따라 달라집니다.</p>
+<ul>
+  <li><b>iOS 26 이상</b> — 알람을 기기가 직접 걸기 때문에 서버가 하는 일이 없습니다. 알람 권한을
+      허락하시는 순간 앱이 <b>서버에 올려 둔 푸시 토큰을 지웁니다.</b> 알람 시각에 서버로 나가는
+      요청도 없습니다.</li>
+  <li><b>iOS 25 이하</b> — 애플 푸시 서비스(APNs)가 발급한 기기 토큰을 서버에 보관합니다. 정해진
+      시각에 알림을 보내기 위한 것이고, 알람을 모두 끄거나 앱을 지우면 더는 쓰이지 않습니다.
+      알림에는 무엇을 틀지(방송 이름)만 담기고 누가 듣는지는 담기지 않습니다.</li>
+</ul>
+<p>권한은 알람을 처음 켤 때만 묻습니다. 알람에 고르신 알람음과 음량은 기기 안에만 있습니다.</p>
 
 <h2>스트림 재생</h2>
 <p>방송을 틀면 앱이 그 방송국 서버에 직접 연결합니다. 소리가 개발자 서버를 거치지 않습니다.
@@ -434,10 +569,18 @@ from the Settings tab.</p>
 <p>What you listened to, for how long, and which presets you use are not sent.</p>
 
 <h2>When alarms are on</h2>
-<p>If you use alarms, the device token issued by Apple Push Notification service is kept on the
-server so a notification can be delivered at the time you set. Turning all alarms off, or deleting
-the app, stops it being used. Notification permission is requested only when you first turn an
-alarm on.</p>
+<p>How an alarm reaches you depends on the iOS version, and so does what the server keeps.</p>
+<ul>
+  <li><b>iOS 26 and later</b> — the device schedules the alarm itself, so the server has no part in
+      it. The moment you grant alarm permission the app <b>deletes the push token it had stored on
+      the server</b>, and nothing is sent to the server at alarm time.</li>
+  <li><b>iOS 25 and earlier</b> — the device token issued by Apple Push Notification service is kept
+      on the server so a notification can be delivered at the time you set. Turning all alarms off,
+      or deleting the app, stops it being used. The notification carries only what to play (a station
+      name), never anything about who is listening.</li>
+</ul>
+<p>Permission is requested only when you first turn an alarm on. The melody and volume you choose for
+an alarm stay on the device.</p>
 
 <h2>Stream playback</h2>
 <p>When you play a station the app connects to that station's own server. Audio does not pass
@@ -490,9 +633,14 @@ iOS 가 네트워크를 강하게 제한합니다. 그래도 끊긴다면 어느
 그럴 때는 채널 이름만 표시됩니다. 앱이 고칠 수 있는 부분이 아닙니다.</p>
 
 <h2>알람이 안 울립니다</h2>
-<p>세 가지를 확인해 주세요. 알림 권한이 켜져 있는지, 무음 스위치가 내려가 있지 않은지,
-벨소리 볼륨이 0 이 아닌지입니다. iOS 알림은 무음 모드에서 소리를 내지 않습니다.
-그리고 알림은 한 번만 울립니다 — 시계 앱처럼 끌 때까지 반복하지 않습니다.</p>
+<p><b>iOS 26 이상</b>이면 설정 → zeroPlayer 에서 알람 권한이 켜져 있는지 보세요. 이 권한이 있으면
+무음 모드와 집중 모드에서도 울립니다. 알람 화면이 떴는데 소리가 작다면 알람 편집에서 음량을
+올리시면 됩니다 — 기본음을 고르셨을 때는 기기의 벨소리 볼륨을 따릅니다.</p>
+<p><b>iOS 25 이하</b>이면 알림으로 오기 때문에 세 가지를 확인해 주세요. 알림 권한이 켜져 있는지,
+무음 스위치가 내려가 있지 않은지, 벨소리 볼륨이 0 이 아닌지입니다. iOS 알림은 무음 모드에서
+소리를 내지 않습니다.</p>
+<p>어느 쪽이든 알람 소리는 한 번 울리고 끝납니다. 그래서 2분 간격으로 몇 번 더 걸어 둡니다.
+알람을 끄거나 앱을 열면 남은 것이 함께 치워집니다.</p>
 
 <h2>듣던 자리가 사라졌습니다</h2>
 <p>팟캐스트는 듣던 위치를 기기에 저장합니다. 앱을 지웠다 다시 깔면 함께 사라집니다.
@@ -528,9 +676,15 @@ left.</p>
 then you see the station name alone. This is not something the app can fix.</p>
 
 <h2>The alarm did not sound</h2>
-<p>Check three things: notification permission is on, the silent switch is not engaged, and the
-ringer volume is not at zero. iOS notifications stay silent in silent mode. Note also that the
-sound plays once — it does not repeat until dismissed the way the Clock app does.</p>
+<p>On <b>iOS 26 and later</b>, check that alarm permission is on under Settings &rarr; zeroPlayer.
+With that permission the alarm rings through Silent mode and Focus. If the alarm screen appeared but
+the sound was faint, raise the volume in the alarm editor — the default alarm sound follows the
+device's ringer volume instead.</p>
+<p>On <b>iOS 25 and earlier</b> it arrives as a notification, so check three things: notification
+permission is on, the silent switch is not engaged, and the ringer volume is not at zero. iOS
+notifications stay silent in silent mode.</p>
+<p>Either way the alarm sound plays once, which is why a few more are scheduled two minutes apart.
+Stopping the alarm, or opening the app, clears the rest.</p>
 
 <h2>My position in an episode is gone</h2>
 <p>Podcast positions are stored on the device, so deleting and reinstalling the app removes them.

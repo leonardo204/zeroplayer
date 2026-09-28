@@ -1,138 +1,204 @@
 /**
- * 랜딩·정책 페이지 공통 스타일.
- * 다른 zerolive 앱 랜딩(lnhud, md-editor, golf, wander)과 같은 결 —
- * 흰 바탕, 강조색 하나, 이모지 없음, Pretendard.
- * 강조색은 앱의 AccentColor(sRGB 0.286 0.647 0.796)를 그대로 가져왔다.
+ * 랜딩·정책 페이지 스타일.
+ *
+ * 앞선 판은 섹션마다 대문자 배지를 얹고, 기능을 여섯 장의 카드로 늘어놓고, 카드가
+ * 마우스를 따라 들리게 했다. 흔한 템플릿의 모양이라 공들여 만든 앱이 아니라
+ * 자동으로 찍어낸 페이지처럼 보였다. 그래서 규칙을 몇 개 세워 두고 다시 짰다.
+ *
+ *  - 배지·알약 라벨을 쓰지 않는다. 제목은 제목만으로 선다.
+ *  - 테두리 상자를 늘어놓지 않는다. 구분은 머리카락 선과 여백으로 한다.
+ *  - 마우스를 올려 움직이는 것은 누를 수 있는 것(링크·단추)뿐이다.
+ *  - 강조색은 링크와 표시 한둘에만 쓴다. 배경을 물들이지 않는다.
+ *  - 어두운 구역은 한 곳(알람)뿐이다. 밤에 쓰는 기능이라 뜻이 있다.
+ *
+ * 강조색은 앱의 AccentColor(sRGB 0.286 0.647 0.796)에서 왔다. 글자로 쓸 때는
+ * 흰 바탕에서 대비가 모자라 한 단계 어두운 값을 따로 둔다.
  */
 export const CSS = `
 :root{
-  --acc:#49A5CB;--acc-dark:#1F6E92;--acc-light:#A6D6E8;--acc-bg:#EBF6FB;
-  --dark:#14181D;--mid:#556069;--light:#8A939C;
-  --surface:#F7FAFC;--border:#E3EAEF;--white:#fff;
-  --night:#131A22;
-  --radius:14px;--radius-lg:22px;
-  --shadow:0 2px 16px rgba(20,24,29,.05);
-  --shadow-lg:0 10px 38px rgba(73,165,203,.20);
+  --ink:#0F1419;--body:#57626C;--faint:#8B959E;
+  --acc:#49A5CB;--acc-ink:#12708F;
+  --line:#E7ECEF;--line-soft:#F0F3F5;
+  --bg:#fff;--bg-alt:#FAFBFC;--night:#101820;
   --font:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --mono:'SF Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,monospace;
+  --wide:1120px;--prose:680px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:var(--font);color:var(--dark);background:var(--white);line-height:1.65;
-  -webkit-font-smoothing:antialiased;word-break:keep-all}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--font);color:var(--ink);background:var(--bg);
+  font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased;word-break:keep-all}
 img{max-width:100%;height:auto;display:block}
-a{color:var(--acc-dark);text-decoration:none}
-a:hover{text-decoration:underline}
+a{color:var(--acc-ink);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+svg{display:block}
+::selection{background:#D6EBF4}
 
-/* ── 상단 바 */
-.nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.85);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(227,234,239,.7)}
-.nav-inner{max-width:1080px;margin:0 auto;padding:0 24px;height:64px;display:flex;
-  align-items:center;justify-content:space-between;gap:16px}
-.nav-logo{display:flex;align-items:center;gap:10px;color:var(--dark);font-weight:700;font-size:16px;
-  letter-spacing:-.3px;text-decoration:none;white-space:nowrap}
-.nav-logo img{width:30px;height:30px;border-radius:7px}
-.nav-links{display:flex;align-items:center;gap:22px}
-.nav-links a{color:var(--mid);font-size:14px;font-weight:600;text-decoration:none}
-.nav-links a:hover{color:var(--acc-dark)}
-.lang{font-size:13px;font-weight:700;color:var(--light);border:1px solid var(--border);
-  border-radius:999px;padding:5px 12px;text-decoration:none}
-.lang:hover{color:var(--acc-dark);border-color:var(--acc-light);text-decoration:none}
+.wrap{max-width:var(--wide);margin:0 auto;padding:0 28px}
+.prose{max-width:var(--prose)}
 
-.container{max-width:1080px;margin:0 auto;padding:0 24px}
-.narrow{max-width:760px}
-.text-center{text-align:center}
-.mx-auto{margin-left:auto;margin-right:auto}
+/* ── 상단 바 ─────────────────────────────────────────────── */
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.88);
+  backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px);
+  border-bottom:1px solid var(--line)}
+.nav .wrap{height:58px;display:flex;align-items:center;gap:28px}
+.brand{display:flex;align-items:center;gap:9px;color:var(--ink);font-weight:650;font-size:15.5px;
+  letter-spacing:-.02em;white-space:nowrap}
+.brand:hover{text-decoration:none}
+.brand img{width:26px;height:26px;border-radius:6px}
+.nav nav{display:flex;gap:22px;margin-left:auto}
+.nav nav a{color:var(--body);font-size:14.5px;font-weight:500}
+.nav nav a:hover{color:var(--ink);text-decoration:none}
+.nav .lang{color:var(--faint);font-size:13px;font-weight:600;letter-spacing:.02em;
+  padding-left:22px;border-left:1px solid var(--line)}
+.nav .lang:hover{color:var(--ink);text-decoration:none}
 
-/* ── 섹션 공통 */
-.section{padding:88px 0}
-.section.alt{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.section-badge{display:inline-block;font-size:12px;font-weight:800;letter-spacing:1.2px;
-  text-transform:uppercase;color:var(--acc-dark);background:var(--acc-bg);
-  border-radius:999px;padding:6px 14px;margin-bottom:18px}
-.section-title{font-size:clamp(25px,3.6vw,38px);font-weight:800;letter-spacing:-1.1px;line-height:1.3;
-  margin-bottom:16px}
-.section-sub{font-size:clamp(15px,1.7vw,17.5px);color:var(--mid);max-width:660px}
-.section-sub.mx-auto{margin-left:auto;margin-right:auto}
-.accent{color:var(--acc)}
+/* ── 제목 체계 ───────────────────────────────────────────── */
+h1,h2,h3{letter-spacing:-.03em;line-height:1.22;font-weight:700}
+.h-hero{font-size:clamp(30px,4.6vw,50px);letter-spacing:-.038em;line-height:1.14}
+.h-sec{font-size:clamp(22px,2.8vw,31px)}
+.lede{font-size:clamp(16.5px,1.5vw,18.5px);color:var(--body);line-height:1.72}
+.note{font-size:14px;color:var(--faint)}
+.mark{color:var(--acc-ink)}
 
-/* ── 히어로 */
-.hero{padding:132px 0 76px;text-align:center;
-  background:radial-gradient(120% 90% at 50% -10%,var(--acc-bg) 0%,#fff 62%)}
-.hero .section-title{max-width:840px;margin-left:auto;margin-right:auto}
-.hero .section-sub{margin:0 auto 30px}
-.appstore-badge{display:inline-block;transition:transform .2s}
-.appstore-badge:hover{transform:translateY(-2px);text-decoration:none}
-.hero-meta{margin-top:14px;font-size:13.5px;color:var(--light)}
+/* ── 구역 ────────────────────────────────────────────────── */
+.sec{padding:84px 0;border-top:1px solid var(--line)}
+.sec.alt{background:var(--bg-alt)}
+.sec-head{max-width:620px;margin-bottom:46px}
+.sec-head .h-sec{margin-bottom:14px}
 
-/* ── 상황 카드 — 앱이 프리셋으로 담는 다섯 가지를 그대로 보여 준다 */
-.moods{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:44px auto 0;max-width:900px}
-.mood{background:var(--night);color:#fff;border-radius:18px;padding:22px 14px;text-align:center;
-  box-shadow:var(--shadow-lg)}
-.mood .m-name{font-size:16px;font-weight:800;letter-spacing:-.3px}
-.mood .m-time{margin-top:6px;font-size:12.5px;color:#9FB3C4;font-family:var(--mono)}
+/* ── 히어로 ──────────────────────────────────────────────── */
+.hero{padding:72px 0 76px}
+.hero-grid{display:grid;grid-template-columns:1fr 300px;gap:72px;align-items:center}
+.hero .h-hero{margin-bottom:22px}
+.hero .lede{margin-bottom:32px;max-width:520px}
+.hero-cta{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.hero-spec{margin-top:26px;font-size:13.5px;color:var(--faint);display:flex;gap:9px;flex-wrap:wrap}
+.hero-spec b{font-weight:600;color:var(--body)}
+.hero-spec span:not(:last-child)::after{content:'·';margin-left:9px;color:#C3CCD3}
 
-/* ── 기능 카드 */
-.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:44px}
-.feature{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);
-  padding:28px 26px;box-shadow:var(--shadow);transition:transform .28s,box-shadow .28s}
-.feature:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg)}
-.feature .ic{width:40px;height:40px;border-radius:11px;background:var(--acc-bg);color:var(--acc-dark);
-  display:grid;place-items:center;font-size:16px;font-weight:800;margin-bottom:15px;font-family:var(--mono)}
-.feature h3{font-size:17.5px;font-weight:800;letter-spacing:-.4px;margin-bottom:8px}
-.feature p{font-size:14.5px;color:var(--mid)}
+/* 화면 캡처. 가짜 기기 테두리를 그리지 않는다 — 실제 화면 비율에 둥근 모서리와
+   머리카락 선만 준다. 그림자는 아주 얕게. */
+.shot{border-radius:26px;border:1px solid var(--line);overflow:hidden;
+  box-shadow:0 1px 2px rgba(15,20,25,.04),0 12px 32px -12px rgba(15,20,25,.14)}
+.shot img{width:100%}
 
-/* ── 두 칸 설명 */
-.rows{margin-top:44px;display:grid;gap:18px}
-.row{display:grid;grid-template-columns:150px 1fr;gap:20px;align-items:start;
-  background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px}
-.row .k{font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--acc-dark)}
-.row .v{font-size:14.8px;color:var(--mid)}
+/* ── 다섯 가지 상황: 표로 읽힌다 ─────────────────────────── */
+.moods{border-top:1px solid var(--line)}
+.mood{display:grid;grid-template-columns:34px 92px 1fr 128px;gap:18px;align-items:baseline;
+  padding:20px 2px;border-bottom:1px solid var(--line)}
+.mood .g{grid-row:span 1;align-self:center;color:var(--acc-ink);opacity:.9}
+.mood .n{font-weight:650;font-size:16.5px;letter-spacing:-.02em}
+.mood .d{color:var(--body);font-size:15px}
+.mood .t{font-family:var(--mono);font-size:12.5px;color:var(--faint);text-align:right;
+  letter-spacing:-.01em;white-space:nowrap}
 
-/* ── FAQ */
-.faq{margin-top:40px;display:grid;gap:12px}
-.faq details{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);
-  padding:18px 22px}
-.faq summary{cursor:pointer;font-weight:700;font-size:15.5px;letter-spacing:-.3px;list-style:none}
+/* ── 화면 캡처 줄 ────────────────────────────────────────── */
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:34px}
+.strip figure{display:flex;flex-direction:column;gap:16px}
+.strip figcaption{font-size:14.5px;color:var(--body)}
+.strip figcaption b{display:block;color:var(--ink);font-weight:650;font-size:15.5px;
+  letter-spacing:-.02em;margin-bottom:3px}
+
+/* ── 기능: 정의 목록, 카드가 아니다 ─────────────────────── */
+.defs{border-top:1px solid var(--line)}
+.def{display:grid;grid-template-columns:232px 1fr;gap:36px;padding:26px 2px;
+  border-bottom:1px solid var(--line)}
+.def dt{font-weight:650;font-size:16.5px;letter-spacing:-.025em}
+.def dd{color:var(--body);font-size:15.2px}
+.def dd .sub{display:block;margin-top:7px;font-size:13.8px;color:var(--faint)}
+
+/* ── 알람(어두운 구역) ──────────────────────────────────── */
+.night{background:var(--night);color:#F2F5F7;border:0;padding:92px 0}
+.night .h-sec{color:#fff}
+.night .lede{color:#A9B6C1}
+.night .note{color:#76848F}
+.night a{color:#8FD0E8}
+.night .tones{margin-top:40px;display:grid;grid-template-columns:repeat(4,1fr);gap:0 28px;
+  border-top:1px solid #222D38}
+.night .tone{padding:15px 0;border-bottom:1px solid #222D38;font-size:14.5px}
+.night .tone b{font-weight:600;color:#fff}
+.night .tone i{font-style:normal;display:block;font-size:12.8px;color:#76848F;margin-top:1px}
+.night-grid{display:grid;grid-template-columns:1fr 268px;gap:64px;align-items:center}
+
+/* ── 사양 표 ─────────────────────────────────────────────── */
+.spec{border-top:1px solid var(--line);max-width:760px}
+.spec div{display:grid;grid-template-columns:168px 1fr;gap:24px;padding:14px 2px;
+  border-bottom:1px solid var(--line-soft);font-size:15px}
+.spec dt{color:var(--faint);font-size:14px}
+.spec dd{color:var(--ink)}
+
+/* ── FAQ ─────────────────────────────────────────────────── */
+.faq{border-top:1px solid var(--line);max-width:var(--prose)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;list-style:none;padding:19px 34px 19px 2px;position:relative;
+  font-weight:600;font-size:16px;letter-spacing:-.02em}
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:'+';float:right;color:var(--acc);font-weight:800}
-.faq details[open] summary::after{content:'–'}
-.faq p{margin-top:12px;font-size:14.8px;color:var(--mid)}
+.faq summary::after{content:'';position:absolute;right:6px;top:50%;width:9px;height:9px;
+  margin-top:-5px;border-right:1.6px solid var(--faint);border-bottom:1.6px solid var(--faint);
+  transform:rotate(45deg);transition:transform .18s}
+.faq details[open] summary::after{transform:rotate(-135deg);margin-top:-2px}
+.faq summary:hover{color:var(--acc-ink)}
+.faq p{padding:0 2px 21px;color:var(--body);font-size:15.2px}
 
-/* ── 본문 문서(개인정보·지원) */
-.doc{padding:120px 0 80px}
-.doc h1{font-size:clamp(26px,3.4vw,34px);font-weight:800;letter-spacing:-1px;margin-bottom:10px}
-.doc .updated{font-size:13.5px;color:var(--light);margin-bottom:36px}
-.doc h2{font-size:19px;font-weight:800;letter-spacing:-.4px;margin:34px 0 10px}
-.doc p{font-size:15.2px;color:var(--mid);margin-bottom:12px}
-.doc ul{margin:0 0 14px 20px}
-.doc li{font-size:15.2px;color:var(--mid);margin-bottom:7px}
+/* ── 내려받기 줄 ────────────────────────────────────────── */
+.get{padding:76px 0;border-top:1px solid var(--line);text-align:center}
+.get .h-sec{margin-bottom:12px}
+.get .lede{margin:0 auto 28px;max-width:480px}
+.badge{display:inline-block;line-height:0}
+.badge:hover{text-decoration:none;opacity:.85}
 
-/* ── 마무리 */
-.cta{background:var(--night);color:#fff;text-align:center;padding:84px 0}
-.cta h2{font-size:clamp(23px,3.2vw,32px);font-weight:800;letter-spacing:-.9px;margin-bottom:14px}
-.cta p{color:#9FB3C4;font-size:16px;margin-bottom:28px}
+/* ── 본문 문서(개인정보·문의) ──────────────────────────── */
+.doc{padding:64px 0 88px}
+.doc h1{font-size:clamp(26px,3.2vw,34px);margin-bottom:8px}
+.doc .updated{font-size:13.5px;color:var(--faint);margin-bottom:40px;padding-bottom:20px;
+  border-bottom:1px solid var(--line)}
+.doc h2{font-size:18.5px;margin:38px 0 12px;letter-spacing:-.025em}
+.doc p{color:var(--body);margin-bottom:13px;font-size:15.5px}
+.doc ul{margin:0 0 16px 0;list-style:none}
+.doc li{color:var(--body);margin-bottom:9px;font-size:15.5px;padding-left:16px;position:relative}
+.doc li::before{content:'';position:absolute;left:1px;top:11px;width:5px;height:5px;
+  border-radius:50%;background:var(--line);box-shadow:0 0 0 1px var(--line)}
+.doc b{color:var(--ink);font-weight:600}
+.doc code{font-family:var(--mono);font-size:13.5px;background:var(--bg-alt);
+  border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.doc .back{display:inline-block;margin-top:44px;font-size:14.5px}
 
-/* ── 바닥글 */
-footer{background:var(--surface);border-top:1px solid var(--border);padding:34px 0 40px;
-  font-size:13.5px;color:var(--light)}
-footer .container{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
-footer a{color:var(--mid)}
-footer .sib{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
-  justify-content:flex-start;gap:10px;font-size:13px}
-footer .sib .lb{color:var(--light);font-weight:700}
+/* ── 바닥글 ──────────────────────────────────────────────── */
+footer{border-top:1px solid var(--line);background:var(--bg-alt);padding:40px 0 48px;
+  font-size:13.8px;color:var(--faint)}
+footer .rowa{display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap}
+footer .rowb{margin-top:20px;padding-top:20px;border-top:1px solid var(--line);
+  display:flex;gap:8px 14px;flex-wrap:wrap;align-items:baseline;font-size:13.2px}
+footer a{color:var(--body)}
+footer .lbl{color:var(--faint)}
+footer .rowb span[aria-hidden]{color:#C3CCD3;margin:0 -4px}
 
-@media(max-width:900px){
-  .nav-links{display:none}
-  .features-grid{grid-template-columns:1fr 1fr}
-  .moods{grid-template-columns:repeat(3,1fr)}
+@media(max-width:920px){
+  .hero-grid{grid-template-columns:1fr;gap:48px}
+  .hero-grid .shot{max-width:280px}
+  .night-grid{grid-template-columns:1fr;gap:44px}
+  .night-grid .shot{max-width:250px}
+  .night .tones{grid-template-columns:1fr 1fr;gap:0 24px}
+  .strip{grid-template-columns:1fr;gap:40px;max-width:420px}
+  .nav nav{display:none}
+  .nav .lang{margin-left:auto}
+  .def{grid-template-columns:1fr;gap:6px}
+  .mood{grid-template-columns:30px 1fr;gap:14px;row-gap:4px;padding:18px 2px}
+  .mood .d{grid-column:2}
+  .mood .t{grid-column:2;text-align:left}
 }
-@media(max-width:640px){
-  .section{padding:64px 0}
-  .hero{padding:110px 0 56px}
-  .features-grid{grid-template-columns:1fr}
-  .moods{grid-template-columns:repeat(2,1fr)}
-  .row{grid-template-columns:1fr;gap:6px}
-  footer .container{flex-direction:column;align-items:flex-start}
+@media(max-width:560px){
+  .wrap{padding:0 20px}
+  .h-hero br{display:none}
+  .sec{padding:62px 0}
+  .hero{padding:52px 0 58px}
+  .night{padding:66px 0}
+  .spec div{grid-template-columns:1fr;gap:2px;padding:12px 2px}
+  footer .rowa{flex-direction:column;gap:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important}
 }
 `;
