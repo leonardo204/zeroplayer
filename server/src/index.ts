@@ -33,6 +33,7 @@ import {
   registerPushToken,
   updateAlarm,
 } from './routes/alarms'
+import { listExclusions, replaceExclusions } from './routes/exclusions'
 import { dispatchDueAlarms, pruneAlarmSends } from './lib/alarmDispatch'
 import { listChannelsAdmin, patchChannelAdmin, probeChannelAdmin } from './routes/hiddenAdmin'
 import { hasAPNsKeys } from './lib/apns'
@@ -47,7 +48,7 @@ function requireAdmin(env: Env, request: Request): Response | null {
 }
 
 async function health(env: Env): Promise<Response> {
-  const [stations, excluded, tagged, pending, moodPending, sets, podcasts, episodes, signed, unkeyed, hidden, alarms, pushable, jobs] = await env.DB.batch<Record<string, unknown>>([
+  const [stations, excluded, tagged, pending, moodPending, sets, podcasts, episodes, signed, unkeyed, hidden, alarms, pushable, excludedStations, jobs] = await env.DB.batch<Record<string, unknown>>([
     env.DB.prepare('SELECT COUNT(*) AS n FROM stations'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM station_health WHERE excluded = 1'),
     env.DB.prepare('SELECT COUNT(DISTINCT station_id) AS n FROM station_tags'),
@@ -61,6 +62,7 @@ async function health(env: Env): Promise<Response> {
     env.DB.prepare('SELECT COUNT(*) AS n FROM hidden_channels WHERE enabled = 1'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM alarms WHERE enabled = 1'),
     env.DB.prepare('SELECT COUNT(*) AS n FROM devices WHERE push_token IS NOT NULL'),
+    env.DB.prepare('SELECT COUNT(*) AS n FROM excluded_stations'),
     env.DB.prepare('SELECT job, last_run_at, last_ok_at, ok, detail FROM sync_state ORDER BY job'),
   ])
 
@@ -80,6 +82,7 @@ async function health(env: Env): Promise<Response> {
     podcastIndexKeys: hasKeys(env),
     enabledAlarms: (alarms.results[0]?.n as number) ?? 0,
     pushableDevices: (pushable.results[0]?.n as number) ?? 0,
+    excludedStations: (excludedStations.results[0]?.n as number) ?? 0,
     apnsKeys: hasAPNsKeys(env),
     jobs: jobs.results,
   })
@@ -141,6 +144,13 @@ export default {
       const hiddenNowMatch = path.match(/^\/hidden\/channels\/([^/]+)\/now$/)
       if (method === 'GET' && hiddenNowMatch) {
         return await getHiddenNow(env, request, decodeURIComponent(hiddenNowMatch[1]))
+      }
+
+      // 자동 선택에서 뺀 방송국. iOS 25 이하만 올린다 — 거기서는 알람에 무엇을 틀지
+      // 서버가 고른다. 올라오는 것은 방송국 번호뿐이다.
+      if (path === '/exclusions') {
+        if (method === 'PUT') return await replaceExclusions(env, request)
+        if (method === 'GET') return await listExclusions(env, request)
       }
 
       if (method === 'POST' && path === '/push/token') return await registerPushToken(env, request)

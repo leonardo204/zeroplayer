@@ -217,6 +217,11 @@ to stop, so a single tap produces sound and nothing else has to be decided.
 - Situation presets: station, timer and fade-out saved together under a name. Five are
   bundled (sleep 45 min, driving no timer, study 90 min, work no timer, wake up 30 min).
   Leaving the source on automatic lets the app pick a fitting station each time.
+- Stop playing this: removing a station from the automatic picks. Playback moves straight to the
+  next candidate, and that station no longer appears in recommendations, presets or alarms. It is
+  still findable in the Browse tab and playable by hand — removal means "leave it out when the app
+  is choosing", not "delete it". Restore it under Settings. A station skipped within 30 seconds also
+  drops down the order on its own, without pressing anything.
 - Recommendations that take the hour, the weekday and your own listening history into
   account. The reordering by personal history happens on the device.
 - Radio alarm. On iOS 26 and later it is scheduled as a system alarm: it rings through
@@ -237,7 +242,10 @@ to stop, so a single tap produces sound and nothing else has to be decided.
 No account and no sign-in. Presets, favourites, listening history and podcast positions are
 stored on the device and never sent to a server. The server (ai.zerolive.co.kr) supplies
 station and podcast lists only; the app sends it a random install UUID, the app version, the
-query, and the id of any station that failed to play. Audio streams come straight from the
+query, the id of any station that failed to play, and — on iOS 25 and earlier only — the ids of
+stations removed with "Stop playing this", because on those versions the server is the one that
+picks what an alarm plays. On iOS 26 and later that list never leaves the device, and granting
+alarm permission deletes the copy already held on the server. Audio streams come straight from the
 broadcaster, not through the developer's server. Banner ads (Google AdMob) appear on list and
 history screens but never on the playback screen or on a screen opened by an alarm.
 On iOS 26 and later the app deletes its push token from the server as soon as alarm permission is

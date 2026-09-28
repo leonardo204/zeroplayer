@@ -17,6 +17,10 @@ struct PlayerView: View {
     }()
     /// 진행 바를 끌고 있는 동안의 값. 손을 떼면 그 자리로 옮기고 비운다.
     @State private var scrub: Double?
+    /// '그만 듣기' 를 누른 뒤 무엇이 벌어졌는지 알려 주는 한 줄. 몇 초 뒤 사라진다.
+    @State private var excludeNotice: String?
+    /// 다음 후보를 찾는 동안 단추를 막는다. 연달아 누르면 여러 개가 함께 빠진다.
+    @State private var isExcluding = false
 
     private var isEpisode: Bool { player.current?.kind == .podcast }
 
@@ -44,6 +48,15 @@ struct PlayerView: View {
             controls
 
             sideButtons
+
+            if let excludeNotice {
+                Text(excludeNotice)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .transition(.opacity)
+            }
 
             Spacer(minLength: 8)
         }
@@ -178,8 +191,9 @@ struct PlayerView: View {
                 Button { Task { await player.next() } } label: {
                     Image(systemName: "forward.fill").font(.title2)
                 }
-                .accessibilityLabel("다음")
-                .disabled(true)
+                .accessibilityLabel("다음 후보")
+                // 자동 선택으로 튼 경우에만 켠다. 목록에서 직접 고른 자리에는 '다음' 이 없다.
+                .disabled(!player.hasNextInQueue)
             }
         }
         .buttonStyle(.plain)
@@ -199,6 +213,18 @@ struct PlayerView: View {
             .buttonStyle(.plain)
             .disabled(player.current == nil)
             .accessibilityLabel(isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가")
+
+            if !isEpisode {
+                Button(action: excludeCurrent) {
+                    VStack(spacing: 4) {
+                        Image(systemName: "speaker.slash").font(.title3)
+                        Text("그만 듣기").font(.caption2)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(player.current == nil || isExcluding)
+                .accessibilityLabel("이 방송을 자동 선택에서 빼기")
+            }
 
             if isEpisode {
                 Menu {
@@ -263,6 +289,28 @@ struct PlayerView: View {
 
     private func rateText(_ rate: Double) -> String {
         rate == 1.0 ? String(localized: "1배") : String(format: String(localized: "%.1f배"), rate)
+    }
+
+    // MARK: - 그만 듣기
+
+    /// 지금 트는 방송을 자동 선택에서 빼고 다음 후보로 넘어간다.
+    ///
+    /// 넘어갈 후보가 없으면 재생이 멈춘다. 뺀 것만 하고 계속 틀어 두면
+    /// 아무 일도 안 일어난 줄 안다.
+    private func excludeCurrent() {
+        guard let item = player.current else { return }
+        isExcluding = true
+        Task {
+            let next = await player.excludeCurrentAndAdvance()
+            isExcluding = false
+            // 방송 이름 뒤에 조사를 붙이지 않는다. 이름이 무엇으로 끝나는지 알 수 없어
+            // '을/를' 이 절반은 틀린다. 콜론으로 끊는다.
+            excludeNotice = next == nil
+                ? String(localized: "뺐습니다: \(item.title). 넘어갈 방송이 없어 멈춥니다.")
+                : String(localized: "뺐습니다: \(item.title). 다음은 \(next!.title) 입니다.")
+            try? await Task.sleep(for: .seconds(4))
+            excludeNotice = nil
+        }
     }
 
     // MARK: - 즐겨찾기

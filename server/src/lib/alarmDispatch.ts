@@ -6,6 +6,7 @@ import { hasAPNsKeys, isDeadToken, sendPush, type PushEnv } from './apns'
 import { collectCandidates } from './candidates'
 import { SITUATIONS, daypartOf, type Situation } from './situations'
 import { GLOBAL_COUNTRY, loadSet } from './recommendSets'
+import { excludedFor } from '../routes/exclusions'
 
 /**
  * 매분 돌며 울릴 때가 된 알람을 보낸다.
@@ -85,16 +86,24 @@ async function resolveSource(env: Env, row: DueRow, at: Date, lang: Lang): Promi
   const weekday = new Date(at).getUTCDay()
   const dayType = [0, 6].includes(weekday) ? 'weekend' : 'weekday'
 
+  // 앱이 '그만 듣기' 로 뺀 방송은 건너뛴다. 뺀 방송으로 깨우면 뺀 의미가 없다.
+  // 지정 알람에는 걸지 않는다 — 사람이 직접 걸어 둔 것을 서버가 바꾸면 놀랍다.
+  const skip = await excludedFor(env, row.install_id)
+
   const stored = await loadSet(env, situation, dayType, daypart, GLOBAL_COUNTRY, lang)
-  const first = stored?.items?.[0] as { id?: string; title?: string; reason?: string } | undefined
-  if (first?.id && first.title) {
-    return { kind: 'station', id: first.id, title: first.title, reason: first.reason ?? null }
+  const items = (stored?.items ?? []) as Array<{ id?: string; title?: string; reason?: string }>
+  // 1위만 보지 않는다. 뺀 방송이 1위면 그 아래에서 고른다.
+  const fromSet = items.find((item) => item.id && item.title && !skip.has(item.id))
+  if (fromSet?.id && fromSet.title) {
+    return { kind: 'station', id: fromSet.id, title: fromSet.title, reason: fromSet.reason ?? null }
   }
 
+  // 세트가 없거나 통째로 빠졌다. 규칙으로 즉석에서 고른다. 뺀 것을 건너뛸 여유가
+  // 있어야 하므로 하나만 받지 않는다.
   const candidates = await collectCandidates(env, {
-    rule, daypart, country: null, limit: 1, secureOnly: true,
+    rule, daypart, country: null, limit: skip.size ? 12 : 1, secureOnly: true,
   })
-  const pick = candidates[0]
+  const pick = candidates.find((candidate) => !skip.has(candidate.id))
   if (!pick) return null
   return { kind: 'station', id: pick.id, title: pick.name, reason: null }
 }
@@ -195,7 +204,11 @@ export async function dispatchDueAlarms(env: Env, limit = 50): Promise<DispatchR
           collapseID: row.id,
         })
         ok = result.ok
-        detail = result.ok ? chosen.title : `${result.status} ${result.reason ?? ''}`.trim()
+        // 실패해도 무엇을 고르려 했는지 남긴다. 사유만 있으면 그 아침에 어느 방송이
+        // 나갈 뻔했는지 알 수 없어서, 제외가 들었는지조차 확인할 수 없다.
+        detail = result.ok
+          ? chosen.title
+          : `${chosen.title} · ${result.status} ${result.reason ?? ''}`.trim()
         if (isDeadToken(result)) {
           await env.DB.prepare('UPDATE devices SET push_token = NULL WHERE install_id = ?')
             .bind(row.install_id).run()

@@ -8,6 +8,11 @@ struct DiscoverView: View {
     @Environment(\.modelContext) private var modelContext
 
     @Query(sort: \Favorite.addedAt, order: .reverse) private var favorites: [Favorite]
+    /// '그만 듣기' 로 뺀 방송. 여기서는 감추지 않는다 — 제외는 "앱이 알아서 고를 때
+    /// 빼 달라" 는 뜻이고, 내가 직접 찾아 누르는 것을 막을 이유가 없다.
+    /// 대신 표시를 두어 왜 추천에 안 나오는지 알 수 있게 한다.
+    @Query private var excludedRows: [ExcludedStation]
+    @Environment(ExcludedStore.self) private var excludedStore
 
     @State private var model = DiscoverModel()
     @State private var store: StationStore?
@@ -137,6 +142,19 @@ struct DiscoverView: View {
                             }
                             .tint(isOn ? AppColor.favoriteOff : AppColor.favorite)
                         }
+                        .swipeActions(edge: .leading) {
+                            if isExcluded(station.id) {
+                                Button("되돌리기", systemImage: "arrow.uturn.backward") {
+                                    restore(station.id)
+                                }
+                                .tint(.gray)
+                            } else {
+                                Button("그만 듣기", systemImage: "speaker.slash") {
+                                    excludedStore.exclude(station.playable)
+                                }
+                                .tint(.orange)
+                            }
+                        }
                         .task { await loadMore(after: station) }
                     }
 
@@ -264,6 +282,15 @@ struct DiscoverView: View {
         favorites.contains { $0.itemID == id }
     }
 
+    private func isExcluded(_ id: String) -> Bool {
+        excludedRows.contains { $0.itemID == id }
+    }
+
+    private func restore(_ id: String) {
+        guard let row = excludedRows.first(where: { $0.itemID == id }) else { return }
+        excludedStore.restore(row)
+    }
+
     private func row(for station: StationDTO) -> some View {
         HStack(spacing: 12) {
             ArtworkView(
@@ -284,6 +311,12 @@ struct DiscoverView: View {
                 }
             }
             Spacer(minLength: 8)
+            if isExcluded(station.id) {
+                Image(systemName: "speaker.slash")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("자동 선택에서 뺀 방송")
+            }
             if isFavorite(station.id) {
                 Image(systemName: "heart.fill")
                     .font(.caption)

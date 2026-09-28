@@ -260,11 +260,40 @@ APNs 키(`HDFVB5T2FZ`)는 Production 으로 발급해 sandbox·배포 두 환경
 
 같은 분에 두 번 보내지 않도록 `alarm_sends(alarm_id, fired_at)` 에 먼저 줄을 잡고 발송한다. 10분 넘게 지난 알람은 보내지 않고 다음 시각으로 민다 — 아침 7시 알람이 9시에 오면 놀라기만 한다.
 
+#### 3.5.1 자동 선택에서 뺀 방송국
+
+```
+PUT /zp/v1/exclusions   Body: { "stations": ["rb:...", ...] }
+GET /zp/v1/exclusions   → { "stations": [...] }
+```
+
+`X-ZP-Install` 이 필요하다. **iOS 25 이하만 올린다.** 그 판에서는 알람에 무엇을 틀지
+서버가 고르기 때문에(`lib/alarmDispatch.ts` 의 `resolveSource`) 기기에만 두면 아침에
+뺀 방송이 그대로 온다. iOS 26 이상은 앱이 직접 고르므로 올리지 않고, AlarmKit 권한을
+받는 순간 앱이 빈 목록을 올려 사본을 지운다.
+
+- **목록 전체를 덮어쓴다.** 하나씩 더하고 빼는 경로를 두지 않는다 — 기기와 서버가
+  어긋났을 때 되맞출 길이 없어진다. 기기가 가진 것이 정답이다.
+- 올라오는 것은 **방송국 번호뿐**이다. 무엇을 얼마나 들었는지는 오지 않는다.
+  이 때문에 개인정보처리방침이 바뀌었다(`docs/12-exclusions.md` 12.4).
+- 한 기기에 300개까지. 모르는 모양이 오면 조용히 버리지 않고 통째로 거절한다.
+- `PUT` 은 한 `batch` 로 지우고 넣는다. 그 사이에 알람 배치가 끼어들어 빈 목록을 보는
+  일이 없다.
+- 지정 알람(`source_kind != 'auto'`)에는 걸지 않는다. 사람이 직접 걸어 둔 것을 서버가
+  바꾸면 놀랍다.
+
+발송 기록(`alarm_sends.detail`)에는 성공·실패와 **함께 고른 방송 이름**을 남긴다.
+사유만 있으면 그 아침에 어느 방송이 나갈 뻔했는지 알 수 없어, 제외가 들었는지조차
+확인할 수 없다.
+
 ### 3.6 상태
 
 ```
 GET /zp/v1/health     → 데이터 소스별 마지막 갱신 시각과 성공 여부
 ```
+
+세는 값 가운데 대시보드가 볼 만한 것 — `enabledAlarms`, `pushableDevices`,
+`excludedStations`, `apnsKeys`, 그리고 `jobs[]`(배치별 마지막 실행과 성공 여부).
 
 ## 4. D1 스키마
 
@@ -379,6 +408,15 @@ CREATE TABLE alarms (
   next_fire_at TEXT,                  -- UTC. 시간대별 계산을 매분 하지 않도록 미리 써 둔다
   last_sent_at TEXT,
   created_at  TEXT NOT NULL
+);
+
+-- 자동 선택에서 빼 달라고 한 방송국. 기기가 기준이고 여기 있는 것은 사본이다.
+-- iOS 25 이하만 올라온다(3.5.1). 담는 것은 방송국 번호뿐이다.
+CREATE TABLE excluded_stations (
+  install_id TEXT NOT NULL REFERENCES devices(install_id) ON DELETE CASCADE,
+  station_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (install_id, station_id)
 );
 
 CREATE INDEX idx_stations_country ON stations(country_code, is_hidden);

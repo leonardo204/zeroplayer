@@ -16,6 +16,9 @@ protocol ProxyClienting: StreamReporting, Sendable {
     func createAlarm(_ payload: AlarmPayload) async throws -> AlarmCreatedDTO
     func updateAlarm(id: String, payload: AlarmPayload) async throws -> AlarmCreatedDTO
     func deleteAlarm(id: String) async throws
+    /// 자동 선택에서 뺀 방송국 번호를 서버에 덮어쓴다.
+    /// iOS 25 이하에서만 부른다 — 거기서는 알람에 무엇을 틀지 서버가 고른다.
+    func replaceExclusions(_ stationIDs: [String]) async throws
     func unlockHidden() async throws -> HiddenUnlockDTO
     func lockHidden(token: String) async throws
     func hiddenChannels(token: String) async throws -> HiddenChannelListDTO
@@ -191,6 +194,11 @@ struct ProxyClient: ProxyClienting {
 
     func deleteAlarm(id: String) async throws {
         try await send("/alarms/\(id)", method: "DELETE", body: nil)
+    }
+
+    func replaceExclusions(_ stationIDs: [String]) async throws {
+        // 목록 전체를 덮어쓴다. 하나씩 더하고 빼면 기기와 서버가 어긋났을 때 되맞출 길이 없다.
+        try await send("/exclusions", method: "PUT", body: ["stations": stationIDs])
     }
 
     /// 신고는 실패해도 사용자에게 알리지 않는다. 재생 복구가 먼저다.

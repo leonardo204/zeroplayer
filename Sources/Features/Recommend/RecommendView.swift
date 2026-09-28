@@ -7,6 +7,9 @@ struct RecommendView: View {
     @Environment(OnDeviceReasoner.self) private var reasoner
     @Environment(\.modelContext) private var modelContext
     @Query private var favorites: [Favorite]
+    /// '그만 듣기' 로 뺀 방송은 추천 목록에서도 감춘다. 앱이 고른 줄이기 때문이다.
+    /// 탐색 탭에서 직접 찾아 누르는 것은 그대로 된다(`docs/12-exclusions.md`).
+    @Query private var excluded: [ExcludedStation]
 
     /// 배너가 들어가는 자리. 맨 위 세 줄 다음이다.
     private static let adRowIndex = 3
@@ -25,14 +28,16 @@ struct RecommendView: View {
                     } actions: {
                         Button("다시 시도") { Task { await load() } }
                     }
-                } else if model.entries.isEmpty && !model.isLoading {
+                } else if visible.isEmpty && !model.isLoading {
                     ContentUnavailableView(
                         "지금 조건에 맞는 방송이 없습니다",
                         systemImage: "sparkles",
-                        description: Text("다른 상황을 골라 보세요.")
+                        description: Text(model.entries.isEmpty
+                            ? "다른 상황을 골라 보세요."
+                            : "고른 방송이 모두 '그만 듣기' 목록에 있습니다. 설정에서 되돌릴 수 있습니다.")
                     )
                 } else {
-                    ForEach(Array(model.entries.enumerated()), id: \.element.id) { index, entry in
+                    ForEach(Array(visible.enumerated()), id: \.element.id) { index, entry in
                         // 추천은 순서와 이유가 부가가치라 목록 중간에 넣는다
                         // (`docs/05-ads-policy.md` 5번). 맨 위 세 줄은 가리지 않는다.
                         if index == Self.adRowIndex {
@@ -63,7 +68,7 @@ struct RecommendView: View {
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .top, spacing: 0) { situationBar }
             .refreshable { await load() }
-            .overlay { if model.isLoading && model.entries.isEmpty { ProgressView() } }
+            .overlay { if model.isLoading && visible.isEmpty { ProgressView() } }
             .task { await start() }
         }
     }
@@ -171,11 +176,17 @@ struct RecommendView: View {
         await model.select(situation, listening: listening, reasoner: reasoner)
     }
 
+    /// 화면에 실제로 보이는 줄. 뺀 방송을 걸러낸 것이다.
+    private var visible: [RecommendModel.Entry] {
+        let skip = Set(excluded.map(\.itemID))
+        return skip.isEmpty ? model.entries : model.entries.filter { !skip.contains($0.id) }
+    }
+
     /// 추천에서 시작한 재생은 기록에 그렇게 남는다. 30초 이탈률이 추천 품질 지표가 된다.
     private func play(_ entry: RecommendModel.Entry) async {
-        await player.play(
-            entry.item.playable,
-            origin: PlaybackOrigin(fromRecommendation: true, situation: model.situation)
-        )
+        let origin = PlaybackOrigin(fromRecommendation: true, situation: model.situation)
+        // 이 목록이 곧 순위다. 재생 화면의 '그만 듣기' 가 여기서 다음을 고른다.
+        player.setQueue(visible.map(\.item.playable), origin: origin)
+        await player.play(entry.item.playable, origin: origin)
     }
 }

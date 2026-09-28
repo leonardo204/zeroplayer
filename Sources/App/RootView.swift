@@ -106,15 +106,23 @@ struct RootView: View {
             situation: info.situation
         )
 
-        if let item = info.item {
+        // 서버가 고른 것이라도 '그만 듣기' 로 뺀 방송이면 버린다.
+        //
+        // 서버에도 제외 목록을 올려 두지만(`ExcludedStore`) 올리지 못한 채 아침이 올 수
+        // 있다. 그때 뺀 방송으로 깨우면 뺀 의미가 없으므로 받은 뒤 여기서 한 번 더 막는다.
+        let picked = info.item.flatMap { player.excludedStationIDs.contains($0.id) ? nil : $0 }
+        if let item = picked {
             alarmBanner = String(localized: "알람 · \(item.title)")
             await player.play(item, origin: origin)
         } else if let situation = info.situation {
             // 로컬 백업 알림이다. 무엇을 틀지 기기가 지금 고른다.
             alarmBanner = String(localized: "알람 · 틀 방송을 고르는 중입니다")
-            let launcher = PresetLauncher(player: player, fallback: {
-                FavoriteStore(context: modelContext).all().map(\.playable)
-            })
+            // 기록을 함께 넘긴다. 없으면 서버 1위가 그대로 울린다.
+            let launcher = PresetLauncher(
+                player: player,
+                fallback: { FavoriteStore(context: modelContext).all().map(\.playable) },
+                profiles: { ListeningStore(context: modelContext).profiles(situation: $0) }
+            )
             if let played = try? await launcher.startSituation(situation, presetName: String(localized: "알람")) {
                 alarmBanner = String(localized: "알람 · \(played.title)")
             } else {

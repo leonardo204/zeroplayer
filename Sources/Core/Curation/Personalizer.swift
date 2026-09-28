@@ -21,7 +21,13 @@ struct ListeningProfile: Sendable {
 struct Personalizer: Sendable {
     var totalWeight: Double = 0.8
     var situationWeight: Double = 0.5
-    var skipPenalty: Double = 1.2
+    /// 30초 안에 넘긴 한 번이 순위를 목록 길이의 몇 배만큼 내리는지.
+    ///
+    /// 고정값이면 뜻이 없다. 처음에는 1.2 였는데, 점수가 `목록 개수 − 순위` 에서
+    /// 출발하므로 20개 목록의 1위와 꼴찌 차이가 19점이다. 1위를 밀어내려면 열여섯 번을
+    /// 넘겨야 했다 — 그래서 싫은 방송이 다음 아침에 또 나왔다.
+    /// 지금은 목록 길이에 비례해서, 한 번 넘기면 중간쯤으로 내려가고 두 번이면 목록 밖이다.
+    var skipPenaltyRatio: Double = 0.45
     var recentPenalty: Double = 0.3
     /// 이 기간 안에 들었으면 순위를 조금 내린다.
     var recentWindow: TimeInterval = 3 * 24 * 60 * 60
@@ -45,7 +51,7 @@ struct Personalizer: Sendable {
             var score = Double(count - index)
             score += totalWeight * log(profile.totalSeconds + 1)
             score += situationWeight * Double(profile.playsInSituation)
-            score -= skipPenalty * Double(profile.earlySkips)
+            score -= skipPenaltyRatio * Double(count) * Double(profile.earlySkips)
             if let last = profile.lastPlayedAt, now.timeIntervalSince(last) < recentWindow {
                 score -= recentPenalty
             }

@@ -58,7 +58,7 @@ export function installID(request: Request): string | null {
 }
 
 /** 알람을 걸려면 기기 줄이 먼저 있어야 한다. 없으면 토큰 없이 만들어 둔다. */
-async function touchDevice(env: Env, install: string, appVersion: string | null): Promise<void> {
+export async function touchDevice(env: Env, install: string, appVersion: string | null): Promise<void> {
   await env.DB.prepare(`
     INSERT INTO devices (install_id, app_version, last_seen_at)
     VALUES (?, ?, ?)

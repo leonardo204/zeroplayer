@@ -11,6 +11,7 @@ struct PresetLauncher {
         case noSource
         case emptyRecommendation
         case allCandidatesFailed
+        case allExcluded
         case playbackFailed
         case proxy(ProxyError)
 
@@ -19,6 +20,7 @@ struct PresetLauncher {
             case .noSource: String(localized: "이 프리셋에 방송국이 지정돼 있지 않습니다.")
             case .emptyRecommendation: String(localized: "지금 조건에 맞는 방송을 찾지 못했습니다.")
             case .allCandidatesFailed: String(localized: "고른 방송이 모두 응답하지 않습니다.")
+            case .allExcluded: String(localized: "후보가 모두 '그만 듣기' 목록에 있습니다. 설정에서 되돌릴 수 있습니다.")
             case .playbackFailed: String(localized: "이 방송이 응답하지 않습니다.")
             case .proxy(let error): error.errorDescription
             }
@@ -112,15 +114,20 @@ struct PresetLauncher {
             timerMinutes: timerMinutes
         )
 
+        // '그만 듣기' 로 뺀 방송은 앱이 고르는 자리에서 전부 건너뛴다.
+        let skip = player.excludedStationIDs
+
         do {
             let set = try await client.recommendations(query)
             guard !set.items.isEmpty else { throw LaunchError.emptyRecommendation }
             // 3단. 서버 순서를 시작점으로 두고 내 기록으로 다시 세운다.
             let ranked = Personalizer().rank(set.items, profiles: profiles(situation))
-            log.info("자동 선택 후보 \(set.items.count)개 (\(set.source, privacy: .public)/\(set.daypart, privacy: .public))")
-            return ranked.map(\.item.playable)
+            let list = ranked.map(\.item.playable).filter { !skip.contains($0.id) }
+            guard !list.isEmpty else { throw LaunchError.allExcluded }
+            log.info("자동 선택 후보 \(list.count)개 (제외 \(set.items.count - list.count)건, \(set.source, privacy: .public)/\(set.daypart, privacy: .public))")
+            return list
         } catch let error as ProxyError {
-            let backup = fallback()
+            let backup = fallback().filter { !skip.contains($0.id) }
             guard !backup.isEmpty else { throw LaunchError.proxy(error) }
             log.info("서버에 닿지 못해 즐겨찾기에서 고른다")
             return backup
@@ -133,6 +140,9 @@ struct PresetLauncher {
         origin: PlaybackOrigin
     ) async throws -> PlayableItem {
         guard !items.isEmpty else { throw LaunchError.emptyRecommendation }
+
+        // 후보 줄을 재생기에 넘긴다. 재생 화면의 '그만 듣기' 가 이 줄에서 다음을 고른다.
+        player.setQueue(items, origin: origin)
 
         for item in items.prefix(Self.autoAttempts) {
             await player.play(item, origin: origin)

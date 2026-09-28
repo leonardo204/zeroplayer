@@ -21,6 +21,12 @@ protocol AudioPlaying: AnyObject {
     func stop()
     func next() async
     func previous() async
+    /// 자동 선택이 고른 후보 줄. 다음 후보로 넘어갈 때 쓴다.
+    func setQueue(_ items: [PlayableItem], origin: PlaybackOrigin)
+    /// 자동 선택이 걸러야 할 방송국 번호.
+    var excludedStationIDs: Set<String> { get }
+    /// 넘어갈 후보가 남아 있는지.
+    var hasNextInQueue: Bool { get }
 }
 
 /// 앱에서 유일한 재생 주체.
@@ -90,6 +96,15 @@ final class AudioPlayerService: AudioPlaying {
     @ObservationIgnored private var positions: (any PlaybackPositionKeeping)?
     /// 히든 해제 상태. 한국 지상파 주소를 물을 때만 토큰을 꺼내 쓴다.
     @ObservationIgnored private weak var hidden: HiddenAccess?
+    /// 자동 선택에서 뺀 방송국. '그만 듣기' 가 여기에 담고 대기열이 여기를 걸러 본다.
+    @ObservationIgnored private weak var excluded: (any StationExcluding)?
+    /// 자동 선택이 고른 후보 줄. '그만 듣기' 를 눌렀을 때 다음으로 넘어갈 자리다.
+    ///
+    /// 목록에서 직접 눌러 튼 경우에는 비어 있다. 그때 '그만 듣기' 는 제외만 하고 멈춘다 —
+    /// 사람이 고른 자리에서 앱이 제멋대로 다음 방송을 트는 것은 놀랍다.
+    ///
+    /// 관찰 대상으로 둔다. 화면의 '다음' 단추가 이 값으로 켜지고 꺼진다.
+    private var queue: [PlayableItem] = []
     /// 준비되면 이 위치로 옮긴다. 이어듣기 값이다.
     @ObservationIgnored private var pendingSeek: TimeInterval?
     @ObservationIgnored private var lastSavedPosition: TimeInterval = 0
@@ -128,6 +143,17 @@ final class AudioPlayerService: AudioPlaying {
         self.hidden = hidden
     }
 
+    /// 제외 목록을 꽂는다. 앱이 뜰 때 한 번만 부른다.
+    func attach(excluded: any StationExcluding) {
+        self.excluded = excluded
+    }
+
+    /// 자동 선택이 걸러야 할 방송국 번호. 후보를 고르는 쪽이 읽는다.
+    ///
+    /// 후보를 고르는 곳이 셋(프리셋·알람·추천)인데 저장소를 세 군데에 따로 꽂으면
+    /// 한 곳을 빼먹는다. 재생기가 이미 들고 있으니 여기로 물어보게 한다.
+    var excludedStationIDs: Set<String> { excluded?.excludedIDs ?? [] }
+
     // MARK: - 재생 조작
 
     func play(_ item: PlayableItem, origin: PlaybackOrigin = .manual) async {
@@ -135,6 +161,10 @@ final class AudioPlayerService: AudioPlaying {
         teardownCurrentItem()
 
         self.origin = origin
+        // 대기열에 없는 것을 틀었다는 것은 사람이 목록에서 직접 골랐다는 뜻이다.
+        // 그때는 지난 자동 선택 줄을 버린다 — 안 버리면 '그만 듣기' 가 엉뚱한
+        // 방송으로 넘어간다.
+        if !queue.contains(where: { $0.id == item.id }) { queue = [] }
         current = item
         streamTitle = nil
         artworkURL = item.artworkURL
@@ -230,6 +260,7 @@ final class AudioPlayerService: AudioPlaying {
     func stop() {
         savePosition(force: true)
         closeListeningSession()
+        queue = []
         sleepTimer.reset()
         teardownCurrentItem()
         session.deactivate()
@@ -315,12 +346,85 @@ final class AudioPlayerService: AudioPlaying {
         pushNowPlaying()
     }
 
+    // MARK: - 자동 선택 대기열
+
+    /// 자동 선택이 고른 후보 줄을 넘겨받는다. 지금 트는 것도 여기에 들어 있어야 한다.
+    func setQueue(_ items: [PlayableItem], origin: PlaybackOrigin) {
+        queue = items
+        self.origin = origin
+    }
+
+    /// 대기열에서 지금 것 다음에 오는 후보들. 제외된 것과 지금 것은 뺀다.
+    private func upcoming() -> [PlayableItem] {
+        let skip = excluded?.excludedIDs ?? []
+        guard let currentID = current?.id, let at = queue.firstIndex(where: { $0.id == currentID })
+        else { return queue.filter { !skip.contains($0.id) } }
+        return queue[(at + 1)...].filter { !skip.contains($0.id) }
+    }
+
+    /// 넘어갈 후보가 남아 있는지. 화면의 '다음' 단추가 이 값을 본다.
+    var hasNextInQueue: Bool { !upcoming().isEmpty }
+
+    /// 대기열의 다음 후보로 넘어간다. 실제로 소리가 난 것을 돌려준다.
+    @discardableResult
+    func playNextInQueue() async -> PlayableItem? {
+        let list = upcoming()
+        guard !list.isEmpty else { return nil }
+
+        let origin = self.origin
+        for item in list.prefix(Self.autoAttempts) {
+            await play(item, origin: origin)
+            if await waitUntilAudible() {
+                log.info("다음 후보로 넘어갔다: \(item.title, privacy: .public)")
+                return item
+            }
+            log.info("응답하지 않아 다음 후보로 넘어간다: \(item.title, privacy: .public)")
+        }
+        return nil
+    }
+
+    /// '그만 듣기'. 지금 트는 방송을 자동 선택에서 빼고 다음 후보로 넘어간다.
+    ///
+    /// 돌려주는 값이 nil 이면 넘어갈 후보가 없었다는 뜻이다 — 그때는 멈춘다.
+    /// 뺀 것만 하고 계속 틀어 두면 사용자는 아무 일도 안 일어난 줄 안다.
+    @discardableResult
+    func excludeCurrentAndAdvance() async -> PlayableItem? {
+        guard let item = current, item.kind == .station else { return nil }
+        excluded?.exclude(item)
+
+        guard let played = await playNextInQueue() else {
+            log.info("넘어갈 후보가 없어 멈춘다")
+            stop()
+            return nil
+        }
+        return played
+    }
+
+    /// 몇 번까지 다음 후보를 눌러 보는지. 죽은 방송이 이어지면 여기서 끊는다.
+    private static let autoAttempts = 4
+
+    /// `.loading` 을 벗어날 때까지 기다린다. 소리가 나기 시작하면 true.
+    private func waitUntilAudible(timeout: Duration = .seconds(20)) async -> Bool {
+        let deadline = ContinuousClock.now.advanced(by: timeout)
+        while ContinuousClock.now < deadline {
+            switch state {
+            case .loading:
+                try? await Task.sleep(for: .milliseconds(100))
+            case .playing, .paused:
+                return true
+            case .failed, .idle:
+                return false
+            }
+        }
+        return false
+    }
+
     func next() async {
-        // M3: 프리셋의 다음 소스, 또는 추천 목록의 다음 항목.
+        await playNextInQueue()
     }
 
     func previous() async {
-        // M3: 위와 같다.
+        // 자동 선택은 앞으로만 간다. 뒤로 가려면 목록에서 다시 누른다.
     }
 
     // MARK: - AVPlayer 관찰

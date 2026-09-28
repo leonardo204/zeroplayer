@@ -555,6 +555,10 @@ const PRIVACY_KO = `
       무관합니다. 앱을 지우고 다시 깔면 다른 값이 됩니다. 알람 등록과 남용 차단에만 씁니다.</li>
   <li>앱 판 번호와 요청한 조건(나라·장르·검색어 같은 것)</li>
   <li>재생이 실패한 방송국의 번호 — 죽은 방송을 목록에서 빼려고 보냅니다</li>
+  <li><b>'그만 듣기' 로 빼신 방송국의 번호</b> — iOS 25 이하에서만 보냅니다. 그 판에서는 알람에
+      무엇을 틀지 서버가 고르기 때문에, 기기에만 두면 아침에 빼신 방송이 그대로 옵니다.
+      번호만 가고 그 방송을 들었는지 여부는 가지 않습니다. iOS 26 이상은 앱이 직접 고르므로
+      보내지 않고, 알람 권한을 허락하시는 순간 <b>서버에 올려 둔 목록도 지웁니다.</b></li>
   <li>모든 인터넷 요청에 따라오는 접속 IP. 서버 앞단(Cloudflare)이 일시적으로 기록합니다</li>
 </ul>
 <p>무엇을 얼마나 들었는지, 어떤 프리셋을 쓰는지는 보내지 않습니다.</p>
@@ -621,6 +625,11 @@ from the Settings tab.</p>
       one. It is used only for alarm registration and abuse limits.</li>
   <li>The app version and the query you made (country, genre, search term and the like)</li>
   <li>The id of a station that failed to play, so dead stations can be removed from the list</li>
+  <li><b>The ids of stations you removed with "Stop playing this"</b> — on iOS 25 and earlier only.
+      On those versions the server decides what an alarm plays, so keeping the list on the device
+      alone means a station you removed still wakes you. Only the ids travel, never whether you
+      listened to them. iOS 26 and later never sends them, because the app itself decides, and
+      granting alarm permission also <b>deletes the copy held on the server.</b></li>
   <li>The connecting IP address that comes with any internet request; the edge (Cloudflare) logs it
       briefly</li>
 </ul>
@@ -700,6 +709,14 @@ iOS 가 네트워크를 강하게 제한합니다. 그래도 끊긴다면 어느
 <p>어느 쪽이든 알람 소리는 한 번 울리고 끝납니다. 그래서 2분 간격으로 몇 번 더 걸어 둡니다.
 알람을 끄거나 앱을 열면 남은 것이 함께 치워집니다.</p>
 
+<h2>알람에 마음에 안 드는 방송이 나옵니다</h2>
+<p>재생 화면의 <b>그만 듣기</b> 를 누르시면 그 방송이 자동 선택에서 빠지고 바로 다음 순위 방송으로
+넘어갑니다. 추천 목록과 프리셋·알람에서 다시 나오지 않습니다. 탐색 탭에서는 그대로 찾을 수 있고
+직접 누르면 들을 수 있습니다 — 뺀 것은 "앱이 알아서 고를 때 빼 달라" 는 뜻입니다.</p>
+<p>누르지 않으셔도 됩니다. 30초 안에 넘긴 방송은 다음번 순서가 내려갑니다. 두 번쯤 넘기면
+목록에서 빠집니다.</p>
+<p>되돌리려면 설정 탭의 <b>그만 듣는 방송</b> 에서 하나씩, 또는 한 번에 되돌리시면 됩니다.</p>
+
 <h2>듣던 자리가 사라졌습니다</h2>
 <p>팟캐스트는 듣던 위치를 기기에 저장합니다. 앱을 지웠다 다시 깔면 함께 사라집니다.
 라디오는 실시간 방송이라 위치라는 것이 없습니다.</p>
@@ -743,6 +760,16 @@ permission is on, the silent switch is not engaged, and the ringer volume is not
 notifications stay silent in silent mode.</p>
 <p>Either way the alarm sound plays once, which is why a few more are scheduled two minutes apart.
 Stopping the alarm, or opening the app, clears the rest.</p>
+
+<h2>The alarm plays a station I dislike</h2>
+<p>Press <b>Stop playing this</b> on the playback screen. That station leaves the automatic picks and
+playback moves straight to the next one in rank, and it will not come back in the recommendation
+list, the presets or the alarm. You can still find it in the Browse tab and play it by hand —
+removing it means "leave this out when the app is choosing", not "delete it".</p>
+<p>You do not have to press anything, though. A station you skip within 30 seconds drops down the
+order next time, and about two skips take it out of the list.</p>
+<p>To undo, open <b>Stations you stopped</b> under the Settings tab and restore them one at a time or
+all at once.</p>
 
 <h2>My position in an episode is gone</h2>
 <p>Podcast positions are stored on the device, so deleting and reinstalling the app removes them.

@@ -204,6 +204,11 @@ const KO: Copy = {
 			sub: "처음부터 다섯 장이 들어 있습니다. 그대로 써도 되고 고쳐도 되고 새로 만들어도 됩니다.",
 		},
 		{
+			k: "그만 듣기",
+			v: "마음에 안 드는 방송을 자동 선택에서 빼면 바로 다음 순위 방송으로 넘어갑니다.",
+			sub: "빼고 나면 추천 목록과 프리셋·알람에서 다시 나오지 않습니다. 탐색 탭에서는 그대로 찾을 수 있고, 설정에서 언제든 되돌릴 수 있습니다. 30초 안에 넘긴 방송은 누르지 않아도 순서가 내려갑니다.",
+		},
+		{
 			k: "청취 기록",
 			v: "이번 달에 몇 시간을 들었고 무엇을 가장 많이 들었는지 월간 리포트로 봅니다.",
 			sub: "이 기록은 기기 안에만 남습니다. 서버로 보내지 않고 광고에도 쓰지 않습니다. 설정에서 언제든 지울 수 있습니다.",
@@ -263,6 +268,10 @@ const KO: Copy = {
 		{
 			q: "알람 소리는 고를 수 있나요?",
 			a: "기본 알람음과 고전 멜로디 스무 곡 가운데 고릅니다. 바흐 무반주 첼로, 그리그 아침, 모차르트 터키 행진곡 같은 곡이고, 저작권이 끝난 악곡을 직접 연주해 담은 것입니다. 음량과 ‘점점 크게’ 도 알람마다 따로 맞춥니다.",
+		},
+		{
+			q: "자동 선택에 마음에 안 드는 방송이 나옵니다",
+			a: "재생 화면의 '그만 듣기' 를 누르시면 그 방송이 빠지고 바로 다음 순위 방송으로 넘어갑니다. 추천 목록과 프리셋·알람에서 다시 나오지 않고, 탐색 탭에서는 그대로 찾을 수 있습니다. 누르지 않으셔도 30초 안에 넘긴 방송은 다음번 순서가 내려갑니다. 되돌리는 것은 설정 탭의 '그만 듣는 방송' 에서 합니다.",
 		},
 		{
 			q: "어떤 방송국이 나오나요?",
@@ -386,6 +395,11 @@ const EN: Copy = {
 			sub: "Five are there when you first open the app. Use them as they are, change them, or make your own.",
 		},
 		{
+			k: "Stop playing this",
+			v: "Remove a station you dislike from the automatic picks and playback moves straight to the next one in rank.",
+			sub: "Once removed it no longer turns up in recommendations, presets or alarms. You can still find it in the Browse tab, and restore it from Settings at any time. A station you skip within 30 seconds also drops down the order without you pressing anything.",
+		},
+		{
 			k: "Listening history",
 			v: "A monthly report of how many hours you listened and what you played most.",
 			sub: "It stays on the device. It is never sent to a server and never used for advertising. You can erase it from Settings at any time.",
@@ -445,6 +459,10 @@ const EN: Copy = {
 		{
 			q: "Can I choose the alarm sound?",
 			a: "You pick between the default alarm sound and twenty classical melodies — Bach's Cello Suite No. 1, Grieg's Morning Mood, Mozart's Turkish March and others. The compositions are in the public domain and the recordings were made for this app. Volume and a gradual fade-in are set per alarm.",
+		},
+		{
+			q: "The automatic picks keep giving me a station I dislike",
+			a: "Press \u201cStop playing this\u201d on the playback screen. That station leaves the picks and playback moves straight to the next one in rank; it will not come back in recommendations, presets or alarms, though you can still find it in the Browse tab. You do not have to press anything either — a station you skip within 30 seconds drops down the order next time. To undo, open \u201cStations you stopped\u201d under Settings.",
 		},
 		{
 			q: "Which stations are available?",

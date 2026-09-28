@@ -133,6 +133,17 @@
         }
       }
     },
+    "%lld개가 다시 추천과 자동 선택에 들어옵니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld will come back to recommendations and the automatic picks."
+          }
+        }
+      }
+    },
     "%lld건": {
       "extractionState": "manual",
       "localizations": {
@@ -499,6 +510,17 @@
         }
       }
     },
+    "고른 방송이 모두 '그만 듣기' 목록에 있습니다. 설정에서 되돌릴 수 있습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every station picked is on your stopped list. You can restore them in Settings."
+          }
+        }
+      }
+    },
     "고른 방송이 모두 응답하지 않습니다.": {
       "extractionState": "manual",
       "localizations": {
@@ -605,6 +627,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Grieg · bright flute"
+          }
+        }
+      }
+    },
+    "그만 듣기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop playing this"
+          }
+        }
+      }
+    },
+    "그만 듣는 방송": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stations you stopped"
           }
         }
       }
@@ -879,6 +923,17 @@
         }
       }
     },
+    "다음 후보": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next candidate"
+          }
+        }
+      }
+    },
     "다음달": {
       "extractionState": "manual",
       "localizations": {
@@ -936,6 +991,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Here is what you get instead"
+          }
+        }
+      }
+    },
+    "되돌리기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore"
           }
         }
       }
@@ -1041,6 +1107,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The model is downloading. Notes read a little better once it is ready."
+          }
+        }
+      }
+    },
+    "모두 되돌리기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore all"
           }
         }
       }
@@ -1464,6 +1541,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remove"
+          }
+        }
+      }
+    },
+    "뺀 방송은 추천 목록과 프리셋·알람의 자동 선택에서 건너뜁니다. 탐색 탭에서는 그대로 찾을 수 있고, 눌러서 들을 수 있습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopped stations are skipped in recommendations and in the automatic picks of presets and alarms. You can still find them in the Browse tab and play them by hand."
+          }
+        }
+      }
+    },
+    "뺀 방송을 모두 되돌립니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore every stopped station"
+          }
+        }
+      }
+    },
+    "뺀 방송이 없습니다": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No stopped stations"
+          }
+        }
+      }
+    },
+    "뺐습니다: %@. 넘어갈 방송이 없어 멈춥니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed: %@. Nothing left to move on to, so playback stops."
+          }
+        }
+      }
+    },
+    "뺐습니다: %@. 다음은 %@ 입니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed: %1$@. Next up: %2$@."
           }
         }
       }
@@ -2355,6 +2487,17 @@
         }
       }
     },
+    "이 방송을 자동 선택에서 빼기": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove this station from the automatic picks"
+          }
+        }
+      }
+    },
     "이 방송이 응답하지 않습니다.": {
       "extractionState": "manual",
       "localizations": {
@@ -2498,6 +2641,17 @@
         }
       }
     },
+    "자동 선택에서 뺀 방송": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed from the automatic picks"
+          }
+        }
+      }
+    },
     "자동 종료": {
       "extractionState": "manual",
       "localizations": {
@@ -2615,6 +2769,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "No ads appear on the player screen or on a screen opened by an alarm. "
+          }
+        }
+      }
+    },
+    "재생 화면에서 '그만 듣기' 를 누르면 그 방송이 여기에 담기고, 앱이 알아서 고를 때 건너뜁니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press “Stop playing this” on the playback screen and that station lands here, skipped whenever the app is choosing."
           }
         }
       }
@@ -3606,6 +3771,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ode to Joy"
+          }
+        }
+      }
+    },
+    "후보가 모두 '그만 듣기' 목록에 있습니다. 설정에서 되돌릴 수 있습니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every candidate is on your stopped list. You can restore them in Settings."
           }
         }
       }

@@ -27,6 +27,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 struct ZeroPlayerApp: App {
     private let container: ModelContainer
     private let listeningStore: ListeningStore
+    /// 자동 선택에서 뺀 방송국. 재생기와 설정 화면이 같은 것을 본다.
+    private let excludedStore: ExcludedStore
     @State private var player: AudioPlayerService
     /// 기기 안 모델. 쓸 수 없는 기기에서는 가용성만 알려 주고 아무 일도 하지 않는다.
     @State private var reasoner = OnDeviceReasoner()
@@ -44,16 +46,22 @@ struct ZeroPlayerApp: App {
         let container = Self.makeContainer()
         let store = ListeningStore(context: container.mainContext)
         let hidden = HiddenAccess()
+        let excluded = ExcludedStore(context: container.mainContext)
         let player = AudioPlayerService()
         player.attach(recorder: store)
         player.attach(positions: PositionStore(context: container.mainContext))
         player.attach(hidden: hidden)
+        player.attach(excluded: excluded)
 
         // 알람 화면의 단추가 눌리면 화면 없이 이 재생기를 쓴다(`docs/10-alarmkit.md`).
         AlarmPlaybackBridge.shared.attach(player: player)
+        // 알람 자동 선택도 프리셋과 같은 재정렬을 거친다. 이것이 없으면 서버 1위가
+        // 그대로 울려서, 30초 안에 넘긴 방송이 다음 아침에 또 나온다.
+        AlarmPlaybackBridge.shared.attach(profiles: { [store] in store.profiles(situation: $0) })
 
         self.container = container
         self.listeningStore = store
+        self.excludedStore = excluded
         _player = State(initialValue: player)
         _hiddenAccess = State(initialValue: hidden)
     }
@@ -67,6 +75,7 @@ struct ZeroPlayerApp: App {
                 .environment(push)
                 .environment(hiddenAccess)
                 .environment(adConsent)
+                .environment(excludedStore)
                 .task { await migrateLegacyIfNeeded() }
                 .task { await adConsent.start() }
                 .task { await startNotifications() }
@@ -96,7 +105,7 @@ struct ZeroPlayerApp: App {
     private static func makeContainer() -> ModelContainer {
         let models: [any PersistentModel.Type] = [
             CachedStation.self, Preset.self, Favorite.self, ListeningSession.self,
-            PlaybackPosition.self, AlarmSetting.self,
+            PlaybackPosition.self, AlarmSetting.self, ExcludedStation.self,
         ]
         let schema = Schema(models)
         do {
@@ -117,6 +126,9 @@ struct ZeroPlayerApp: App {
         // 앱을 열었다는 것은 이미 일어났다는 뜻이다. 밀린 스누즈를 치운다.
         LocalAlarmScheduler.cancelSnoozes()
         await AlarmStore(context: container.mainContext).syncAll()
+        // 서버에 못 올린 제외 목록을 밀어 넣는다. AlarmKit 으로 옮겼으면 반대로 지운다.
+        // `push.start()` 뒤에 부른다 — 그 안에서 AlarmKit 권한 상태를 읽어 두기 때문이다.
+        excludedStore.syncIfNeeded()
     }
 
     /// 알람을 손으로 만들지 않고 확인하려고 둔 통로다.

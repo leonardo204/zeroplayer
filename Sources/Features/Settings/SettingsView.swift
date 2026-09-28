@@ -11,6 +11,7 @@ struct SettingsView: View {
     @Environment(HiddenAccess.self) private var hidden
     @Query private var favorites: [Favorite]
     @Query private var sessions: [ListeningSession]
+    @Query private var excluded: [ExcludedStation]
 
     @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("zp.timer.defaultMinutes") private var defaultMinutes = 45
@@ -155,6 +156,17 @@ struct SettingsView: View {
                         Text("청취 기록")
                         Spacer()
                         Text("\(sessions.count)건").foregroundStyle(.secondary)
+                    }
+                    // '그만 듣기' 로 뺀 것을 되돌리는 자리. 되돌릴 길이 보이지 않으면
+                    // 사용자가 그 단추를 아예 안 누른다.
+                    NavigationLink {
+                        ExcludedStationsView()
+                    } label: {
+                        HStack {
+                            Text("그만 듣는 방송")
+                            Spacer()
+                            Text("\(excluded.count)개").foregroundStyle(.secondary)
+                        }
                     }
                     Button("청취 기록 지우기", role: .destructive) {
                         isEraseConfirmPresented = true
