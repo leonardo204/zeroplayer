@@ -98,7 +98,7 @@ enum AlarmKitScheduler {
         let root = alarm.localID
         var count = 0
         // 우리 알람음을 고르지 않았으면 기본음이다. 기본음은 1분 넘게 반복해서 울린다.
-        let sound: AlertConfiguration.AlertSound = alarm.ensureSoundFile()
+        let melody: AlertConfiguration.AlertSound = alarm.ensureSoundFile()
             .map { .named($0) } ?? .default
 
         for index in 0..<chainCount {
@@ -108,6 +108,14 @@ enum AlarmKitScheduler {
                 continue
             }
             let id = chainID(root: root, index: index)
+            // 고른 곡은 첫 번째에만 쓰고 뒤는 기본음으로 건다.
+            //
+            // iOS 26 은 미디어 볼륨과 알람 볼륨을 갈랐는데, `.named` 로 준 우리 음원은
+            // 알람 볼륨이 아니라 **미디어 볼륨**을 따른다. 미디어 볼륨을 0 으로 두고 자면
+            // 알람 볼륨을 최대로 해 둬도 곡이 안 들린다(실기기에서 겪었다). 앱이 알람 음량을
+            // 정할 API 는 없다. 기본음(`.default`)은 알람 볼륨을 따르므로, 곡을 못 들어도
+            // 2분 뒤에는 반드시 들리는 소리로 깨운다. 첫 알람을 끄면 뒤의 것은 같이 치워진다.
+            let sound: AlertConfiguration.AlertSound = index == 0 ? melody : .default
             let config = AlarmManager.AlarmConfiguration(
                 schedule: schedule,
                 attributes: attributes(for: alarm),

@@ -232,6 +232,8 @@ internet radio,podcast,sleep timer,radio alarm,white noise,focus,study,driving,s
   탐색 탭에서는 그대로 찾아 들을 수 있습니다. 목록에서 감추지는 않습니다.
 • 설정 → 그만 듣는 방송 에서 언제든 되돌립니다.
 • 30초 안에 넘긴 방송은 다음부터 아래로 내려갑니다. 알람이 고를 때도 그렇게 합니다.
+• 미디어 볼륨을 줄여 두면 고른 알람 곡이 들리지 않던 문제를 고쳤습니다. 곡은 처음 한 번 울리고,
+  끄지 않으면 2분 뒤부터 알람 볼륨을 따르는 기본음으로 깨웁니다.
 ```
 
 **영어** (스토어 현지화를 영어까지 늘릴 때만 쓴다)
@@ -245,6 +247,8 @@ You can now drop a station you don't want to hear.
   it is not hidden from the list.
 • Restore any of them from Settings → Stopped stations.
 • Stations you skip within 30 seconds now move down the list, alarms included.
+• Fixed alarm melodies going silent when media volume was turned down. The melody plays once,
+  then from two minutes later the default sound wakes you at alarm volume.
 ```
 
 ### 2.1.0 — 앞 버전에 넣었던 것

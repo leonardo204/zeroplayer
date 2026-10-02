@@ -499,13 +499,13 @@
         }
       }
     },
-    "고른 곡은 한 번만 울립니다. 못 듣고 지나치지 않게 2분 간격으로 몇 번 더 겁니다. 미리듣기는 지금 기기 음량으로 들리고, 알람은 벨소리 볼륨으로 납니다.": {
+    "고른 곡은 처음 한 번 울리고, 끄지 않으면 2분 뒤부터는 기본음으로 다시 울립니다. 고른 곡은 알람 볼륨이 아니라 미디어 볼륨을 따릅니다. 미디어 볼륨을 줄여 두면 곡이 작게 들리거나 안 들리고, 그때는 기본음이 알람 볼륨으로 깨웁니다.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The piece you pick rings once. We set a few more at two-minute intervals so you don't sleep through it. The preview plays at the current device volume; the alarm uses the ringer volume."
+            "value": "The piece plays once, and if you don't stop it the default alarm sound rings from two minutes later. The piece follows the media volume, not the alarm volume, so with media volume turned down it may be faint or silent — the default sound then wakes you at alarm volume."
           }
         }
       }
@@ -736,13 +736,13 @@
         }
       }
     },
-    "기본음은 끌 때까지 반복해서 울리고 가장 크게 납니다. 음량은 설정 앱의 '사운드 및 햅틱 > 벨소리 및 알림' 을 따릅니다.": {
+    "기본음은 끌 때까지 반복해서 울리고 가장 크게 납니다. 음량은 기기의 알람 볼륨을 따릅니다.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The default sound repeats until you stop it and is the loudest. Its volume follows Settings > Sounds & Haptics > Ringtone and Alerts."
+            "value": "The default sound repeats until you stop it and is the loudest. It follows the device's alarm volume."
           }
         }
       }
@@ -1288,6 +1288,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Minuet"
+          }
+        }
+      }
+    },
+    "미디어 볼륨이 낮아 고른 곡이 작게 들리거나 안 들릴 수 있습니다. 2분 뒤 기본음은 알람 볼륨으로 울립니다.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Media volume is low, so the piece may be faint or silent. The default sound two minutes later rings at alarm volume."
           }
         }
       }

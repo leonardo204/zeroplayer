@@ -14,6 +14,9 @@ struct AlarmSoundSection: View {
 
     @State private var preview = AlarmSoundPreview()
 
+    /// 미디어 볼륨(0…1). 고른 곡은 알람 볼륨이 아니라 이 값을 따른다.
+    @State private var mediaVolume: Float = AVAudioSession.sharedInstance().outputVolume
+
     private var tone: AlarmTone? { AlarmSoundCatalog.tone(id: toneID) }
 
     var body: some View {
@@ -44,6 +47,14 @@ struct AlarmSoundSection: View {
 
                 Toggle("점점 크게", isOn: $fadeIn)
 
+                // 고른 곡은 미디어 볼륨으로 난다. 지금 그 볼륨이 낮으면 미리 알린다.
+                if mediaVolume < 0.3 {
+                    Label("미디어 볼륨이 낮아 고른 곡이 작게 들리거나 안 들릴 수 있습니다. 2분 뒤 기본음은 알람 볼륨으로 울립니다.",
+                          systemImage: "speaker.slash")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
+
                 Button {
                     preview.toggle(tone: tone, volume: volume)
                 } label: {
@@ -56,10 +67,18 @@ struct AlarmSoundSection: View {
             Text("알람음")
         } footer: {
             Text(toneID == nil
-                 ? String(localized: "기본음은 끌 때까지 반복해서 울리고 가장 크게 납니다. 음량은 설정 앱의 '사운드 및 햅틱 > 벨소리 및 알림' 을 따릅니다.")
-                 : String(localized: "고른 곡은 한 번만 울립니다. 못 듣고 지나치지 않게 2분 간격으로 몇 번 더 겁니다. 미리듣기는 지금 기기 음량으로 들리고, 알람은 벨소리 볼륨으로 납니다."))
+                 ? String(localized: "기본음은 끌 때까지 반복해서 울리고 가장 크게 납니다. 음량은 기기의 알람 볼륨을 따릅니다.")
+                 : String(localized: "고른 곡은 처음 한 번 울리고, 끄지 않으면 2분 뒤부터는 기본음으로 다시 울립니다. 고른 곡은 알람 볼륨이 아니라 미디어 볼륨을 따릅니다. 미디어 볼륨을 줄여 두면 곡이 작게 들리거나 안 들리고, 그때는 기본음이 알람 볼륨으로 깨웁니다."))
         }
         .onDisappear { preview.stop() }
+        // `outputVolume` 은 KVO 로만 바뀜을 알린다. 화면에 있는 동안 지켜본다.
+        .task {
+            let session = AVAudioSession.sharedInstance()
+            mediaVolume = session.outputVolume
+            for await value in session.publisher(for: \.outputVolume).values {
+                mediaVolume = value
+            }
+        }
     }
 }
 
