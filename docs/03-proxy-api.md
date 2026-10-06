@@ -429,7 +429,7 @@ CREATE INDEX idx_alarms_due ON alarms(enabled, next_fire_at);
 | --- | --- |
 | 분마다 | `next_fire_at` 이 지난 알람 조회, APNs 발송, 다음 발송 시각 갱신 |
 | 6시간마다 | radio-browser 동기화. 전체를 받는 나라는 사라진 방송국까지 정리한다 |
-| 매일 05:40 KST | 판정 대기 태그를 Workers AI 로 정규화하고 태그를 다시 계산 |
+| 매일 05:40 KST | 판정 대기 태그를 AI 프록시(gemini-2.5-flash-lite)로 정규화하고 태그를 다시 계산 |
 | 매일 04:00 KST | 상황별 추천 세트 재생성 (M4) |
 | 매시 17분 | 스트림 생사 점검 150건. `fail_streak >= 3` 이면 `excluded = 1`. IP 주소로 된 주소는 판정을 미룬다 — Cloudflare 안에서 IP 직접 접근이 막혀 살았는지 알 수 없다 |
 | 매일 | Podcast Index 인기 목록 갱신 |

@@ -52,6 +52,12 @@
 
 ### 4.3 모델 선택
 
+> **2026-10-06 변경.** 세 가지 모두 Workers AI 에서 `ai.zerolive.co.kr` AI 프록시(OpenRouter)로 옮겼다.
+> 모델은 `google/gemini-2.5-flash-lite`. Workers AI `llama-3.3-70b` 가 응답 없이 붙드는 일이 잦아
+> 추천 세트 배치가 15분 한도에 끊겼고(10-04~06), 바인딩 호출이라 대시보드 비용 집계에서도 빠져 있었다.
+> 코드는 용도 이름(`recommend`·`tags`·`moods`)만 보내고 모델은 프록시의 zeroplayer 앱 설정이 정한다
+> (`server/src/lib/aiProxy.ts`). 아래 표는 처음 정할 때의 판단으로 남겨 둔다.
+
 | 일 | 경로 | 이유 |
 | --- | --- | --- |
 | 태그 정규화, 분위기 분류 | **Cloudflare Workers AI** | 프록시가 이미 Workers 위에 있어 붙일 것이 없다. 하루 10,000 뉴런까지 무료 [[S4]](#s4) |

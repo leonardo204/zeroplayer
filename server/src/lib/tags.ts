@@ -1,4 +1,5 @@
 import type { Env } from '../types'
+import { AI_TIMEOUT_MS, askJSON } from './aiProxy'
 import { nowISO } from './http'
 
 /**
@@ -118,33 +119,30 @@ export function buildTagSystemPrompt(): string {
   ].join('\n')
 }
 
-export const TAG_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
-
-export const TAG_RESPONSE_FORMAT = {
-  type: 'json_schema',
-  json_schema: {
-    type: 'object',
-    properties: {
-      mappings: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            tag: { type: 'string' },
-            value: { type: 'string', enum: ['', ...CANONICAL_TAGS] },
-          },
-          required: ['tag', 'value'],
+export const TAG_SCHEMA = {
+  type: 'object',
+  properties: {
+    mappings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          tag: { type: 'string' },
+          value: { type: 'string', enum: ['', ...CANONICAL_TAGS] },
         },
+        required: ['tag', 'value'],
+        additionalProperties: false,
       },
     },
-    required: ['mappings'],
   },
+  required: ['mappings'],
+  additionalProperties: false,
 } as const
 
 interface NormalizeResult { asked: number; decided: number }
 
 /**
- * 판정 대기 태그를 Workers AI 로 표준 태그에 맞춘다.
+ * 판정 대기 태그를 AI 프록시(`aiProxy.ts`)로 표준 태그에 맞춘다.
  * 맞는 것이 없으면 빈 문자열로 적어 다시 묻지 않는다.
  */
 export async function normalizePendingTags(env: Env, maxBatches = 6): Promise<NormalizeResult> {
@@ -161,18 +159,15 @@ export async function normalizePendingTags(env: Env, maxBatches = 6): Promise<No
 
     let mapping = new Map<string, string>()
     try {
-      const answer = (await env.AI.run(TAG_MODEL as never, {
-        messages: [
-          { role: 'system', content: buildTagSystemPrompt() },
-          { role: 'user', content: JSON.stringify(results.map((r) => r.raw)) },
-        ],
-        response_format: TAG_RESPONSE_FORMAT,
-        max_tokens: 1200,
-      } as never)) as { response?: unknown }
+      const answer = await askJSON(env, 'tags', {
+        system: buildTagSystemPrompt(),
+        user: JSON.stringify(results.map((r) => r.raw)),
+        schema: TAG_SCHEMA,
+        maxTokens: 1200,
+        timeoutMs: AI_TIMEOUT_MS,
+      })
 
-      const payload = typeof answer?.response === 'string'
-        ? JSON.parse(answer.response)
-        : answer?.response
+      const payload = answer.data
       const rows = (payload as { mappings?: Array<{ tag?: string; value?: string }> })?.mappings ?? []
       mapping = new Map(rows.map((r) => [String(r.tag ?? ''), String(r.value ?? '').trim().toLowerCase()]))
     } catch (error) {

@@ -1,4 +1,5 @@
 import type { Env } from '../types'
+import { AI_TIMEOUT_MS, askJSON } from './aiProxy'
 import { nowISO } from './http'
 
 /**
@@ -92,30 +93,27 @@ export function moodsFromTags(tags: string[]): Array<{ mood: Mood; confidence: n
     .map(([mood, value]) => ({ mood, confidence: Math.min(1, value / max) }))
 }
 
-export const MOOD_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
-
-const MOOD_RESPONSE_FORMAT = {
-  type: 'json_schema',
-  json_schema: {
-    type: 'object',
-    properties: {
-      stations: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            moods: {
-              type: 'array',
-              items: { type: 'string', enum: [...CANONICAL_MOODS] },
-            },
+const MOOD_SCHEMA = {
+  type: 'object',
+  properties: {
+    stations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          moods: {
+            type: 'array',
+            items: { type: 'string', enum: [...CANONICAL_MOODS] },
           },
-          required: ['id', 'moods'],
         },
+        required: ['id', 'moods'],
+        additionalProperties: false,
       },
     },
-    required: ['stations'],
   },
+  required: ['stations'],
+  additionalProperties: false,
 } as const
 
 function moodSystemPrompt(): string {
@@ -218,24 +216,20 @@ export async function classifyPendingMoods(env: Env, maxBatches = 6): Promise<Cl
 
     let answerMap = new Map<string, string[]>()
     try {
-      const answer = (await env.AI.run(MOOD_MODEL as never, {
-        messages: [
-          { role: 'system', content: moodSystemPrompt() },
-          {
-            role: 'user',
-            content: JSON.stringify(results.map((row) => ({
+      const answer = await askJSON(env, 'moods', {
+        system: moodSystemPrompt(),
+        user: JSON.stringify(results.map((row) => ({
               id: row.id,
               name: row.name,
               country: row.country_code ?? '',
               language: row.language ?? '',
             }))),
-          },
-        ],
-        response_format: MOOD_RESPONSE_FORMAT,
-        max_tokens: 1200,
-      } as never)) as { response?: unknown }
+        schema: MOOD_SCHEMA,
+        maxTokens: 1200,
+        timeoutMs: AI_TIMEOUT_MS,
+      })
 
-      const payload = typeof answer?.response === 'string' ? JSON.parse(answer.response) : answer?.response
+      const payload = answer.data
       const rows = (payload as { stations?: Array<{ id?: string; moods?: string[] }> })?.stations ?? []
       answerMap = new Map(rows.map((r) => [String(r.id ?? ''), (r.moods ?? []).map(String)]))
     } catch (error) {

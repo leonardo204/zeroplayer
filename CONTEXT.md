@@ -142,7 +142,7 @@ HTTP 고 한국도 114개 중 40개로 같은 비율이다. `NSAllowsArbitraryLo
 만료된 서명 토큰이 붙어 있어 서버에서도 앱에서도 403·400 이 난다. 점검 120건 중 38건이
 실패였고 그 대부분이 이것이다. 히든 기능(M7)에서 서버가 주소를 직접 만들어야 풀린다.
 
-**Workers AI 모델은 폐지된다.** 처음 쓴 `@cf/meta/llama-3.1-8b-instruct` 는 2026-05-30 에
+**(2026-10-06 부터 서버 LLM 은 전부 AI 프록시 — `server/src/lib/aiProxy.ts`, 모델 `google/gemini-2.5-flash-lite`. 아래는 그 전 기록이다.)** **Workers AI 모델은 폐지된다.** 처음 쓴 `@cf/meta/llama-3.1-8b-instruct` 는 2026-05-30 에
 폐지돼 오류만 돌려줬다. 지금은 `@cf/meta/llama-3.3-70b-instruct-fp8-fast` 를 쓴다.
 JSON 스키마 강제 출력을 받는 모델이라야 태그 판정이 안정적이다 — 8b 계열은 스키마를 못 받아
 장황한 설명을 돌려준다.

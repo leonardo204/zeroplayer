@@ -2,6 +2,8 @@ export interface Env {
   DB: D1Database
   AI: Ai
   ADMIN_TOKEN?: string
+  /** ai.zerolive.co.kr AI 프록시의 zeroplayer 앱 토큰. 태그·분위기·추천 문구 모델 호출에 쓴다 */
+  AI_PROXY_TOKEN?: string
   /** Podcast Index 키. 없으면 iTunes Search 로 내려간다. */
   PI_KEY?: string
   PI_SECRET?: string

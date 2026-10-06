@@ -2,9 +2,9 @@ import type { Env } from '../types'
 import { nowISO } from './http'
 import { collectCandidates, ruleReason, toItem, type Candidate, type RecommendItem } from './candidates'
 import { SITUATIONS, type Daypart, type Situation } from './situations'
+import { AI_TIMEOUT_MS, AITimeout, askJSON } from './aiProxy'
 import { DAYPART_LABEL, DAY_TYPE_LABEL, SITUATION_TEXT, type Lang } from './i18n'
 
-export const SET_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
 
 const DAYPARTS: Daypart[] = ['06-09', '09-12', '12-18', '18-22', '22-02', '02-06']
 const DAY_TYPES = ['weekday', 'weekend'] as const
@@ -21,28 +21,31 @@ export function setID(
 }
 
 
-const SET_RESPONSE_FORMAT = {
-  type: 'json_schema',
-  json_schema: {
-    type: 'object',
-    properties: {
+/** 모델 답의 모양. strict 스키마라 모든 객체에 additionalProperties: false 가 있어야 한다. */
+const SET_SCHEMA = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      // 후보를 40개 주면 flash-lite 가 가끔 같은 채널을 되풀이해 쓰다 출력 한도에서 잘린다
+      // (10-06 실측 3회 중 1회). 세트는 20개만 쓰므로 고르는 수를 막는다.
+      maxItems: 20,
       items: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            reason: { type: 'string' },
-          },
-          required: ['id', 'reason'],
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          reason: { type: 'string' },
         },
+        required: ['id', 'reason'],
+        additionalProperties: false,
       },
     },
-    required: ['items'],
   },
+  required: ['items'],
+  additionalProperties: false,
 } as const
 
-function systemPrompt(lang: Lang, situation: Situation, daypart: Daypart, dayType: string): string {
+function systemPrompt(lang: Lang, situation: Situation, daypart: Daypart, dayType: string, limit: number): string {
   const situationLabel = SITUATION_TEXT[lang][situation].label
   const daypartLabel = DAYPART_LABEL[lang][daypart]
   const dayTypeLabel = DAY_TYPE_LABEL[lang][dayType]
@@ -52,7 +55,7 @@ function systemPrompt(lang: Lang, situation: Situation, daypart: Daypart, dayTyp
       'You are an editor who picks internet radio channels to fit a moment.',
       `The moment is "${situationLabel}" and the time is ${daypartLabel} on ${dayTypeLabel}.`,
       'The input is an array of candidate channels. Each has id, name, tags, moods and country.',
-      'Reorder them to fit the moment and attach one English sentence to each channel.',
+      `Pick at most ${limit} channels that fit the moment best, order them, and attach one English sentence to each.`,
       '',
       'Sentence rules:',
       '- One full sentence between 30 and 90 characters, ending with a period.',
@@ -61,7 +64,7 @@ function systemPrompt(lang: Lang, situation: Situation, daypart: Daypart, dayTyp
       '- Plain words. Avoid "perfect", "ultimate", "a variety of", "seamless".',
       '- Invent nothing that is not in the tags. If unsure, use only the tags and moods.',
       '',
-      'Copy each id exactly from the input. Never invent a channel that is not in the input.',
+      'Copy each id exactly from the input. Never invent a channel that is not in the input, and never list a channel twice.',
     ].join('\n')
   }
 
@@ -69,7 +72,7 @@ function systemPrompt(lang: Lang, situation: Situation, daypart: Daypart, dayTyp
     '너는 인터넷 라디오 채널을 상황에 맞게 골라 주는 편집자다.',
     `지금 상황은 "${situationLabel}"이고 시간대는 ${dayTypeLabel} ${daypartLabel}이다.`,
     '입력은 후보 채널 배열이다. 각 채널에 id, 이름, 태그, 분위기, 나라가 들어 있다.',
-    '이 상황에 잘 맞는 순서로 다시 배열하고, 각 채널에 한국어 한 문장을 붙여라.',
+    `이 상황에 가장 잘 맞는 채널을 ${limit}개까지만 골라 맞는 순서로 배열하고, 각 채널에 한국어 한 문장을 붙여라.`,
     '',
     '문장 규칙:',
     '- 40자 이내 한 문장으로 쓴다.',
@@ -78,7 +81,7 @@ function systemPrompt(lang: Lang, situation: Situation, daypart: Daypart, dayTyp
     '- "이러한", "이를 통해", "최적의", "다양한" 같은 말을 쓰지 않는다.',
     '- 태그에 없는 사실을 지어내지 않는다. 확실하지 않으면 태그와 분위기만 가지고 쓴다.',
     '',
-    'id 는 입력에 있는 값을 그대로 옮긴다. 입력에 없는 채널을 만들지 않는다.',
+    'id 는 입력에 있는 값을 그대로 옮긴다. 입력에 없는 채널을 만들지 않고, 같은 채널을 두 번 넣지 않는다.',
   ].join('\n')
 }
 
@@ -158,20 +161,15 @@ async function buildOne(
 
   try {
     // 응답 없이 붙들리면 배치 전체가 15분 한도에 걸려 끊긴다(2026-10-05 에 한 개도 못 만들었다).
-    // 시간을 넘기면 규칙 문구로 저장한다. 원래 호출은 뒤에서 끝나도 결과를 버린다.
-    const answer = (await withTimeout(env.AI.run(SET_MODEL as never, {
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt(lang, situation, daypart, dayType),
-        },
-        { role: 'user', content: JSON.stringify(candidates.slice(0, limit * 2).map(toPromptRow)) },
-      ],
-      response_format: SET_RESPONSE_FORMAT,
-      max_tokens: 2000,
-    } as never), AI_TIMEOUT_MS)) as { response?: unknown }
-
-    const payload = typeof answer?.response === 'string' ? JSON.parse(answer.response) : answer?.response
+    // 시간을 넘기면 규칙 문구로 저장한다. 요청은 그 자리에서 끊는다.
+    const answer = await askJSON(env, 'recommend', {
+      system: systemPrompt(lang, situation, daypart, dayType, limit),
+      user: JSON.stringify(candidates.slice(0, limit * 2).map(toPromptRow)),
+      schema: SET_SCHEMA,
+      maxTokens: 4000,  // 후보 40개에 문구를 다 달면 2000 에서 잘린다(10-06 실측)
+      timeoutMs: AI_TIMEOUT_MS,
+    })
+    const payload = answer.data
     const rows = (payload as { items?: Array<{ id?: string; reason?: string }> })?.items ?? []
     if (rows.length) {
       items = merge(
@@ -181,7 +179,7 @@ async function buildOne(
         limit,
         lang,
       )
-      model = SET_MODEL
+      model = answer.model
     }
   } catch (error) {
     if (error instanceof AITimeout) timedOut = true
@@ -208,22 +206,6 @@ export interface BuildResult {
   /** 시간 예산이 다 돼 새 세트를 시작하지 않고 멈췄는지 */
   stoppedByBudget: boolean
   elapsedMs: number
-}
-
-/** 세트 하나의 LLM 호출에 줄 시간. 넘기면 규칙 문구로 저장한다. */
-export const AI_TIMEOUT_MS = 45_000
-
-class AITimeout extends Error {
-  constructor(ms: number) { super(`AI 응답이 ${ms}ms 안에 오지 않았다`) }
-}
-
-/** env.AI.run 에는 시간 제한이 없다. 경주시켜 먼저 끝나는 쪽을 받는다. */
-function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | null = null
-  const limit = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new AITimeout(ms)), ms)
-  })
-  return Promise.race([work, limit]).finally(() => { if (timer !== null) clearTimeout(timer) })
 }
 
 /**
