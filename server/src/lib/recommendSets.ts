@@ -129,7 +129,7 @@ function merge(
   return items
 }
 
-interface BuildOneResult { id: string; model: string; count: number }
+interface BuildOneResult { id: string; model: string; count: number; timedOut: boolean }
 
 async function buildOne(
   env: Env,
@@ -154,9 +154,12 @@ async function buildOne(
 
   let items: RecommendItem[] | null = null
   let model = 'rule'
+  let timedOut = false
 
   try {
-    const answer = (await env.AI.run(SET_MODEL as never, {
+    // 응답 없이 붙들리면 배치 전체가 15분 한도에 걸려 끊긴다(2026-10-05 에 한 개도 못 만들었다).
+    // 시간을 넘기면 규칙 문구로 저장한다. 원래 호출은 뒤에서 끝나도 결과를 버린다.
+    const answer = (await withTimeout(env.AI.run(SET_MODEL as never, {
       messages: [
         {
           role: 'system',
@@ -166,7 +169,7 @@ async function buildOne(
       ],
       response_format: SET_RESPONSE_FORMAT,
       max_tokens: 2000,
-    } as never)) as { response?: unknown }
+    } as never), AI_TIMEOUT_MS)) as { response?: unknown }
 
     const payload = typeof answer?.response === 'string' ? JSON.parse(answer.response) : answer?.response
     const rows = (payload as { items?: Array<{ id?: string; reason?: string }> })?.items ?? []
@@ -181,6 +184,7 @@ async function buildOne(
       model = SET_MODEL
     }
   } catch (error) {
+    if (error instanceof AITimeout) timedOut = true
     console.error('추천 세트 생성 실패', situation, daypart, country, lang, error)
   }
 
@@ -195,12 +199,31 @@ async function buildOne(
       payload = excluded.payload, model = excluded.model, created_at = excluded.created_at
   `).bind(id, situation, daypart, dayType, country, JSON.stringify(items), model, nowISO()).run()
 
-  return { id, model, count: items.length }
+  return { id, model, count: items.length, timedOut }
 }
 
 export interface BuildResult {
   built: BuildOneResult[]
   remaining: number
+  /** 시간 예산이 다 돼 새 세트를 시작하지 않고 멈췄는지 */
+  stoppedByBudget: boolean
+  elapsedMs: number
+}
+
+/** 세트 하나의 LLM 호출에 줄 시간. 넘기면 규칙 문구로 저장한다. */
+export const AI_TIMEOUT_MS = 45_000
+
+class AITimeout extends Error {
+  constructor(ms: number) { super(`AI 응답이 ${ms}ms 안에 오지 않았다`) }
+}
+
+/** env.AI.run 에는 시간 제한이 없다. 경주시켜 먼저 끝나는 쪽을 받는다. */
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new AITimeout(ms)), ms)
+  })
+  return Promise.race([work, limit]).finally(() => { if (timer !== null) clearTimeout(timer) })
 }
 
 /**
@@ -212,8 +235,13 @@ export interface BuildResult {
  */
 export async function buildSets(
   env: Env,
-  options: { countries?: string[]; maxSets?: number; limit?: number; force?: boolean } = {},
+  options: {
+    countries?: string[]; maxSets?: number; limit?: number; force?: boolean
+    /** 이 시간이 지나면 새 세트를 시작하지 않는다. 남은 것은 다음 실행으로 넘긴다 */
+    budgetMs?: number
+  } = {},
 ): Promise<BuildResult> {
+  const startedAt = Date.now()
   const countries = options.countries ?? recommendCountries(env)
   const maxSets = options.maxSets ?? 8
   const limit = options.limit ?? 20
@@ -244,12 +272,24 @@ export async function buildSets(
   }
 
   const built: BuildOneResult[] = []
+  let attempted = 0
+  let stoppedByBudget = false
   for (const [situation, dayType, daypart, country, lang] of todo.slice(0, maxSets)) {
+    if (options.budgetMs !== undefined && Date.now() - startedAt >= options.budgetMs) {
+      stoppedByBudget = true
+      break
+    }
+    attempted++
     const result = await buildOne(env, situation, dayType, daypart, country, limit, lang)
     if (result) built.push(result)
   }
 
-  return { built, remaining: Math.max(0, todo.length - maxSets) }
+  return {
+    built,
+    remaining: Math.max(0, todo.length - attempted),
+    stoppedByBudget,
+    elapsedMs: Date.now() - startedAt,
+  }
 }
 
 /** 세트를 만들어 둘 나라. 방송국을 받아오는 나라와 전 세계 자리를 함께 쓴다. */

@@ -329,9 +329,27 @@ export default {
             `표준 태그 재계산 · 분위기 규칙 ${moods.byRule}건 · 모델 ${moods.decided}건`)
         } else if (event.cron === '0 19 * * *') {
           // 04:00 KST. 한 번에 다 만들지 않고 남은 것은 다음 날로 넘긴다.
-          const result = await buildSets(env, { maxSets: 24 })
-          await markSync(env, 'recommend_build', true,
-            `세트 ${result.built.length}건 생성 · 남음 ${result.remaining}`)
+          //
+          // cron 한 번은 15분에 강제로 끊긴다. 끊기면 catch 까지 못 와서 성공·실패 어느 기록도
+          // 안 남는다(2026-10-04~06 실제로 그랬다). 그래서 10분이 지나면 새 세트를 시작하지
+          // 않는다. 세트 하나는 LLM 45초 제한이 걸려 있어 마지막 것이 끝나도 한도 안에 든다.
+          // 기록은 finally 에서 남겨 도중에 오류가 나도 "몇 개 만들고 몇 개 남았는지" 가 남는다.
+          let result: Awaited<ReturnType<typeof buildSets>> | null = null
+          let failure: unknown = null
+          try {
+            result = await buildSets(env, { maxSets: 24, budgetMs: 10 * 60_000 })
+          } catch (error) {
+            failure = error
+          } finally {
+            const timeouts = result?.built.filter((b) => b.timedOut).length ?? 0
+            await markSync(env, 'recommend_build', failure === null,
+              result
+                ? `세트 ${result.built.length}건 생성 · 남음 ${result.remaining}`
+                  + ` · ${Math.round(result.elapsedMs / 1000)}초`
+                  + (timeouts ? ` · AI 시간초과 ${timeouts}건(규칙 문구로 저장)` : '')
+                  + (result.stoppedByBudget ? ' · 10분 예산으로 멈춤' : '')
+                : `실패: ${String(failure)}`)
+          }
           await pruneAlarmSends(env)
         }
       } catch (error) {
