@@ -22,7 +22,7 @@ App Store Connect 의 칸에 그대로 붙여 넣을 값이다. 한국어와 영
 
 심사 없이 언제든 바꿀 수 있는 유일한 칸이다. 그래서 새 기능을 가장 먼저 알리는 자리로 쓴다.
 
-### 2.1.1 — 지금 넣을 것
+### 2.1.1 — 지금 넣을 것 (2.1.2 에서도 그대로 쓴다)
 
 **한국어** (104자)
 
@@ -220,7 +220,33 @@ internet radio,podcast,sleep timer,radio alarm,white noise,focus,study,driving,s
 
 ## 6. 새로운 기능 (릴리스 노트)
 
-### 2.1.1 — 지금 넣을 것
+### 2.1.2 — 지금 넣을 것
+
+**한국어**
+
+```
+알람과 지상파 라디오의 불편을 고쳤습니다.
+
+• 알람 화면에서 '방송 켜기' 를 누른 뒤 2분쯤 지나 알람이 다시 울리며 라디오가 끊기던
+  문제를 고쳤습니다. 방송을 켜면 그 알람은 다시 울리지 않습니다.
+• 지상파 라디오를 듣는 동안 제목 자리에 시각 정보가 나타나고, 블루투스로 연결한 차량
+  화면이 새 채널을 튼 것처럼 자꾸 바뀌던 문제를 고쳤습니다. 이제 제목에는 지금 방송 중인
+  프로그램 이름만 나옵니다.
+```
+
+**영어**
+
+```
+Fixes for alarms and Korean terrestrial radio.
+
+• Fixed the alarm ringing again about two minutes after tapping "Play radio", which
+  interrupted the radio. Once you start the radio, that alarm does not ring again.
+• Fixed a timestamp appearing in place of the title while playing terrestrial radio,
+  which made car displays over Bluetooth refresh as if a new channel had started. The
+  title now shows only the name of the programme on air.
+```
+
+### 2.1.1 — 앞 버전에 넣었던 것
 
 **한국어**
 
