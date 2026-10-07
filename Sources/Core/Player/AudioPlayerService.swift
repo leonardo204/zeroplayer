@@ -679,6 +679,7 @@ final class AudioPlayerService: AudioPlaying {
             guard let self else { return }
             switch interruption {
             case .began:
+                AlarmDiagnostics.write("오디오 인터럽트 시작 state=\(self.state) item=\(self.current?.title ?? "-")")
                 switch self.state {
                 case .playing:
                     self.player?.pause()
@@ -700,6 +701,7 @@ final class AudioPlayerService: AudioPlaying {
                     break
                 }
             case .ended(let shouldResume):
+                AlarmDiagnostics.write("오디오 인터럽트 끝 shouldResume=\(shouldResume) paused=\(self.pausedByInterruption)")
                 guard self.pausedByInterruption else { return }
                 self.pausedByInterruption = false
                 let wasLoading = self.interruptedWhileLoading
@@ -775,6 +777,7 @@ final class AudioPlayerService: AudioPlaying {
     }
 
     private func fail(_ reason: PlaybackFailure) {
+        AlarmDiagnostics.write("재생 실패 \(reason) item=\(current?.title ?? "-")")
         let reported = current
         closeListeningSession()
         sleepTimer.reset()

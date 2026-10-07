@@ -75,7 +75,9 @@ final class AlarmPlaybackBridge {
         // 후보 줄을 재생기에 넘긴다. 잠에서 깬 사람이 '그만 듣기' 를 누르면 다음으로 넘어간다.
         if list.count > 1 { player.setQueue(list, origin: origin) }
         await player.play(target, origin: origin)
-        return await waitUntilPlaying(player)
+        let playing = await waitUntilPlaying(player)
+        AlarmDiagnostics.write("방송 켜기 \(target.title) → \(playing ? "재생 붙음" : "재생 실패")")
+        return playing
     }
 
     // MARK: - 기다리기

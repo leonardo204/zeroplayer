@@ -101,12 +101,40 @@ enum AlarmKitScheduler {
         let melody: AlertConfiguration.AlertSound = alarm.ensureSoundFile()
             .map { .named($0) } ?? .default
 
+        // 오늘 이 알람이 울리는 중(첫 발화 ~ 마지막 연쇄)이면 오늘 남은 연쇄는 다시 걸지 않는다.
+        //
+        // 알람이 울린 뒤 앱을 열면 `syncAll()` 이 모든 알람을 치우고 다시 건다. 그런데
+        // 요일 반복은 `.relative` 라 07:02 를 다시 걸면 오늘 07:02 에 또 울린다. 그래서
+        // '방송 켜기' 로 끈 알람이 2분 뒤 다시 울리고, 그 알람이 듣던 라디오를 끊었다.
+        let progress = inProgressToday(alarm)
+
+        var plans: [(index: Int, schedule: Alarm.Schedule)] = []
         for index in 0..<chainCount {
-            guard let schedule = schedule(for: alarm, offsetMinutes: index * chainInterval) else {
+            let offset = index * chainInterval
+            guard let schedule = schedule(for: alarm, offsetMinutes: offset) else {
                 // 자정을 넘으면 요일까지 밀려야 한다. 거기까지는 하지 않고 건너뛴다.
                 log.info("연쇄 \(index) 번이 자정을 넘어 건너뛴다")
                 continue
             }
+            guard let today = progress, index > 0, isUpcomingToday(alarm, offsetMinutes: offset) else {
+                plans.append((index, schedule))
+                continue
+            }
+            // 오늘 아직 안 울린 연쇄. 오늘만 빼고 건다.
+            if case .relative(let relative) = schedule, case .weekly(let days) = relative.repeats {
+                let others = days.filter { $0 != today }
+                if !others.isEmpty {
+                    plans.append((index, .relative(.init(time: relative.time, repeats: .weekly(others)))))
+                }
+                if let nextWeek = Calendar.current.date(byAdding: .day, value: 7, to: todayAt(alarm, offsetMinutes: offset)) {
+                    plans.append((deferredIndex(index), .fixed(nextWeek)))
+                }
+            }
+            // 한 번만 울리는 알람은 오늘 남은 연쇄를 아예 걸지 않는다.
+            AlarmDiagnostics.write("reschedule 오늘 진행 중이라 연쇄 #\(index) 를 오늘은 건너뛴다")
+        }
+
+        for (index, schedule) in plans {
             let id = chainID(root: root, index: index)
             // 고른 곡은 첫 번째에만 쓰고 뒤는 기본음으로 건다.
             //
@@ -218,17 +246,61 @@ enum AlarmKitScheduler {
     /// 없어서 오류를 삼킨다(`docs/10-alarmkit.md` 10.5).
     static func finish(alarmID: String, rootID: String) {
         if let id = UUID(uuidString: alarmID) {
-            try? AlarmManager.shared.stop(id: id)
+            do { try AlarmManager.shared.stop(id: id) } catch {
+                AlarmDiagnostics.write("finish stop \(alarmID.prefix(8)) 실패 \(error)")
+            }
         }
         guard let root = UUID(uuidString: rootID) else { return }
-        let alive = Set(((try? AlarmManager.shared.alarms) ?? []).map(\.id))
-        for index in 0..<chainCount {
-            let id = chainID(root: root, index: index)
-            guard alive.contains(id) else { continue }
-            try? AlarmManager.shared.cancel(id: id)
+        // 목록을 못 읽어도 치우기는 해 본다. 읽기가 실패해서 아무것도 안 치우면
+        // 2분 뒤 다음 연쇄가 그대로 울린다.
+        let alive: Set<UUID>?
+        do {
+            alive = Set(try AlarmManager.shared.alarms.map(\.id))
+        } catch {
+            alive = nil
+            AlarmDiagnostics.write("finish alarms 읽기 실패 \(error)")
         }
-        log.info("알람 묶음 \(rootID.prefix(8), privacy: .public) 의 남은 알람을 치웠다")
+        var cancelled = 0
+        var failed = 0
+        // 앞쪽 연쇄와, 오늘 진행 중이라 다음 주로 미뤄 건 것(`deferredIndex`)까지 본다.
+        for index in 0..<(chainCount * 2) {
+            let id = chainID(root: root, index: index)
+            if let alive, !alive.contains(id) { continue }
+            do {
+                try AlarmManager.shared.cancel(id: id)
+                cancelled += 1
+            } catch {
+                failed += 1
+                AlarmDiagnostics.write("finish cancel #\(index) 실패 \(error)")
+            }
+        }
+        AlarmDiagnostics.write(
+            "finish root=\(rootID.prefix(8)) 남아 있던 \(alive.map { "\($0.count)" } ?? "?")건 · 치움 \(cancelled) · 실패 \(failed)")
     }
+
+    /// 오늘이 이 알람의 요일이고 지금이 첫 발화와 마지막 연쇄 사이면 오늘 요일을 준다.
+    private static func inProgressToday(_ alarm: AlarmSetting, now: Date = .now) -> Locale.Weekday? {
+        let calendar = Calendar.current
+        let raw = calendar.component(.weekday, from: now)
+        let days = alarm.weekdays
+        guard days.isEmpty || days.contains(raw) else { return nil }
+        let start = todayAt(alarm, offsetMinutes: 0, now: now)
+        let end = start.addingTimeInterval(TimeInterval(((chainCount - 1) * chainInterval + 1) * 60))
+        guard now >= start, now < end else { return nil }
+        return weekday(from: raw) ?? .sunday
+    }
+
+    private static func isUpcomingToday(_ alarm: AlarmSetting, offsetMinutes: Int, now: Date = .now) -> Bool {
+        todayAt(alarm, offsetMinutes: offsetMinutes, now: now) > now
+    }
+
+    private static func todayAt(_ alarm: AlarmSetting, offsetMinutes: Int, now: Date = .now) -> Date {
+        let start = Calendar.current.startOfDay(for: now)
+        return start.addingTimeInterval(TimeInterval((alarm.hour * 60 + alarm.minute + offsetMinutes) * 60))
+    }
+
+    /// 오늘을 빼고 다음 주 같은 요일 하나만 따로 건 연쇄의 번호. 앞쪽 번호와 겹치지 않게 민다.
+    private static func deferredIndex(_ index: Int) -> Int { index + chainCount }
 
     /// 한 알람이 거는 여러 개에 줄 식별자. 마지막 바이트만 바꿔 되짚을 수 있게 한다.
     ///
