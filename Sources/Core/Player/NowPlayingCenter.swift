@@ -24,6 +24,8 @@ final class NowPlayingCenter {
     private var shownArtworkURL: URL?
     private var cachedArtwork: MPMediaItemArtwork?
     private var artworkTask: Task<Void, Never>?
+    /// 라이브 항목에서 마지막으로 잠금화면에 쓴 값. 같으면 다시 쓰지 않는다.
+    private var lastLiveKey: String?
     private let commandCenter = MPRemoteCommandCenter.shared()
     private var isWired = false
 
@@ -97,6 +99,7 @@ final class NowPlayingCenter {
     ) {
         guard let item else {
             infoCenter.nowPlayingInfo = nil
+            lastLiveKey = nil
             setScrubEnabled(false)
             artworkTask?.cancel()
             artworkTask = nil
@@ -104,6 +107,12 @@ final class NowPlayingCenter {
             cachedArtwork = nil
             return
         }
+
+        // 라이브는 바뀐 것이 없으면 다시 쓰지 않는다. 같은 값이라도 다시 쓰면 차량 오디오가
+        // 새 곡이 걸린 것으로 받아 화면을 다시 그린다.
+        let key = "\(item.id)|\(streamTitle ?? "")|\(item.subtitle ?? "")|\(artworkURL?.absoluteString ?? "")|\(isPlaying)|\(rate)"
+        if item.isLive, key == lastLiveKey, infoCenter.nowPlayingInfo != nil { return }
+        lastLiveKey = item.isLive ? key : nil
 
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: streamTitle ?? item.title,

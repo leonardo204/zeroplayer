@@ -629,13 +629,18 @@ final class AudioPlayerService: AudioPlaying {
                 var wait = 300
                 if let now = try? await self.client.hiddenNow(channelID: item.id, token: token) {
                     guard !Task.isCancelled, self.current?.id == item.id else { return }
-                    if let name = now.programName, !name.isEmpty {
+                    // 같은 값이면 잠금화면을 다시 쓰지 않는다. 다시 쓸 때마다 차량 화면이
+                    // 새 곡이 걸린 것처럼 갱신된다(2026-10-07 블루투스 실사용에서 겪었다).
+                    var changed = false
+                    if let name = now.programName, !name.isEmpty, name != self.streamTitle {
                         self.streamTitle = name
+                        changed = true
                     }
-                    if let url = now.artworkURL.flatMap(URL.init(string:)) {
+                    if let url = now.artworkURL.flatMap(URL.init(string:)), url != self.artworkURL {
                         self.artworkURL = url
+                        changed = true
                     }
-                    self.pushNowPlaying()
+                    if changed { self.pushNowPlaying() }
                     wait = max(60, min(now.refreshAfter, 1800))
                 }
                 try? await Task.sleep(for: .seconds(wait))
@@ -657,6 +662,10 @@ final class AudioPlayerService: AudioPlaying {
 
     /// `MetadataForwarder` 가 문자열만 뽑아 넘겨준다.
     fileprivate func updateStreamTitle(_ title: String) {
+        // 지상파는 편성표의 프로그램 이름이 제목이다. 스트림이 함께 보내는 타임드
+        // 메타데이터는 곡명이 아니라 `{"mediaTime":"…"}` 같은 기계용 값이라, 받아 쓰면
+        // 몇 초마다 제목이 그 문자열로 바뀌고 차량 화면이 새 채널처럼 깜빡인다.
+        guard current?.kind != .hidden else { return }
         guard title != streamTitle else { return }
         streamTitle = title
         log.info("ICY 곡명: \(title, privacy: .public)")
@@ -851,7 +860,7 @@ private final class MetadataForwarder: NSObject, AVPlayerItemMetadataOutputPushD
 
         // 한 묶음에 곡명과 앨범 이미지 주소가 함께 오는 방송국이 있다
         // (Radio Paradise 가 그렇다). 주소로 보이는 것은 곡명으로 세우지 않는다.
-        let title = values.first { !Self.looksLikeImageURL($0) }
+        let title = values.first { !Self.looksLikeImageURL($0) && !Self.looksLikeMachineValue($0) }
         let artwork = values.first { Self.looksLikeImageURL($0) }
 
         guard title != nil || artwork != nil else { return }
@@ -859,6 +868,18 @@ private final class MetadataForwarder: NSObject, AVPlayerItemMetadataOutputPushD
             if let title { owner?.updateStreamTitle(title) }
             if let artwork { owner?.updateStreamArtwork(artwork) }
         }
+    }
+
+    /// 사람이 읽을 곡명이 아닌 값. HLS 방송(SBS 등)은 ID3 로 `{"mediaTime":"…"}` 같은
+    /// JSON 이나 시각 문자열을 몇 초마다 보낸다. 이것을 곡명으로 세우면 안 된다.
+    private static func looksLikeMachineValue(_ value: String) -> Bool {
+        if value.hasPrefix("{") || value.hasPrefix("[") { return true }
+        if value.hasPrefix("http://") || value.hasPrefix("https://") { return true }
+        // 2026-10-03T05:41:06.030Z 같은 시각만 있는 값
+        if value.range(of: #"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}"#, options: .regularExpression) != nil {
+            return true
+        }
+        return false
     }
 
     private static func looksLikeImageURL(_ value: String) -> Bool {
