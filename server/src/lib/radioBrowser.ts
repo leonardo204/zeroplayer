@@ -6,6 +6,9 @@
  */
 
 const DIRECTORY = 'https://all.api.radio-browser.info/json/servers'
+// 2026-10 기준 실제 서버는 한 대다. de1·de2·all 이 모두 91.98.4.78 로 풀리고, 목록 API 도 de1 하나만
+// 준다. fi1·nl1·at1 등은 이름 조회조차 안 된다. 그래서 여기 이름을 더 늘려도 소용이 없다.
+// 짧은 장애는 call() 의 재시도와 syncAll() 의 마지막 재시도로 넘긴다.
 const FALLBACK_HOSTS = ['de1.api.radio-browser.info', 'de2.api.radio-browser.info']
 const USER_AGENT = 'zeroplayer/2.0.0 (+https://zerolive.co.kr)'
 
@@ -54,8 +57,19 @@ async function hosts(): Promise<string[]> {
   return hostCache.hosts
 }
 
-/** 살아 있는 서버를 찾을 때까지 넘겨 가며 호출한다. */
+const RETRY_DELAY_MS = 5000
+
+/** 살아 있는 서버를 찾을 때까지 넘겨 가며 호출한다. 후보를 다 실패하면 잠깐 쉬고 한 번 더 돈다. */
 async function call<T>(path: string): Promise<T> {
+  try {
+    return await callOnce<T>(path)
+  } catch {
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+    return callOnce<T>(path)
+  }
+}
+
+async function callOnce<T>(path: string): Promise<T> {
   const candidates = await hosts()
   let lastError: unknown = new Error('radio-browser 서버 목록이 비어 있다')
   for (const host of candidates.slice(0, 3)) {
@@ -66,6 +80,8 @@ async function call<T>(path: string): Promise<T> {
       })
       if (!res.ok) {
         lastError = new Error(`${host} → HTTP ${res.status}`)
+        // 5xx 를 준 서버가 30분 동안 목록 앞에 남지 않게 한다. 다음 호출에서 목록을 다시 받는다.
+        if (res.status >= 500) hostCache = null
         continue
       }
       return (await res.json()) as T

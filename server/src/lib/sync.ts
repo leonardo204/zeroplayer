@@ -136,18 +136,26 @@ export async function syncAll(env: Env): Promise<SyncResult[]> {
   const perCountry = Number.parseInt(env.SYNC_TOP_PER_COUNTRY || '200', 10) || 200
   const out: SyncResult[] = []
 
-  for (const code of full) {
+  // 실패한 나라는 바로 기록하지 않고 모아 두었다가, 전체를 다 돈 뒤 한 번 더 시도한다.
+  // 2026-10-08 00:01Z 에 radio-browser 가 1~2분 502 를 내서 맨 앞 KR·US 만 실패했고,
+  // 나머지 13개국이 끝날 즈음에는 이미 살아 있었다. 6시간 주기라 한 번 놓치면 갱신이 6시간 밀린다.
+  const jobs = [
+    ...full.map((code) => ({ code, limit: 0, prune: true })),
+    ...top.map((code) => ({ code, limit: perCountry, prune: false })),
+  ]
+  const failed: typeof jobs = []
+  for (const job of jobs) {
     try {
-      out.push(await syncCountry(env, code, 0, true))
-    } catch (error) {
-      await markSync(env, `radio_browser:${code}`, false, String(error))
+      out.push(await syncCountry(env, job.code, job.limit, job.prune))
+    } catch {
+      failed.push(job)
     }
   }
-  for (const code of top) {
+  for (const job of failed) {
     try {
-      out.push(await syncCountry(env, code, perCountry, false))
+      out.push(await syncCountry(env, job.code, job.limit, job.prune))
     } catch (error) {
-      await markSync(env, `radio_browser:${code}`, false, String(error))
+      await markSync(env, `radio_browser:${job.code}`, false, String(error))
     }
   }
   return out
