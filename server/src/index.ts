@@ -342,9 +342,13 @@ export default {
             failure = error
           } finally {
             const timeouts = result?.built.filter((b) => b.timedOut).length ?? 0
-            await markSync(env, 'recommend_build', failure === null,
+            // 모델이 한 건도 답하지 못했으면 실패로 남긴다. 세트는 규칙 목록으로라도 저장되므로
+            // 그대로 두면 성공으로 보인다 — 2026-10-22~28 프록시 404 가 그렇게 일주일 묻혔다.
+            const byModel = result?.built.filter((b) => b.model !== 'rule').length ?? 0
+            const modelDead = !!result && result.built.length > 0 && byModel === 0
+            await markSync(env, 'recommend_build', failure === null && !modelDead,
               result
-                ? `세트 ${result.built.length}건 생성 · 남음 ${result.remaining}`
+                ? `세트 ${result.built.length}건 생성 · 모델 ${byModel}건 · 남음 ${result.remaining}`
                   + ` · ${Math.round(result.elapsedMs / 1000)}초`
                   + (timeouts ? ` · AI 시간초과 ${timeouts}건(규칙 문구로 저장)` : '')
                   + (result.stoppedByBudget ? ' · 10분 예산으로 멈춤' : '')
